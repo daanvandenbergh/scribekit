@@ -1,0 +1,22 @@
+---
+title: "Les bases du SEO pour un blog Next.js"
+description: "Titres, méta-descriptions, URL canoniques, et le JSON-LD que le paquet émet pour vous."
+date: "2026-07-05"
+keywords:
+    - seo
+    - json-ld
+    - métadonnées
+categories:
+    - Guides
+image: "/assets/blog/seo-basics/hero.fr.jpg"
+---
+
+## Les métadonnées viennent du frontmatter
+
+`generateMetadata` lit le même frontmatter que vos cartes, pour que le titre SEO et la
+méta-description ne s'écartent jamais de ce que voient les lecteurs.
+
+## Des données structurées gratuitement
+
+Chaque article expose un bloc JSON-LD `BlogPosting` et l'aperçu un bloc `CollectionPage`, pour que
+les moteurs de recherche et de réponse analysent votre contenu sans effort supplémentaire.

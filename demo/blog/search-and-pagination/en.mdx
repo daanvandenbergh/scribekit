@@ -1,0 +1,24 @@
+---
+title: "Fuzzy search and infinite scroll"
+description: "Type to filter posts fuzzily, and scroll to load more without leaving the page."
+date: "2026-07-01"
+keywords:
+    - search
+    - pagination
+    - fuse.js
+categories:
+    - Reference
+author: "Neil Kakkar"
+author-image: "/assets/blog/authors/neil-kakkar.svg"
+image: "/assets/blog/search-and-pagination/hero.en.jpg"
+---
+
+## Search is typo-tolerant
+
+The search box runs a fuzzy match over each post's title, description, keywords, and
+categories, so a near-miss still surfaces the right post.
+
+## Scroll to load more
+
+The grid reveals posts in batches and loads the next one when you reach the bottom, with a
+"Load more" button as an explicit fallback.

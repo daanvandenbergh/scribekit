@@ -1,0 +1,22 @@
+---
+title: "SEO basics for a Next.js blog"
+description: "Titles, meta descriptions, canonical URLs, and the JSON-LD the package emits for you."
+date: "2026-07-05"
+keywords:
+    - seo
+    - json-ld
+    - metadata
+categories:
+    - Guides
+image: "/assets/blog/seo-basics/hero.en.jpg"
+---
+
+## Metadata comes from front-matter
+
+`generateMetadata` reads the same front-matter your cards use, so the SEO title and meta
+description never drift from what readers see.
+
+## Structured data for free
+
+Each post ships a `BlogPosting` JSON-LD block and the overview a `CollectionPage` block, so
+search engines and answer engines can parse your content without extra work.

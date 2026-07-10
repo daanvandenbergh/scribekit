@@ -1,0 +1,24 @@
+---
+title: "Temps de lecture et catégories sur les cartes"
+description: "Comment l'aperçu affiche un temps de lecture estimé et des badges de catégorie pour chaque article."
+date: "2026-07-02"
+keywords:
+    - temps de lecture
+    - catégories
+    - aperçu
+categories:
+    - Référence
+author: "Maya Lindholm"
+author-image: "/assets/blog/authors/maya-lindholm.svg"
+image: "/assets/blog/reading-time-and-categories/hero.fr.jpg"
+---
+
+## Le temps de lecture est précalculé
+
+La classe `Blog` estime un temps de lecture en minutes entières à partir du corps de chaque article
+au moment de l'analyse, pour que l'aperçu affiche « N min de lecture » sans charger l'article entier.
+
+## Les catégories pilotent les filtres
+
+Listez une ou plusieurs `categories` dans le frontmatter et l'aperçu les transforme en boutons de
+filtre - sauf si tous les articles partagent une seule catégorie, auquel cas la barre est masquée.

@@ -1,0 +1,29 @@
+<!--
+  scribekit-hero :: hero gradient gallery
+  ================================
+  Renders one hero per gradient (sample text, stacked vertically) so tune-gradients can review the
+  whole palette at once. The skill fills the two {{...}} tokens with absolute file:// paths into a
+  scratchpad copy, then screenshots it at --window-size=1200,<630 * number-of-gradients>.
+
+  TOKENS the skill fills:
+    {{HERO_COMPONENT}} - file:// path to the skill's assets/hero.js (renderGallery).
+    {{HERO_SETTINGS}}  - file:// path to the project's blog/hero.settings.js (brand + gradients).
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+</head>
+<body>
+<script type="module">
+    import { renderGallery } from "{{HERO_COMPONENT}}";
+    import { brand, gradients } from "{{HERO_SETTINGS}}";
+
+    renderGallery(gradients, {
+        ...brand,
+        title: "A sharp, specific headline that earns the click",
+        subtitle: "One supporting line that expands the promise and makes the read feel worth it.",
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,1842 @@
+/*
+ * Styles for the scribekit drop-in components (BlogOverview + BlogPage).
+ *
+ * Theming: every colour reads from a `--scribekit-*` custom property with a sensible light-theme
+ * default, e.g. `var(--scribekit-primary, #2563EB)`. Override any of them from your own CSS to
+ * match your brand, e.g. `:root { --scribekit-primary: #6D5DF6; }`. Class names are namespaced
+ * `.scribekit-*`, and MDX body tags are scoped under `.scribekit-prose`, so nothing here leaks into the
+ * rest of your site.
+ */
+
+/* --- Overview: post grid --- */
+.scribekit-overview {
+    max-width: var(--scribekit-overview-width, 1040px);
+    margin: 0 auto;
+    padding: clamp(24px, 5vw, 48px) clamp(16px, 5vw, 40px);
+}
+
+.scribekit-empty {
+    text-align: center;
+    color: var(--scribekit-ink-muted, #4a5568);
+    font-size: 18px;
+}
+
+.scribekit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.scribekit-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 26px 26px 24px;
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 16px;
+    text-decoration: none;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    animation: scribekit-rise 0.5s ease both;
+}
+
+.scribekit-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--scribekit-primary, #2563eb);
+    box-shadow: var(--scribekit-card-shadow, 0 14px 34px -18px rgba(11, 27, 54, 0.35));
+}
+
+/* Hero thumbnail: full-bleed across the top of the card (negative margins cancel the card's
+   26px padding). `height:auto` scales the 1200x630 hero down to the card width at its ratio. */
+.scribekit-card-image {
+    display: block;
+    width: calc(100% + 52px);
+    height: auto;
+    margin: -26px -26px 18px;
+    border-radius: 16px 16px 0 0;
+    border-bottom: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+.scribekit-card-date {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--scribekit-ink-muted, #4a5568);
+}
+
+.scribekit-card-title {
+    margin: 10px 0 0;
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-card-desc {
+    margin: 12px 0 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--scribekit-ink-muted, #4a5568);
+}
+
+.scribekit-card-more {
+    margin-top: auto;
+    padding-top: 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--scribekit-primary, #2563eb);
+}
+
+/* Card meta row: date and reading time side by side (a dot separates them). */
+.scribekit-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--scribekit-ink-muted, #4a5568);
+}
+
+.scribekit-card-readtime {
+    position: relative;
+    padding-left: 16px;
+}
+
+.scribekit-card-readtime::before {
+    content: "·";
+    position: absolute;
+    left: 5px;
+}
+
+/* Category badges on a card. */
+.scribekit-card-cats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+}
+
+.scribekit-cat {
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--scribekit-primary, #2563eb);
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 999px;
+}
+
+/* --- Overview: search + category-filter toolbar --- */
+.scribekit-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.scribekit-search {
+    flex: 1 1 240px;
+    min-width: 0;
+    padding: 11px 16px;
+    font: inherit;
+    font-size: 15px;
+    color: var(--scribekit-ink, #0b1b36);
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 12px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scribekit-search:focus {
+    outline: none;
+    border-color: var(--scribekit-primary, #2563eb);
+    box-shadow: 0 0 0 3px var(--scribekit-focus-ring, rgba(37, 99, 235, 0.18));
+}
+
+.scribekit-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.scribekit-filter {
+    padding: 8px 15px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--scribekit-ink-muted, #4a5568);
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.scribekit-filter:hover {
+    color: var(--scribekit-ink, #0b1b36);
+    border-color: var(--scribekit-primary, #2563eb);
+}
+
+.scribekit-filter-active {
+    color: var(--scribekit-on-primary, #ffffff);
+    background: var(--scribekit-primary, #2563eb);
+    border-color: var(--scribekit-primary, #2563eb);
+}
+
+/* --- Overview: infinite-scroll "load more" --- */
+.scribekit-loadmore-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 28px;
+}
+
+.scribekit-loadmore {
+    padding: 11px 24px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--scribekit-primary, #2563eb);
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.scribekit-loadmore:hover {
+    color: var(--scribekit-on-primary, #ffffff);
+    background: var(--scribekit-primary, #2563eb);
+    border-color: var(--scribekit-primary, #2563eb);
+}
+
+/* The IntersectionObserver target; sits at the end of the list to trigger the next batch. */
+.scribekit-sentinel {
+    width: 1px;
+    height: 1px;
+}
+
+/* --- Post --- */
+.scribekit-post {
+    max-width: var(--scribekit-post-width, 760px);
+    margin: 0 auto;
+    padding: clamp(24px, 5vw, 48px) clamp(16px, 5vw, 40px) clamp(48px, 8vw, 80px);
+}
+
+.scribekit-back {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--scribekit-primary, #2563eb);
+    text-decoration: none;
+}
+
+.scribekit-back:hover {
+    text-decoration: underline;
+}
+
+.scribekit-post-title {
+    margin: 18px 0 0;
+    font-weight: 300;
+    font-size: clamp(2.1rem, 3.2vw + 1rem, 3.25rem);
+    letter-spacing: -0.03em;
+    line-height: 1.12;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+/* Meta row under the title: category badge, then dot-separated date / author / reading time. */
+.scribekit-post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0 0;
+    font-size: 15px;
+    color: var(--scribekit-ink-muted, #4a5568);
+}
+
+.scribekit-post-cat {
+    display: inline-flex;
+    align-items: center;
+    /* A touch of extra separation from the first text item, on top of the row's gap. */
+    margin-right: 6px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--scribekit-primary, #2563eb);
+    background: var(--scribekit-primary-subtle, #eef2ff);
+    border-radius: 999px;
+}
+
+/* A dot only between two consecutive text items - never after the badge. */
+.scribekit-post-metaitem + .scribekit-post-metaitem::before {
+    content: "·";
+    margin-right: 10px;
+    color: var(--scribekit-border, #cbd5e1);
+}
+
+/* Author in the meta row: a small round avatar (when the post has one) beside the name. */
+.scribekit-post-author {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The flex gap already spaces the dot; trim its margin so it matches the plain items' 10px. */
+.scribekit-post-metaitem + .scribekit-post-author::before {
+    margin-right: 2px;
+}
+
+.scribekit-post-author-avatar {
+    display: block;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    object-fit: cover;
+}
+
+.scribekit-post-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    margin: 28px 0 36px;
+}
+
+/* MDX body typography (scoped under .scribekit-prose so bare tag selectors don't leak). */
+.scribekit-prose {
+    margin: 28px 0 0;
+}
+
+.scribekit-prose h2 {
+    margin: 44px 0 14px;
+    font-size: clamp(1.5rem, 1.6vw + 0.9rem, 1.9rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-prose h3 {
+    margin: 32px 0 10px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-prose p {
+    margin: 0 0 18px;
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-prose ul,
+.scribekit-prose ol {
+    margin: 0 0 18px;
+    padding-left: 24px;
+}
+
+.scribekit-prose li {
+    margin: 0 0 8px;
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-prose a {
+    color: var(--scribekit-primary, #2563eb);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.scribekit-prose strong {
+    font-weight: 600;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-prose blockquote {
+    margin: 28px 0;
+    padding: 4px 0 4px 22px;
+    border-left: 3px solid var(--scribekit-primary, #2563eb);
+    font-size: 1.25rem;
+    font-weight: 300;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-prose blockquote p {
+    margin: 0;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+
+.scribekit-prose img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin: 8px 0 20px;
+}
+
+/* Inline code + fenced code blocks (the latter was unstyled in the source project). */
+.scribekit-prose code {
+    padding: 2px 6px;
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 6px;
+    font-family: var(--scribekit-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 0.9em;
+}
+
+.scribekit-prose pre {
+    margin: 0 0 20px;
+    padding: 16px 18px;
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.scribekit-prose pre code {
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    font-size: inherit;
+}
+
+/* Tables (GFM, when the consumer enables remark-gfm; also unstyled in the source project). */
+.scribekit-prose table {
+    width: 100%;
+    margin: 0 0 20px;
+    border-collapse: collapse;
+    font-size: 15px;
+    overflow-x: auto;
+    display: block;
+}
+
+.scribekit-prose th,
+.scribekit-prose td {
+    padding: 10px 14px;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    text-align: left;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-prose th {
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    font-weight: 600;
+}
+
+.scribekit-prose hr {
+    margin: 40px 0;
+    border: 0;
+    border-top: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+/* --- Post: author bio --- */
+/* Closes the article when the post has an author: a divider, then a plain avatar + text row
+   (deliberately no card background or border). */
+.scribekit-author-bio {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: 64px;
+    padding-top: 40px;
+    border-top: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+.scribekit-author-bio-avatar {
+    display: block;
+    flex: none;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    object-fit: cover;
+}
+
+.scribekit-author-bio-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.scribekit-author-bio-label {
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-subtle, #94a3b8);
+}
+
+.scribekit-author-bio-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-author-bio-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--scribekit-ink-subtle, #94a3b8);
+}
+
+.scribekit-author-bio-cat {
+    font-weight: 600;
+    color: var(--scribekit-primary, #2563eb);
+}
+
+/* Dot only when a category precedes the publish date. */
+.scribekit-author-bio-cat + .scribekit-author-bio-date::before {
+    content: "·";
+    margin: 0 9px;
+    color: var(--scribekit-border, #cbd5e1);
+}
+
+/* --- Post + sidebar layout --- */
+/* Two-column shell: the post keeps its reading width, the sidebar sits in a fixed rail. */
+.scribekit-post-layout {
+    display: grid;
+    grid-template-columns: minmax(0, var(--scribekit-post-width, 760px)) var(--scribekit-sidebar-width, 240px);
+    gap: clamp(24px, 4vw, 56px);
+    max-width: calc(var(--scribekit-post-width, 760px) + var(--scribekit-sidebar-width, 240px) + 56px);
+    margin: 0 auto;
+    align-items: start;
+}
+
+/* Inside the two-column shell the article no longer centres itself. */
+.scribekit-post-layout .scribekit-post {
+    margin: 0;
+    max-width: none;
+}
+
+.scribekit-sidebar {
+    position: sticky;
+    top: clamp(16px, 4vw, 40px);
+    align-self: start;
+    padding: clamp(24px, 5vw, 48px) 0;
+    font-size: 14px;
+}
+
+.scribekit-sidebar-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* Section eyebrow ("On this page" / "Similar pages"): a small uppercase, tracked label that
+   reads as a heading by style rather than size, so it never blends into the items below it. */
+.scribekit-sidebar-toggle,
+.scribekit-sidebar-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-subtle, #94a3b8);
+    cursor: default;
+}
+
+.scribekit-sidebar-body {
+    margin-top: 16px;
+}
+
+/* The 2px rail is the ul's left border (track); the active link paints its own segment of it.
+   ponytail: static per-item marker, not a JS-measured sliding fill - upgrade to a moving rail
+   only if the animated slide between headings is wanted. */
+.scribekit-toc ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-left: 2px solid var(--scribekit-border, #e5eaf0);
+}
+
+.scribekit-toc li {
+    margin: 0;
+}
+
+.scribekit-toc-sub {
+    padding-left: 14px;
+}
+
+.scribekit-toc-link {
+    display: block;
+    margin-left: -2px;
+    padding: 7px 0 7px 16px;
+    border-left: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--scribekit-ink-muted, #4a5568);
+    text-decoration: none;
+    transition: color 0.15s ease, border-color 0.15s ease, font-weight 0.15s ease;
+}
+
+.scribekit-toc-link:hover {
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-toc-link.is-active {
+    font-weight: 600;
+    color: var(--scribekit-primary, #2563eb);
+    border-left-color: var(--scribekit-primary, #2563eb);
+}
+
+.scribekit-similar {
+    margin-top: 28px;
+}
+
+.scribekit-sidebar-heading {
+    margin-bottom: 14px;
+    padding-left: 2px;
+}
+
+.scribekit-similar-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Each similar post is a quiet row: title + category · date, with an arrow that leans in on hover. */
+.scribekit-similar-card {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px 12px;
+    color: inherit;
+    text-decoration: none;
+}
+
+/* Straight full-width divider: a border-top on the card would follow the highlight's radius and
+   curve at the ends, so draw the rule with a pseudo-element that ignores any corner rounding. */
+.scribekit-similar-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+/* Hover highlight as an inset overlay (behind the text) so it floats clear of the dividers above
+   and below instead of butting right up against them. */
+.scribekit-similar-card::after {
+    content: "";
+    position: absolute;
+    inset: 6px 0;
+    z-index: -1;
+    border-radius: 12px;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+
+.scribekit-similar-card:hover::after {
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+}
+
+.scribekit-similar-body {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.scribekit-similar-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-similar-meta {
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--scribekit-ink-subtle, #94a3b8);
+}
+
+.scribekit-similar-cat {
+    font-weight: 600;
+    color: var(--scribekit-primary, #2563eb);
+}
+
+/* Dot only when a category precedes the date. */
+.scribekit-similar-cat + .scribekit-similar-date::before {
+    content: "·";
+    margin: 0 7px;
+    color: var(--scribekit-border, #cbd5e1);
+}
+
+.scribekit-similar-arrow {
+    flex: none;
+    margin-top: 2px;
+    font-size: 14px;
+    color: var(--scribekit-ink-subtle, #94a3b8);
+    transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.scribekit-similar-card:hover .scribekit-similar-arrow {
+    transform: translateX(3px);
+    color: var(--scribekit-primary, #2563eb);
+}
+
+/* Mobile: collapse to one column; the sidebar becomes a collapsible bar above the article. */
+@media (max-width: 1080px) {
+    .scribekit-post-layout {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: var(--scribekit-post-width, 760px);
+    }
+
+    .scribekit-sidebar {
+        position: static;
+        order: -1;
+        margin-bottom: 8px;
+        padding: clamp(16px, 5vw, 24px);
+        border: 1px solid var(--scribekit-border, #e5eaf0);
+        border-radius: 12px;
+        background: var(--scribekit-bg-subtle, #f7f9fc);
+    }
+
+    .scribekit-sidebar-toggle {
+        cursor: pointer;
+    }
+
+    /* Chevron only appears on mobile, where the toggle actually collapses the body. */
+    .scribekit-sidebar-toggle::after {
+        content: "";
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-left: 4px;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: rotate(45deg);
+        transition: transform 0.18s ease;
+    }
+
+    .scribekit-sidebar-toggle[aria-expanded="true"]::after {
+        transform: rotate(-135deg);
+    }
+
+    .scribekit-sidebar-body {
+        display: none;
+    }
+
+    .scribekit-sidebar-body.is-open {
+        display: block;
+    }
+}
+
+/* Entrance animation for cards; disabled when the visitor prefers reduced motion. */
+@keyframes scribekit-rise {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scribekit-card {
+        animation: none;
+    }
+
+    .scribekit-toc-link,
+    .scribekit-sidebar-toggle::after,
+    .scribekit-similar-card::after,
+    .scribekit-similar-arrow,
+    .scribekit-search,
+    .scribekit-filter,
+    .scribekit-loadmore {
+        transition: none;
+    }
+}
+
+/* =================================================================================
+   Docs
+   The docs components implement the SwiftGuard Docs design: a full-width app of a top
+   tab bar, a left navigation, a centered article, and a right "on this page" minimap.
+   Colours reuse the shared `--scribekit-*` palette; a few docs-only tokens (`--scribekit-violet`,
+   `--scribekit-border-strong`, `--scribekit-font-sans`, the layout widths, `--scribekit-code-*`)
+   default here and can be overridden like any other. Classes are namespaced
+   `.scribekit-docs-*` / `.scribekit-doc*`; the MDX body reuses `.scribekit-prose`.
+   ================================================================================= */
+
+/* --- Docs app shell. Compose it in your route layout:
+   <div class="scribekit-docs">
+     <DocsTabs/>                                  (top tab bar, full width)
+     <div class="scribekit-docs-body">
+       <DocsSidebar/>                             (left nav)
+       <main class="scribekit-docs-main"> ...DocsPage or DocsIndex... </main>
+     </div>
+   </div>                                                                            --- */
+.scribekit-docs {
+    display: flex;
+    flex-direction: column;
+    /* Full-width app by default; set --scribekit-docs-max-width to cap and centre the whole shell. */
+    max-width: var(--scribekit-docs-max-width, none);
+    margin-inline: auto;
+    min-height: var(--scribekit-docs-min-height, auto);
+    color: var(--scribekit-ink, #0b1b36);
+    background: var(--scribekit-surface, #ffffff);
+    font-family: var(--scribekit-font-sans, "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+.scribekit-docs-body {
+    display: flex;
+    align-items: stretch;
+    min-height: var(--scribekit-docs-body-min-height, 60vh);
+}
+
+.scribekit-docs-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+}
+
+/* --- Docs top tab bar (only rendered when getNavTree reports more than one tab) --- */
+.scribekit-docs-tabbar {
+    position: sticky;
+    top: var(--scribekit-docs-tabbar-top, 0);
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    height: 47px;
+    padding: 0 22px;
+    border-bottom: 1px solid var(--scribekit-border-strong, #eaeef4);
+    background: var(--scribekit-surface, #ffffff);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.scribekit-docs-tabbar::-webkit-scrollbar {
+    display: none;
+}
+
+.scribekit-docs-tabbar-inner {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    height: 100%;
+}
+
+.scribekit-docs-tab {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 13px;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--scribekit-ink-soft, #5a6b82);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.scribekit-docs-tab:hover {
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-tab.is-active {
+    color: var(--scribekit-ink, #0b1b36);
+    font-weight: 600;
+}
+
+/* The sliding underline; positioned in JS from the active tab's offset/width. */
+.scribekit-docs-tab-indicator {
+    position: absolute;
+    bottom: -1px;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(90deg, var(--scribekit-primary, #2563eb), var(--scribekit-violet, #6d5df6));
+    transition: left 0.28s cubic-bezier(0.16, 1, 0.3, 1), width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- Docs left navigation --- */
+.scribekit-docs-nav {
+    flex: 0 0 var(--scribekit-docs-nav-width, 300px);
+    width: var(--scribekit-docs-nav-width, 300px);
+    border-right: 1px solid var(--scribekit-border-strong, #eaeef4);
+    background: var(--scribekit-docs-nav-bg, linear-gradient(180deg, #fcfdfe, #fbfcfe));
+}
+
+.scribekit-docs-nav-inner {
+    position: sticky;
+    top: var(--scribekit-docs-content-top, 47px);
+    max-height: calc(100vh - var(--scribekit-docs-content-top, 47px));
+    overflow-y: auto;
+    padding: 22px 16px 40px;
+}
+
+/* --- Docs top bar (DocsNavbar) --- */
+.scribekit-docs-navbar {
+    position: sticky;
+    top: var(--scribekit-docs-navbar-top, 0);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    height: var(--scribekit-docs-navbar-height, 64px);
+    padding: 0 22px;
+    border-bottom: 1px solid var(--scribekit-border-strong, #eaeef4);
+    background: var(--scribekit-navbar-bg, rgba(255, 255, 255, 0.9));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.scribekit-docs-navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    text-decoration: none;
+}
+
+.scribekit-docs-navbar-logo {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+}
+
+.scribekit-docs-navbar-logo svg,
+.scribekit-docs-navbar-logo img,
+.scribekit-docs-navbar-logo > * {
+    height: 100%;
+    width: auto;
+    display: block;
+}
+
+.scribekit-docs-navbar-name {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-navbar-pill {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--scribekit-violet, #6d5df6);
+    background: var(--scribekit-violet-subtle, #f0eefe);
+    border: 1px solid var(--scribekit-violet-line, #e4e0fc);
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.scribekit-docs-navbar-search {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.scribekit-docs-navbar-search .scribekit-docs-search-trigger {
+    max-width: var(--scribekit-docs-navbar-search-width, 440px);
+}
+
+.scribekit-docs-navbar-spacer {
+    flex: 1;
+}
+
+.scribekit-docs-navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex: 0 0 auto;
+    font-size: 14px;
+}
+
+/* Fallback styling for raw top-level <a> actions; a direct child so it excludes DocsNavbarButton
+   (its variant classes win) and the nested language-menu links. */
+.scribekit-docs-navbar-right > a:not(.scribekit-docs-navbar-btn) {
+    color: var(--scribekit-ink-muted, #4a5568);
+    text-decoration: none;
+}
+
+.scribekit-docs-navbar-right > a:not(.scribekit-docs-navbar-btn):hover {
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+/* --- Docs navbar language picker (DocsLanguagePicker) --- */
+.scribekit-docs-lang {
+    position: relative;
+    display: inline-flex;
+}
+
+.scribekit-docs-lang-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 36px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.scribekit-docs-lang-trigger:hover {
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    color: var(--scribekit-ink-muted, #4a5568);
+}
+
+.scribekit-docs-lang-flag {
+    display: inline-flex;
+    flex: none;
+}
+
+.scribekit-docs-lang-flag svg {
+    display: block;
+    width: 22px;
+    height: auto;
+}
+
+.scribekit-docs-lang-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 40;
+    min-width: 190px;
+    padding: 6px;
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 12px;
+    box-shadow: var(--scribekit-menu-shadow, 0 14px 40px -12px rgba(11, 27, 54, 0.28));
+    animation: scribekit-pop 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.scribekit-docs-lang-heading {
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-docs-lang-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--scribekit-ink, #0b1b36);
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.scribekit-docs-lang-item:hover {
+    background: var(--scribekit-bg-subtle, #f4f6fa);
+}
+
+.scribekit-docs-lang-item.is-active {
+    font-weight: 600;
+}
+
+.scribekit-docs-lang-item .scribekit-docs-lang-flag svg {
+    width: 25px;
+}
+
+.scribekit-docs-lang-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.scribekit-docs-lang-check {
+    flex: none;
+    color: var(--scribekit-primary, #2563eb);
+}
+
+/* Navbar action buttons (DocsNavbarButton): link / primary / secondary, per the design. */
+.scribekit-docs-navbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font: inherit;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    background: none;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scribekit-docs-navbar-btn-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.scribekit-docs-navbar-btn-link {
+    padding: 0;
+    color: var(--scribekit-ink-muted, #4a5568);
+}
+
+.scribekit-docs-navbar-btn-link:hover {
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-navbar-btn-primary {
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 9px;
+    background: var(--scribekit-ink, #0b1b36);
+    color: var(--scribekit-on-ink, #ffffff);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(11, 27, 54, 0.2);
+}
+
+.scribekit-docs-navbar-btn-primary:hover {
+    background: var(--scribekit-ink-hover, #15264a);
+    color: var(--scribekit-on-ink, #ffffff);
+}
+
+.scribekit-docs-navbar-btn-secondary {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 9px;
+    border-color: var(--scribekit-border, #e5eaf0);
+    background: var(--scribekit-surface, #ffffff);
+    color: var(--scribekit-ink-muted, #4a5568);
+    font-weight: 500;
+}
+
+.scribekit-docs-navbar-btn-secondary:hover {
+    border-color: var(--scribekit-primary-soft, #c7d2fe);
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+/* Search trigger: the ⌘K launcher - a quiet field-like button that opens the palette. */
+.scribekit-docs-search-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--scribekit-ink-subtle, #94a3b8);
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scribekit-docs-search-trigger:hover {
+    border-color: var(--scribekit-primary-soft, #c7d2fe);
+    background: var(--scribekit-surface, #ffffff);
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.06);
+}
+
+.scribekit-docs-search-trigger-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.scribekit-docs-kbd-group {
+    display: flex;
+    gap: 4px;
+    flex: none;
+}
+
+.scribekit-docs-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    background: var(--scribekit-surface, #ffffff);
+    font: inherit;
+    font-size: 11px;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+/* Mobile-only collapse toggle (hidden on wide viewports by the media query below). */
+.scribekit-docs-nav-toggle {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: 40px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--scribekit-ink, #0b1b36);
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.scribekit-docs-group + .scribekit-docs-group {
+    margin-top: 22px;
+}
+
+.scribekit-docs-group-label {
+    padding: 0 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-docs-group-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.scribekit-docs-navitem {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    color: var(--scribekit-nav-ink, #475569);
+    font-size: 14px;
+    text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.scribekit-docs-navitem:hover {
+    color: var(--scribekit-ink, #0b1b36);
+    background: var(--scribekit-docs-nav-hover, #f1f4f9);
+}
+
+.scribekit-docs-navitem.is-active {
+    color: var(--scribekit-primary, #2563eb);
+    font-weight: 600;
+    background: var(--scribekit-primary-subtle, #edf2fe);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12), 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.scribekit-docs-navitem-icon {
+    display: inline-flex;
+    flex: none;
+    color: currentColor;
+}
+
+/* --- Docs command palette (⌘K) --- */
+.scribekit-docs-palette-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 12vh 20px 20px;
+    background: var(--scribekit-scrim, rgba(11, 27, 54, 0.32));
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.scribekit-docs-palette {
+    width: 100%;
+    max-width: 580px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 16px;
+    box-shadow: var(--scribekit-palette-shadow, 0 24px 70px rgba(11, 27, 54, 0.28));
+    animation: scribekit-pop 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.scribekit-docs-palette-input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: none;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--scribekit-border, #eef1f6);
+    color: var(--scribekit-ink-subtle, #94a3b8);
+}
+
+.scribekit-docs-palette-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-size: 16px;
+    color: var(--scribekit-ink, #0b1b36);
+    background: transparent;
+}
+
+.scribekit-docs-palette-results {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.scribekit-docs-palette-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--scribekit-ink, #0b1b36);
+    text-decoration: none;
+}
+
+.scribekit-docs-palette-item.is-active {
+    background: var(--scribekit-bg-subtle, #f4f6fa);
+}
+
+.scribekit-docs-palette-item-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--scribekit-primary, #2563eb);
+}
+
+.scribekit-docs-palette-item-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.scribekit-docs-palette-item-crumb {
+    flex: none;
+    font-size: 12px;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-docs-palette-empty {
+    padding: 24px 12px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+/* --- Docs page: centered article + right ToC column --- */
+.scribekit-docs-page {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+}
+
+.scribekit-doc {
+    flex: 1;
+    min-width: 0;
+    max-width: var(--scribekit-doc-width, 760px);
+    margin: 0 auto;
+    padding: 44px clamp(24px, 4vw, 56px) 120px;
+}
+
+.scribekit-doc-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-doc-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.scribekit-doc-crumb-sep {
+    display: inline-flex;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-doc-crumb-current {
+    color: var(--scribekit-ink-muted, #4a5568);
+}
+
+.scribekit-doc-title {
+    margin: 0;
+    font-size: clamp(2rem, 1.4vw + 1.5rem, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.028em;
+    line-height: 1.12;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-doc-lead {
+    margin: 14px 0 0;
+    max-width: 62ch;
+    font-size: 18.5px;
+    line-height: 1.6;
+    color: var(--scribekit-ink-soft, #5a6b82);
+}
+
+.scribekit-doc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.scribekit-doc-readpill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--scribekit-primary, #2563eb);
+    background: var(--scribekit-primary-subtle, #edf2fe);
+    border: 1px solid var(--scribekit-primary-line, #dbe4fe);
+    border-radius: 999px;
+}
+
+.scribekit-doc-updated {
+    font-size: 12px;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-doc-divider {
+    height: 1px;
+    margin: 32px 0;
+    background: var(--scribekit-border, #eef1f6);
+}
+
+/* Docs MDX body: the design's tighter scale (scoped to .scribekit-doc so the blog's prose is
+   untouched). scroll-margin clears the sticky tab bar when jumping to an anchor. */
+.scribekit-doc .scribekit-prose {
+    margin: 0;
+}
+
+.scribekit-doc .scribekit-prose h2 {
+    margin: 44px 0 12px;
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    scroll-margin-top: 80px;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-doc .scribekit-prose h3 {
+    margin: 30px 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+    scroll-margin-top: 80px;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-doc .scribekit-prose p,
+.scribekit-doc .scribekit-prose li {
+    font-size: 16px;
+    line-height: 1.72;
+    color: var(--scribekit-ink-body, #41506a);
+}
+
+/* Docs code blocks pick up the design's dark slab (scoped to .scribekit-doc so the blog's light
+   code blocks are untouched). Consumers who add rehype-pretty-code style over the top of it. */
+.scribekit-doc .scribekit-prose pre {
+    background: var(--scribekit-code-bg, #0b1b36);
+    border-color: var(--scribekit-code-border, #10203f);
+    color: var(--scribekit-code-ink, #c7d2fe);
+    border-radius: 14px;
+}
+
+/* --- Docs page: "was this page helpful?" --- */
+.scribekit-docs-feedback {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--scribekit-border, #eef1f6);
+}
+
+.scribekit-docs-feedback-q {
+    font-size: 14px;
+    color: var(--scribekit-ink-body, #41506a);
+}
+
+.scribekit-docs-feedback-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--scribekit-nav-ink, #475569);
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.scribekit-docs-feedback-btn:hover {
+    color: var(--scribekit-ink, #0b1b36);
+    border-color: var(--scribekit-primary-soft, #c7d2fe);
+}
+
+.scribekit-docs-feedback-btn.is-active {
+    color: var(--scribekit-primary, #2563eb);
+    border-color: var(--scribekit-primary-soft, #c7d2fe);
+    background: var(--scribekit-primary-subtle, #edf2fe);
+}
+
+.scribekit-docs-feedback-thanks {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--scribekit-success, #15a34a);
+}
+
+/* --- Docs page: prev / next --- */
+.scribekit-docs-prevnext {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 26px;
+}
+
+.scribekit-docs-prevnext-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 14px;
+    background: var(--scribekit-surface, #ffffff);
+    text-decoration: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scribekit-docs-prevnext-card:hover {
+    border-color: var(--scribekit-primary-soft, #c7d2fe);
+    box-shadow: 0 4px 16px rgba(11, 27, 54, 0.06);
+}
+
+.scribekit-docs-prevnext-next {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.scribekit-docs-prevnext-spacer {
+    display: block;
+}
+
+.scribekit-docs-prevnext-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-docs-prevnext-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+/* --- Docs page: right "on this page" minimap --- */
+.scribekit-docs-toc {
+    flex: 0 0 var(--scribekit-docs-toc-width, 250px);
+    width: var(--scribekit-docs-toc-width, 250px);
+    border-left: 1px solid var(--scribekit-border-strong, #eaeef4);
+    background: var(--scribekit-surface, #ffffff);
+}
+
+.scribekit-docs-toc-inner {
+    position: sticky;
+    top: var(--scribekit-docs-content-top, 47px);
+    max-height: calc(100vh - var(--scribekit-docs-content-top, 47px));
+    overflow-y: auto;
+    padding: 44px 22px 40px;
+}
+
+.scribekit-docs-toc-title {
+    margin-bottom: 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-subtle, #9aa6b6);
+}
+
+.scribekit-docs-toc-list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* The blue bar that slides to the active section (translateY/height set in JS). */
+.scribekit-docs-toc-indicator {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--scribekit-primary, #2563eb);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), height 0.25s ease, opacity 0.2s ease;
+}
+
+.scribekit-docs-toc-link {
+    display: block;
+    padding: 6px 0 6px 16px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: var(--scribekit-toc-ink, #64748b);
+    text-decoration: none;
+    transition: color 0.12s ease;
+}
+
+.scribekit-docs-toc-link:hover {
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-toc-link.is-active {
+    color: var(--scribekit-primary, #2563eb);
+    font-weight: 600;
+}
+
+.scribekit-docs-toc-sub {
+    padding-left: 28px;
+}
+
+/* --- Docs index / landing --- */
+.scribekit-docs-index {
+    max-width: var(--scribekit-docs-index-width, 1040px);
+    margin: 0 auto;
+    padding: clamp(28px, 5vw, 56px) clamp(16px, 5vw, 40px);
+}
+
+.scribekit-docs-hero {
+    margin-bottom: clamp(28px, 4vw, 44px);
+}
+
+.scribekit-docs-hero-title {
+    margin: 0;
+    font-size: clamp(2.1rem, 3vw + 1rem, 3rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-hero-desc {
+    margin: 16px 0 0;
+    max-width: 60ch;
+    font-size: clamp(1.05rem, 0.6vw + 0.9rem, 1.2rem);
+    line-height: 1.6;
+    color: var(--scribekit-ink-soft, #5a6b82);
+}
+
+.scribekit-docs-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.scribekit-docs-section-card {
+    padding: 22px 22px 18px;
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    border-radius: 16px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.scribekit-docs-section-card:hover {
+    border-color: var(--scribekit-primary-soft, #c7d2fe);
+    box-shadow: var(--scribekit-card-shadow, 0 8px 24px -14px rgba(37, 99, 235, 0.28));
+    transform: translateY(-2px);
+}
+
+.scribekit-docs-section-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-bottom: 14px;
+    border-radius: 9px;
+    color: var(--scribekit-primary, #2563eb);
+    background: var(--scribekit-primary-subtle, #edf2fe);
+}
+
+.scribekit-docs-section-title {
+    margin: 0 0 10px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-section-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.scribekit-docs-section-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--scribekit-nav-ink, #475569);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.scribekit-docs-section-link:hover {
+    color: var(--scribekit-primary, #2563eb);
+}
+
+.scribekit-docs-section-arrow {
+    flex: none;
+    color: var(--scribekit-ink-subtle, #cbd5e1);
+    transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.scribekit-docs-section-link:hover .scribekit-docs-section-arrow {
+    transform: translateX(3px);
+    color: var(--scribekit-primary, #2563eb);
+}
+
+/* --- Docs: mobile (stack the app; collapse the left nav; hide the right minimap) --- */
+@media (max-width: 1080px) {
+    .scribekit-docs-body {
+        flex-direction: column;
+    }
+
+    .scribekit-docs-nav {
+        flex: none;
+        width: 100%;
+        border-right: 0;
+        border-bottom: 1px solid var(--scribekit-border-strong, #eaeef4);
+    }
+
+    .scribekit-docs-nav-inner {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        padding: clamp(14px, 4vw, 20px);
+    }
+
+    .scribekit-docs-nav-toggle {
+        display: inline-flex;
+    }
+
+    .scribekit-docs-groups {
+        display: none;
+        margin-top: 12px;
+    }
+
+    .scribekit-docs-groups.is-open {
+        display: block;
+    }
+
+    .scribekit-docs-page {
+        flex-direction: column;
+    }
+
+    .scribekit-docs-toc {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scribekit-docs-palette {
+        animation: none;
+    }
+
+    .scribekit-docs-tab-indicator,
+    .scribekit-docs-toc-indicator,
+    .scribekit-docs-search-trigger,
+    .scribekit-docs-tab,
+    .scribekit-docs-navitem,
+    .scribekit-docs-toc-link,
+    .scribekit-docs-feedback-btn,
+    .scribekit-docs-prevnext-card,
+    .scribekit-docs-section-card,
+    .scribekit-docs-section-arrow {
+        transition: none;
+    }
+}
+
+/* Shared pop-in for the command palette. */
+@keyframes scribekit-pop {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

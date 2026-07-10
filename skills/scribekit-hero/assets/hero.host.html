@@ -1,0 +1,47 @@
+<!--
+  scribekit-hero :: hero render host
+  ===========================
+  The ONE place component + settings + post-params are wired together. The skill copies this file
+  into the session scratchpad and string-replaces the three {{...}} tokens with absolute file://
+  paths before screenshotting it with headless Chrome (see the /scribekit-hero skill). Do not render a project's
+  hero from this file in place; it is a template with unresolved imports.
+
+  TOKENS the skill fills:
+    {{HERO_COMPONENT}} - file:// path to the skill's assets/hero.js (renderHero).
+    {{HERO_SETTINGS}}  - file:// path to the project's blog/hero.settings.js (brand + gradients).
+    {{HERO_PARAMS}}    - file:// path to the post's blog/<slug>/hero.js (default export: a params
+                         object, or a (locale) => params function for multi-language posts).
+
+  LANGUAGE: the render picks the locale from the URL query, e.g. file://<copy>?lang=fr. A params
+  function receives that code and returns its language's text; a plain params object ignores it.
+  The post file owns i18n - this host just forwards the locale.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+</head>
+<body>
+<script type="module">
+    import { renderHero } from "{{HERO_COMPONENT}}";
+    import { brand, gradients } from "{{HERO_SETTINGS}}";
+    import params from "{{HERO_PARAMS}}";
+
+    const locale = new URLSearchParams(location.search).get("lang") || undefined;
+    const post = typeof params === "function" ? params(locale) : params;
+
+    // Pick the gradient by name (preferred) or index; fall back to the first defined gradient.
+    const pick = post.gradient;
+    const gradient =
+        gradients.find((g) => g.name === pick) ||
+        (typeof pick === "number" ? gradients[pick] : undefined) ||
+        gradients[0];
+
+    // Byline is post-controlled: a hero shows one only when its post defines `byline`.
+    // The brand byline then fills in any field the post leaves out (e.g. a shared avatar);
+    // a post with no `byline` renders without one, ignoring any brand default.
+    const byline = post.byline ? { ...brand.byline, ...post.byline } : undefined;
+    renderHero({ ...brand, ...post, byline, gradient });
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+    "name": "scribekit-demo",
+    "private": true,
+    "version": "1.0.0",
+    "description": "In-repo Next.js App Router demo. Imports the built package directly from ../dist (no symlink) and shares the repo-root node_modules, so a single React instance is used.",
+    "type": "module",
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start"
+    }
+}

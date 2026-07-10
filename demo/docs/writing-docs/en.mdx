@@ -1,0 +1,27 @@
+---
+title: "Writing docs pages"
+description: "The front-matter contract, the MDX body, and sidebar icons."
+tab: "Guides"
+group: "Recipes"
+order: 1
+icon: "document"
+updated: "2026-07-09"
+---
+
+A docs page is one folder with an MDX file inside. Its front-matter drives everything
+the components render.
+
+## Front-matter
+
+`title` and `description` become the H1 and the lead. `tab`, `group`, and `order` place
+the page in the sidebar. `updated`, `icon`, `keywords`, and `image` are optional.
+
+## MDX body
+
+Write standard MDX. `##` and `###` headings get anchor ids injected automatically, so
+the "On this page" minimap and its scroll-spy just work.
+
+## Icons
+
+`icon` names a glyph from the built-in set - `book`, `rocket`, `gear`, `globe`, and more.
+Unknown names fall back to a neutral document icon, or pass your own `renderIcon`.

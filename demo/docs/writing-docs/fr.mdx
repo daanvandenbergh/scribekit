@@ -1,0 +1,27 @@
+---
+title: "Rédiger des pages de documentation"
+description: "Le contrat des front-matter, le corps MDX, et les icônes de la barre latérale."
+tab: "Guides"
+group: "Recipes"
+order: 1
+icon: "document"
+updated: "2026-07-09"
+---
+
+Une page de documentation est un dossier contenant un fichier MDX. Ses front-matter pilotent tout
+ce que les composants affichent.
+
+## Front-matter
+
+`title` et `description` deviennent le H1 et le chapô. `tab`, `group` et `order` placent
+la page dans la barre latérale. `updated`, `icon`, `keywords` et `image` sont optionnels.
+
+## Corps MDX
+
+Rédigez du MDX standard. Les titres `##` et `###` reçoivent automatiquement des identifiants d'ancre injectés, de sorte que
+la minicarte « Sur cette page » et son défilement synchronisé fonctionnent sans effort.
+
+## Icônes
+
+`icon` nomme un glyphe de l'ensemble intégré - `book`, `rocket`, `gear`, `globe`, et plus encore.
+Les noms inconnus se rabattent sur une icône de document neutre, ou passez votre propre `renderIcon`.

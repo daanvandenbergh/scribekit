@@ -1,0 +1,32 @@
+---
+title: "Introduction"
+description: "Ce qu'est scribekit, et comment les surfaces blog et documentation s'articulent."
+tab: "Documentation"
+group: "Get started"
+order: 1
+icon: "book"
+updated: "2026-07-09"
+---
+
+Scribekit est un petit paquet TypeScript qui transforme un dossier de fichiers MDX en un
+blog *et* un site de documentation prêts pour la production, pour l'App Router de Next.js -
+des composants serveur pour les pages, une compétence d'agent portable pour les rédiger,
+et le SEO intégré.
+
+## Vue d'ensemble
+
+Vous apportez le contenu (un dossier par page) et l'habillage du site (votre barre de
+navigation et votre pied de page). Scribekit affiche le corps : la grille des articles,
+l'article, la navigation de la documentation et les données structurées.
+
+## Ce que vous obtenez
+
+- Une vue d'ensemble de **blog** recherchable et paginée, avec des pages d'article.
+- Un site de **documentation** à onglets et groupé, avec une palette de commandes et une minicarte à défilement synchronisé.
+- Des `Metadata`, du JSON-LD et des sitemaps i18n dérivés de la configuration de votre site.
+
+## Comment tout s'articule
+
+Les classes `Blog` et `Docs` lisent votre MDX au moment de la compilation. Leurs données
+alimentent les composants React sous forme de props, de sorte que le système de fichiers
+ne franchit jamais la frontière du bundle client.

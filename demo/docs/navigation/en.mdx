@@ -1,0 +1,32 @@
+---
+title: "Navigation & tabs"
+description: "How tab, group, and order front-matter assemble the docs sidebar."
+tab: "Documentation"
+group: "Configuration"
+order: 2
+icon: "list"
+updated: "2026-07-09"
+---
+
+The docs sidebar is assembled from each page's front-matter - there is no separate
+navigation config file to keep in sync.
+
+## Tabs
+
+A page's `tab` places it under a top-level section. When more than one tab exists, the
+sidebar shows a tab switcher; a single tab hides it.
+
+## Groups
+
+Pages sharing a `group` are listed together under an uppercase heading. Pages with no
+`group` fall into an unlabelled bucket.
+
+## Ordering
+
+`order` sorts pages within their group, ascending. Unordered pages sort after ordered
+ones, then alphabetically - so a folder is always deterministic.
+
+## Hidden pages
+
+Set `hidden: true` to keep a page routable but out of the sidebar, prev/next, and the
+index - handy for drafts and deep links.

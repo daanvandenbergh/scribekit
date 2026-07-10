@@ -1,0 +1,62 @@
+:root {
+    color-scheme: light;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #0b1b36;
+    background: #fff;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* Top bar: sticky so the docs' sticky tab bar / columns stack neatly beneath it. */
+.demo-nav {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    height: 56px;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid #eaeef4;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.demo-nav a {
+    color: #6d5df6;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.demo-nav .brand {
+    color: #0b1b36;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+    margin-right: auto;
+}
+
+.demo-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+}
+
+/* The docs app owns its own 64px DocsNavbar; stack the sticky tab bar (below the 64px navbar) and
+   the sidebar/ToC columns (below navbar + 47px tab bar) so nothing overlaps while scrolling. */
+.scribekit-docs {
+    --scribekit-docs-tabbar-top: 64px;
+    --scribekit-docs-content-top: 111px;
+    --scribekit-docs-body-min-height: calc(100vh - 111px);
+}

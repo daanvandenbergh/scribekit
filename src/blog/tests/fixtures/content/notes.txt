@@ -1,0 +1,1 @@
+Not a post. Should be ignored by getPostSlugs (wrong extension).

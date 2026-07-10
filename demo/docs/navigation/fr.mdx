@@ -1,0 +1,32 @@
+---
+title: "Navigation et onglets"
+description: "Comment les front-matter tab, group et order assemblent la barre latérale de la documentation."
+tab: "Documentation"
+group: "Configuration"
+order: 2
+icon: "list"
+updated: "2026-07-09"
+---
+
+La barre latérale de la documentation est assemblée à partir des front-matter de chaque page - il n'y a pas de
+fichier de configuration de navigation séparé à maintenir synchronisé.
+
+## Onglets
+
+Le `tab` d'une page la place sous une section de premier niveau. Lorsqu'il existe plus d'un onglet, la
+barre latérale affiche un sélecteur d'onglets ; un onglet unique le masque.
+
+## Groupes
+
+Les pages partageant un même `group` sont listées ensemble sous un intitulé en majuscules. Les pages sans
+`group` tombent dans un ensemble sans étiquette.
+
+## Ordonnancement
+
+`order` trie les pages au sein de leur groupe, par ordre croissant. Les pages sans ordre sont triées après les pages ordonnées,
+puis par ordre alphabétique - ainsi un dossier est toujours déterministe.
+
+## Pages masquées
+
+Définissez `hidden: true` pour garder une page accessible par route mais hors de la barre latérale, de la navigation précédent/suivant et de
+l'index - pratique pour les brouillons et les liens profonds.

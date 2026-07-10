@@ -1,0 +1,24 @@
+---
+title: "Getting started with Claude Code Blog"
+description: "Wire a Next.js blog together with three small route files and a folder of MDX."
+date: "2026-07-06"
+keywords:
+    - next.js
+    - blog
+    - mdx
+categories:
+    - Guides
+author: "Neil Kakkar"
+author-image: "/assets/blog/authors/neil-kakkar.svg"
+image: "/assets/blog/getting-started/hero.en.jpg"
+---
+
+## What this is
+
+This post lives at `demo/blog/getting-started/en.mdx`. The folder name is the slug, so it is
+served at `/blog/getting-started`.
+
+## How it works
+
+The `Blog` class reads this folder and `<BlogOverview>` / `<BlogPage>` render it. You write
+Markdown; the package handles the routing metadata, SEO JSON-LD, and the post sidebar.

@@ -1,0 +1,34 @@
+---
+title: "Installation"
+description: "Install the package, wire up the peer dependencies, and import the stylesheet."
+tab: "Documentation"
+group: "Get started"
+order: 2
+icon: "rocket"
+updated: "2026-07-09"
+---
+
+Scribekit ships as an npm package with a server entry and a `/react` entry for the
+components.
+
+## Install the package
+
+```bash
+npm install @daanvandenbergh/scribekit
+```
+
+## Peer dependencies
+
+The React components expect `next`, `react`, `react-dom`, and `next-mdx-remote` in
+your app - they are peer dependencies, so your app controls the versions.
+
+## Import the stylesheet
+
+Import the bundled stylesheet once, app-wide (for example in your root layout):
+
+```tsx
+import "@daanvandenbergh/scribekit/styles.css";
+```
+
+Every colour reads from a `--scribekit-*` custom property, so you can theme it to match
+your brand without touching the components.

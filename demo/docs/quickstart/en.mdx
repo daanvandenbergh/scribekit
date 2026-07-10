@@ -1,0 +1,35 @@
+---
+title: "Quickstart"
+description: "Create a Docs instance, add the route tree, and write your first page."
+tab: "Documentation"
+group: "Get started"
+order: 3
+icon: "workflow"
+updated: "2026-07-09"
+---
+
+Five minutes from install to a live docs page.
+
+## Create an instance
+
+Point a `Docs` instance at your content directory and give it your site config:
+
+```ts
+import { Docs } from "@daanvandenbergh/scribekit";
+
+export const docs = new Docs({
+  contentDir: "./docs",
+  siteUrl: "https://example.com",
+  brandName: "Example",
+});
+```
+
+## Add the routes
+
+Render `DocsSidebar` in a layout and `DocsPage` in a `[slug]` route. Use
+`generateStaticParams` with `docs.getDocRefs()` so every page is prerendered.
+
+## Write your first page
+
+Create `docs/introduction/en.mdx` with `title`, `description`, `tab`, `group`, and
+`order` front-matter. It shows up in the sidebar immediately.

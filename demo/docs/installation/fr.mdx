@@ -1,0 +1,34 @@
+---
+title: "Installation"
+description: "Installez le paquet, configurez les dépendances de pair, et importez la feuille de style."
+tab: "Documentation"
+group: "Get started"
+order: 2
+icon: "rocket"
+updated: "2026-07-09"
+---
+
+Scribekit est distribué comme un paquet npm avec une entrée serveur et une entrée `/react`
+pour les composants.
+
+## Installer le paquet
+
+```bash
+npm install @daanvandenbergh/scribekit
+```
+
+## Dépendances de pair
+
+Les composants React attendent `next`, `react`, `react-dom` et `next-mdx-remote` dans
+votre application - ce sont des dépendances de pair, donc votre application contrôle les versions.
+
+## Importer la feuille de style
+
+Importez la feuille de style fournie une seule fois, à l'échelle de l'application (par exemple dans votre layout racine) :
+
+```tsx
+import "@daanvandenbergh/scribekit/styles.css";
+```
+
+Chaque couleur provient d'une propriété personnalisée `--scribekit-*`, ce qui vous permet de la thématiser à l'image de
+votre marque sans toucher aux composants.

@@ -1,0 +1,37 @@
+---
+title: "Theming"
+description: "Recolour and resize scribekit with the --scribekit-* design tokens."
+tab: "Documentation"
+group: "Configuration"
+order: 1
+icon: "gear"
+updated: "2026-07-09"
+---
+
+Scribekit is themed entirely through CSS custom properties - no build step, no config.
+
+## Design tokens
+
+Every colour, radius, and width reads from a `--scribekit-*` variable with a sensible
+default. Override any of them from your own CSS.
+
+## Overriding colours
+
+Set the tokens on `:root` (or any ancestor) to rebrand the components:
+
+```css
+:root {
+  --scribekit-primary: #6d5df6;
+  --scribekit-ink: #0b1b36;
+}
+```
+
+### Dark mode
+
+Because the defaults live in `var(--token, default)`, a `@media (prefers-color-scheme:
+dark)` block that redefines the tokens is all you need.
+
+## Layout widths
+
+`--scribekit-doc-width`, `--scribekit-docs-nav-width`, and `--scribekit-docs-toc-width`
+control the three-column docs shell.

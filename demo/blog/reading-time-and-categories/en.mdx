@@ -1,0 +1,24 @@
+---
+title: "Reading time and categories on cards"
+description: "How the overview shows an estimated read time and category badges for every post."
+date: "2026-07-02"
+keywords:
+    - reading time
+    - categories
+    - overview
+categories:
+    - Reference
+author: "Maya Lindholm"
+author-image: "/assets/blog/authors/maya-lindholm.svg"
+image: "/assets/blog/reading-time-and-categories/hero.en.jpg"
+---
+
+## Reading time is precomputed
+
+The `Blog` class estimates a whole-minute reading time from each post's body at parse time, so
+the overview can show "N min read" without loading the full article.
+
+## Categories drive the filters
+
+List one or more `categories` in front-matter and the overview turns them into filter buttons -
+unless every post shares a single category, in which case the bar is hidden.

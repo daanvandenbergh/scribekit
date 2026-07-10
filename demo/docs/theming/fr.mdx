@@ -1,0 +1,37 @@
+---
+title: "Thématisation"
+description: "Recolorez et redimensionnez scribekit avec les jetons de design --scribekit-*."
+tab: "Documentation"
+group: "Configuration"
+order: 1
+icon: "gear"
+updated: "2026-07-09"
+---
+
+Scribekit se thématise entièrement via des propriétés personnalisées CSS - sans étape de compilation, sans configuration.
+
+## Jetons de design
+
+Chaque couleur, rayon et largeur provient d'une variable `--scribekit-*` avec une valeur
+par défaut sensée. Redéfinissez n'importe laquelle depuis votre propre CSS.
+
+## Redéfinir les couleurs
+
+Définissez les jetons sur `:root` (ou n'importe quel ancêtre) pour rehabiller les composants :
+
+```css
+:root {
+  --scribekit-primary: #6d5df6;
+  --scribekit-ink: #0b1b36;
+}
+```
+
+### Mode sombre
+
+Comme les valeurs par défaut vivent dans `var(--token, default)`, un bloc `@media (prefers-color-scheme:
+dark)` qui redéfinit les jetons suffit amplement.
+
+## Largeurs de mise en page
+
+`--scribekit-doc-width`, `--scribekit-docs-nav-width` et `--scribekit-docs-toc-width`
+contrôlent la structure à trois colonnes de la documentation.

@@ -1,0 +1,24 @@
+---
+title: "Writing posts with MDX"
+description: "Front-matter, headings, and how the slug is derived from the file name."
+date: "2026-07-07"
+keywords:
+    - mdx
+    - blog
+    - markdown
+categories:
+    - Tutorials
+author: "Neil Kakkar"
+author-image: "/assets/blog/authors/neil-kakkar.svg"
+image: "/assets/blog/writing-with-mdx/hero.en.jpg"
+---
+
+## Front-matter
+
+Every post opens with quoted front-matter: a `title`, a `description`, and an ISO `date`.
+Always quote the date so YAML keeps it a string instead of parsing it to a `Date`.
+
+## Headings become a minimap
+
+The `##` and `###` headings in the body feed the post sidebar's "On this page" minimap and
+the reading-time estimate - no extra setup needed.

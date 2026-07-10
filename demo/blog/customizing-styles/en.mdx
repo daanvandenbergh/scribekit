@@ -1,0 +1,24 @@
+---
+title: "Customizing the blog styles"
+description: "Override the ccb- CSS custom properties to match your brand in a few lines."
+date: "2026-07-03"
+keywords:
+    - css
+    - theming
+    - design
+categories:
+    - Tutorials
+author: "Maya Lindholm"
+author-image: "/assets/blog/authors/maya-lindholm.svg"
+image: "/assets/blog/customizing-styles/hero.en.jpg"
+---
+
+## Everything is a custom property
+
+Colours read from `--ccb-*` variables with sensible light-theme defaults. Set `--ccb-primary`
+on `:root` and the cards, links, and filter buttons all follow.
+
+## Scoped by default
+
+Every class is namespaced `ccb-`, and the post body is scoped under `.ccb-prose`, so nothing
+here leaks into the rest of your site.

@@ -1,0 +1,35 @@
+---
+title: "Démarrage rapide"
+description: "Créez une instance Docs, ajoutez l'arborescence de routes, et rédigez votre première page."
+tab: "Documentation"
+group: "Get started"
+order: 3
+icon: "workflow"
+updated: "2026-07-09"
+---
+
+Cinq minutes entre l'installation et une page de documentation en ligne.
+
+## Créer une instance
+
+Pointez une instance `Docs` vers votre répertoire de contenu et donnez-lui la configuration de votre site :
+
+```ts
+import { Docs } from "@daanvandenbergh/scribekit";
+
+export const docs = new Docs({
+  contentDir: "./docs",
+  siteUrl: "https://example.com",
+  brandName: "Example",
+});
+```
+
+## Ajouter les routes
+
+Affichez `DocsSidebar` dans un layout et `DocsPage` dans une route `[slug]`. Utilisez
+`generateStaticParams` avec `docs.getDocRefs()` afin que chaque page soit prérendue.
+
+## Rédiger votre première page
+
+Créez `docs/introduction/en.mdx` avec les front-matter `title`, `description`, `tab`, `group` et
+`order`. Elle apparaît immédiatement dans la barre latérale.
