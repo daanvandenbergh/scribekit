@@ -1,15 +1,15 @@
 ---
 title: "Installation"
-description: "Install the package, wire up the peer dependencies, and import the stylesheet."
+description: "Install the package and its peer dependencies, and import the stylesheet."
 tab: "Documentation"
 group: "Get started"
 order: 2
 icon: "rocket"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-Scribekit ships as an npm package with a server entry and a `/react` entry for the
-components.
+Install Scribekit into an existing Next.js App Router app and import its stylesheet. You need
+Next 14 or newer and React 18 or newer.
 
 ## Install the package
 
@@ -17,10 +17,29 @@ components.
 npm install @daanvandenbergh/scribekit
 ```
 
-## Peer dependencies
+Scribekit renders MDX with `next-mdx-remote`, which is an **optional** peer dependency, so npm
+will not install it for you. Add it explicitly:
 
-The React components expect `next`, `react`, `react-dom`, and `next-mdx-remote` in
-your app - they are peer dependencies, so your app controls the versions.
+```bash
+npm install next-mdx-remote
+```
+
+Skip this and the package installs cleanly, then fails at your first docs page with a
+module-not-found for `next-mdx-remote/rsc`.
+
+## Check the peer dependencies
+
+You almost certainly already have the first three. In practice only `next-mdx-remote` needs adding.
+
+| Package | Range | Notes |
+| --- | --- | --- |
+| `react` | `>=18` | required |
+| `next` | `>=14` | the package does not work without it |
+| `react-dom` | `>=18` | optional peer |
+| `next-mdx-remote` | `^5 \|\| ^6` | optional peer, install it yourself |
+
+The optional peers produce no npm warning when they are missing, so a gap surfaces as a build
+error rather than an install error.
 
 ## Import the stylesheet
 
@@ -30,5 +49,5 @@ Import the bundled stylesheet once, app-wide (for example in your root layout):
 import "@daanvandenbergh/scribekit/styles.css";
 ```
 
-Every colour reads from a `--scribekit-*` custom property, so you can theme it to match
-your brand without touching the components.
+Colours, fonts, shadows, and widths read from `--scribekit-*` custom properties with inline
+fallbacks, so you can restyle the components without touching them. See [Theming](/docs/theming).

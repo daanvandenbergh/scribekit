@@ -5,14 +5,18 @@ tab: "Documentation"
 group: "Get started"
 order: 3
 icon: "workflow"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-Cinq minutes entre l'installation et une page de documentation en ligne.
+À la fin de cette page, vous disposez d'une instance `Docs`, d'une route `[lang]/docs/[slug]` et
+d'une première page affichée dans la barre latérale. Installez d'abord le paquet, y compris
+`next-mdx-remote` : voir [Installation](/fr/docs/installation).
 
 ## Créer une instance
 
-Pointez une instance `Docs` vers votre répertoire de contenu et donnez-lui la configuration de votre site :
+Pointez une instance `Docs` vers votre répertoire de contenu et donnez-lui la configuration de votre
+site. `contentDir` est résolu par rapport à la racine de l'application (le répertoire depuis lequel
+elle s'exécute), et non par rapport à la racine du dépôt.
 
 ```ts
 import { Docs } from "@daanvandenbergh/scribekit";
@@ -24,12 +28,76 @@ export const docs = new Docs({
 });
 ```
 
+`siteUrl` et `brandName` doivent tous deux être définis avant que les méthodes SEO (`docMetadata`,
+`docJsonLd`, `sitemapEntries`) puissent fonctionner.
+
 ## Ajouter les routes
 
-Affichez `DocsSidebar` dans un layout et `DocsPage` dans une route `[slug]`. Utilisez
-`generateStaticParams` avec `docs.getDocRefs()` afin que chaque page soit prérendue.
+La documentation est servie par langue : l'arborescence est donc `app/[lang]/docs/[slug]`. Affichez
+`DocsSidebar` dans le layout, en lui passant l'arbre de navigation construit côté serveur :
+
+```tsx
+import { DocsSidebar } from "@daanvandenbergh/scribekit/react";
+import { docs } from "./_docs";
+
+export default async function DocsLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  return (
+    <>
+      <DocsSidebar nav={docs.getNavTree(lang)} lang={lang} />
+      {children}
+    </>
+  );
+}
+```
+
+Affichez ensuite `DocsPage` dans la route `[slug]`. `getDocRefs()` renvoie une paire
+`{ slug, lang }` par fichier de page, ce qu'attend précisément `generateStaticParams` :
+
+```tsx
+import { DocsPage } from "@daanvandenbergh/scribekit/react";
+import { docs } from "../_docs";
+
+export function generateStaticParams() {
+  return docs.getDocRefs().map((ref) => ({ lang: ref.lang, slug: ref.slug }));
+}
+
+export default async function DocSlugPage({
+  params,
+}: {
+  params: Promise<{ lang: string; slug: string }>;
+}) {
+  const { lang, slug } = await params;
+  return <DocsPage docs={docs} slug={slug} lang={lang} />;
+}
+```
+
+Si vous utilisez la configuration `redirects` pour renommer un slug, ajoutez également
+`docs.getRedirectRefs()` à `generateStaticParams`, sinon l'ancien slug renvoie une 404 au niveau du
+routeur avant de pouvoir rediriger.
 
 ## Rédiger votre première page
 
-Créez `docs/introduction/en.mdx` avec les front-matter `title`, `description`, `tab`, `group` et
-`order`. Elle apparaît immédiatement dans la barre latérale.
+Le nom du dossier est le slug, et le nom du fichier est la langue. Créez `docs/hello/en.mdx` :
+
+```mdx
+---
+title: "Hello"
+description: "My first docs page."
+tab: "Documentation"
+group: "Get started"
+order: 1
+icon: "book"
+---
+
+The body starts at `##` - the title above renders the H1.
+```
+
+`order` doit être un nombre nu. Entre guillemets (`order: "1"`), il est silencieusement ignoré et la
+page tombe en bas de son groupe. La page apparaît dans la barre latérale dès que le fichier existe.

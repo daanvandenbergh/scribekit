@@ -1,37 +1,85 @@
 ---
 title: "Thématisation"
-description: "Recolorez et redimensionnez scribekit avec les jetons de design --scribekit-*."
+description: "Recolorez et redimensionnez Scribekit avec les jetons de design --scribekit-*."
 tab: "Documentation"
 group: "Configuration"
 order: 1
 icon: "gear"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-Scribekit se thématise entièrement via des propriétés personnalisées CSS - sans étape de compilation, sans configuration.
+Les composants de Scribekit tirent leurs couleurs, leurs polices, leurs ombres et leurs largeurs de
+propriétés personnalisées `--scribekit-*`, chacune dotée d'une valeur de repli. Redéfinissez-en
+n'importe laquelle dans votre propre CSS, après avoir importé
+`@daanvandenbergh/scribekit/styles.css` (voir [Installation](/fr/docs/installation)). Sans étape de
+compilation ni configuration de thème.
 
-## Jetons de design
+Deux choses ne sont pas exposées en jetons : les rayons de bordure sont des valeurs fixes dans la
+feuille de style, et quatre ombres portées codent leur couleur en dur, conservant donc une teinte
+claire sous un thème sombre.
 
-Chaque couleur, rayon et largeur provient d'une variable `--scribekit-*` avec une valeur
-par défaut sensée. Redéfinissez n'importe laquelle depuis votre propre CSS.
+## Référence des jetons
 
-## Redéfinir les couleurs
+Les jetons les plus courants et leurs valeurs par défaut.
 
-Définissez les jetons sur `:root` (ou n'importe quel ancêtre) pour rehabiller les composants :
+| Jeton | Par défaut | Contrôle |
+| --- | --- | --- |
+| `--scribekit-primary` | `#2563EB` | liens, élément de nav actif, boutons, indicateur du sommaire |
+| `--scribekit-on-primary` | `#ffffff` | texte sur une surface remplie en primaire |
+| `--scribekit-ink` | `#0b1b36` | titres et corps de texte |
+| `--scribekit-ink-muted` | `#4a5568` | texte secondaire |
+| `--scribekit-surface` | `#ffffff` | fond des pages et des cartes |
+| `--scribekit-bg-subtle` | `#f7f9fc` | panneaux en retrait |
+| `--scribekit-border` | `#e5eaf0` | filets et bordures de cartes |
+| `--scribekit-code-bg` | `#0b1b36` | le bloc de code |
+| `--scribekit-font-sans` | `"Inter", ui-sans-serif, system-ui, ...` | police du corps |
+| `--scribekit-doc-width` | `760px` | la colonne d'article |
+| `--scribekit-docs-nav-width` | `300px` | la barre latérale gauche |
+| `--scribekit-docs-toc-width` | `250px` | le sommaire de droite |
+
+## Redéfinir un jeton
+
+Définissez les jetons sur `:root` (ou n'importe quel ancêtre) pour restyler les composants :
 
 ```css
 :root {
-  --scribekit-primary: #6d5df6;
-  --scribekit-ink: #0b1b36;
+  --scribekit-primary: #0f766e;
+  --scribekit-ink: #111827;
+  --scribekit-surface: #fdfdfc;
 }
 ```
 
-### Mode sombre
+`--scribekit-primary` est le plus structurant : il pilote les liens, l'élément actif de la barre
+latérale, les boutons et l'indicateur du sommaire.
 
-Comme les valeurs par défaut vivent dans `var(--token, default)`, un bloc `@media (prefers-color-scheme:
-dark)` qui redéfinit les jetons suffit amplement.
+### Passer en mode sombre
 
-## Largeurs de mise en page
+Scribekit ne fournit aucun thème sombre : la palette vous revient. Comme chaque valeur par défaut
+vit dans `var(--token, repli)`, il suffit de redéfinir les jetons dans une media query :
 
-`--scribekit-doc-width`, `--scribekit-docs-nav-width` et `--scribekit-docs-toc-width`
-contrôlent la structure à trois colonnes de la documentation.
+```css
+@media (prefers-color-scheme: dark) {
+  :root {
+    --scribekit-surface: #0b1120;
+    --scribekit-bg-subtle: #131c31;
+    --scribekit-ink: #e6edf7;
+    --scribekit-ink-muted: #94a3b8;
+    --scribekit-border: #1f2c47;
+    --scribekit-code-bg: #05070d;
+  }
+}
+```
+
+Les quatre ombres codées en dur ne suivront pas et conserveront une légère teinte claire.
+
+## Redimensionner la mise en page
+
+`--scribekit-doc-width`, `--scribekit-docs-nav-width` et `--scribekit-docs-toc-width` contrôlent les
+trois colonnes de la documentation. La barre latérale et le sommaire collants se placent d'eux-mêmes
+sous les éléments réellement rendus au-dessus d'eux - la barre de navigation, la barre d'onglets, ou
+les deux : modifier `--scribekit-docs-navbar-height` (par défaut `64px`) ou
+`--scribekit-docs-tabbar-height` (par défaut `47px`) suffit, les colonnes suivent.
+
+Ne définissez `--scribekit-docs-content-top` que si la documentation est placée sous vos propres
+éléments d'interface, par exemple un en-tête global au-dessus de `.scribekit-docs` : cette variable
+impose le décalage auquel les colonnes se figent, et la hauteur qu'elles soustraient de la fenêtre.

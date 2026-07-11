@@ -21,6 +21,7 @@ server modules (e.g. `comments/`, `database/`) are new siblings under `src/`.
 @node_modules/@daanvandenbergh/claudekit/rules/todo.md
 @node_modules/@daanvandenbergh/claudekit/rules/ts_modular_coding.md
 @node_modules/@daanvandenbergh/claudekit/skills/ts/audit-tests/claude-rules.md
+@node_modules/@daanvandenbergh/claudekit/rules/active_sessions.md
 
 ## Web Testing
 - After editing or developing any HTML (pages, components, markup), always inspect and

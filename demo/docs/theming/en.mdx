@@ -1,37 +1,82 @@
 ---
 title: "Theming"
-description: "Recolour and resize scribekit with the --scribekit-* design tokens."
+description: "Recolour and resize Scribekit with the --scribekit-* design tokens."
 tab: "Documentation"
 group: "Configuration"
 order: 1
 icon: "gear"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-Scribekit is themed entirely through CSS custom properties - no build step, no config.
+Scribekit's components read their colours, fonts, shadows, and widths from `--scribekit-*` custom
+properties, each with an inline fallback. Override any of them in your own CSS, after importing
+`@daanvandenbergh/scribekit/styles.css` (see [Installation](/docs/installation)). There is no build
+step and no theme config.
 
-## Design tokens
+Two things are not tokenised: border radii are fixed values in the stylesheet, and four box-shadows
+hardcode their colour, so they keep a light-theme tint under a dark override.
 
-Every colour, radius, and width reads from a `--scribekit-*` variable with a sensible
-default. Override any of them from your own CSS.
+## Token reference
 
-## Overriding colours
+The most common tokens and their shipped defaults.
 
-Set the tokens on `:root` (or any ancestor) to rebrand the components:
+| Token | Default | Controls |
+| --- | --- | --- |
+| `--scribekit-primary` | `#2563EB` | links, active nav item, buttons, the ToC indicator |
+| `--scribekit-on-primary` | `#ffffff` | text on a primary-filled surface |
+| `--scribekit-ink` | `#0b1b36` | headings and body text |
+| `--scribekit-ink-muted` | `#4a5568` | secondary text |
+| `--scribekit-surface` | `#ffffff` | page and card background |
+| `--scribekit-bg-subtle` | `#f7f9fc` | inset panels |
+| `--scribekit-border` | `#e5eaf0` | hairlines and card borders |
+| `--scribekit-code-bg` | `#0b1b36` | the code-block slab |
+| `--scribekit-font-sans` | `"Inter", ui-sans-serif, system-ui, ...` | body font |
+| `--scribekit-doc-width` | `760px` | the article column |
+| `--scribekit-docs-nav-width` | `300px` | the left sidebar |
+| `--scribekit-docs-toc-width` | `250px` | the right minimap |
+
+## Override a token
+
+Set the tokens on `:root` (or any ancestor) to restyle the components:
 
 ```css
 :root {
-  --scribekit-primary: #6d5df6;
-  --scribekit-ink: #0b1b36;
+  --scribekit-primary: #0f766e;
+  --scribekit-ink: #111827;
+  --scribekit-surface: #fdfdfc;
 }
 ```
 
-### Dark mode
+`--scribekit-primary` does the most work: it drives links, the active sidebar item, buttons, and the
+"On this page" indicator.
 
-Because the defaults live in `var(--token, default)`, a `@media (prefers-color-scheme:
-dark)` block that redefines the tokens is all you need.
+### Theme for dark mode
 
-## Layout widths
+Scribekit ships no dark theme, so you supply the palette. Because every default lives in
+`var(--token, fallback)`, redefining the tokens in a media query is enough:
 
-`--scribekit-doc-width`, `--scribekit-docs-nav-width`, and `--scribekit-docs-toc-width`
-control the three-column docs shell.
+```css
+@media (prefers-color-scheme: dark) {
+  :root {
+    --scribekit-surface: #0b1120;
+    --scribekit-bg-subtle: #131c31;
+    --scribekit-ink: #e6edf7;
+    --scribekit-ink-muted: #94a3b8;
+    --scribekit-border: #1f2c47;
+    --scribekit-code-bg: #05070d;
+  }
+}
+```
+
+The four hardcoded shadows will not follow, so they stay slightly light-tinted in dark mode.
+
+## Resize the layout
+
+`--scribekit-doc-width`, `--scribekit-docs-nav-width`, and `--scribekit-docs-toc-width` control the
+three docs columns. The sticky sidebar and minimap park themselves below whatever chrome is actually
+rendered above them - the navbar, the tab bar, or both - so changing `--scribekit-docs-navbar-height`
+(default `64px`) or `--scribekit-docs-tabbar-height` (default `47px`) is enough; the columns follow.
+
+Set `--scribekit-docs-content-top` only when the docs shell sits under chrome of your own, such as an
+app-wide header above `.scribekit-docs`: it overrides the offset the columns stick at, and the height
+they subtract from the viewport.

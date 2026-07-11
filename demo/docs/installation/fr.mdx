@@ -1,15 +1,15 @@
 ---
 title: "Installation"
-description: "Installez le paquet, configurez les dépendances de pair, et importez la feuille de style."
+description: "Installez le paquet et ses dépendances de pair, puis importez la feuille de style."
 tab: "Documentation"
 group: "Get started"
 order: 2
 icon: "rocket"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-Scribekit est distribué comme un paquet npm avec une entrée serveur et une entrée `/react`
-pour les composants.
+Installez Scribekit dans une application Next.js App Router existante, puis importez sa feuille de
+style. Il vous faut Next 14 ou plus récent et React 18 ou plus récent.
 
 ## Installer le paquet
 
@@ -17,18 +17,40 @@ pour les composants.
 npm install @daanvandenbergh/scribekit
 ```
 
-## Dépendances de pair
+Scribekit affiche le MDX avec `next-mdx-remote`, une dépendance de pair **optionnelle** : npm ne
+l'installera donc pas pour vous. Ajoutez-la explicitement :
 
-Les composants React attendent `next`, `react`, `react-dom` et `next-mdx-remote` dans
-votre application - ce sont des dépendances de pair, donc votre application contrôle les versions.
+```bash
+npm install next-mdx-remote
+```
+
+Sans cette étape, le paquet s'installe correctement, puis échoue sur votre première page de
+documentation avec un module introuvable pour `next-mdx-remote/rsc`.
+
+## Vérifier les dépendances de pair
+
+Vous avez presque certainement déjà les trois premières. En pratique, seul `next-mdx-remote` reste à
+ajouter.
+
+| Paquet | Version | Remarques |
+| --- | --- | --- |
+| `react` | `>=18` | requis |
+| `next` | `>=14` | le paquet ne fonctionne pas sans lui |
+| `react-dom` | `>=18` | dépendance de pair optionnelle |
+| `next-mdx-remote` | `^5 \|\| ^6` | optionnelle, à installer vous-même |
+
+Les dépendances optionnelles ne déclenchent aucun avertissement npm lorsqu'elles manquent : l'absence
+se manifeste donc à la compilation, pas à l'installation.
 
 ## Importer la feuille de style
 
-Importez la feuille de style fournie une seule fois, à l'échelle de l'application (par exemple dans votre layout racine) :
+Importez la feuille de style fournie une seule fois, à l'échelle de l'application (par exemple dans
+votre layout racine) :
 
 ```tsx
 import "@daanvandenbergh/scribekit/styles.css";
 ```
 
-Chaque couleur provient d'une propriété personnalisée `--scribekit-*`, ce qui vous permet de la thématiser à l'image de
-votre marque sans toucher aux composants.
+Les couleurs, les polices, les ombres et les largeurs proviennent de propriétés personnalisées
+`--scribekit-*` dotées de valeurs de repli, ce qui vous permet de restyler les composants sans y
+toucher. Voir [Thématisation](/fr/docs/theming).

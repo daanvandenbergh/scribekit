@@ -5,28 +5,59 @@ tab: "Documentation"
 group: "Configuration"
 order: 2
 icon: "list"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-The docs sidebar is assembled from each page's front-matter - there is no separate
-navigation config file to keep in sync.
+Each page declares its own place in the sidebar through its `tab`, `group`, and `order`
+front-matter. The `tabs` and `groups` options on the `Docs` instance decide the order and labels of
+the sections themselves.
 
-## Tabs
+## Place a page in a tab
 
-A page's `tab` places it under a top-level section. When more than one tab exists, the
-sidebar shows a tab switcher; a single tab hides it.
+A page's `tab` puts it under a top-level section. With more than one tab, a tab bar appears above the
+sidebar; with a single tab it is hidden entirely.
 
-## Groups
+## Group pages in the sidebar
 
-Pages sharing a `group` are listed together under an uppercase heading. Pages with no
-`group` fall into an unlabelled bucket.
+Pages sharing a `group` are listed together under an uppercase heading. Pages with no `group` fall
+into an unlabelled bucket.
 
-## Ordering
+Both `tab` and `group` are matched as exact strings, so `"Get started"` and `"Get Started"` are two
+different sections.
 
-`order` sorts pages within their group, ascending. Unordered pages sort after ordered
-ones, then alphabetically - so a folder is always deterministic.
+## Order the sections
 
-## Hidden pages
+Tabs and groups sort by their position in the `tabs` and `groups` arrays on the `Docs` instance. A
+tab or group missing from those arrays sorts after every listed one, so list them all:
 
-Set `hidden: true` to keep a page routable but out of the sidebar, prev/next, and the
-index - handy for drafts and deep links.
+```ts
+export const docs = new Docs({
+  contentDir: "./docs",
+  tabs: ["Documentation", "Guides"],
+  groups: ["Get started", "Configuration", "Recipes"],
+});
+```
+
+Pass `{ id, label }` instead of a bare string to rename a section in the UI without editing a single
+page.
+
+## Order pages within a group
+
+`order` sorts pages within their group, ascending. A page with no `order` sorts after every ordered
+page, and two pages that both lack an `order` simply keep the order they were read off disk. Two
+pages sharing the same `order` are tie-broken alphabetically by `title`.
+
+So give every page in a group its own `order`, dense from 1, if you want the sidebar to read the way
+you wrote it.
+
+`order` must be a **bare number**. Quote it (`order: "3"`) and it is silently dropped: the page keeps
+rendering, but it falls into the unordered bucket at the bottom of its group.
+
+## Hide a page from the nav
+
+Set `hidden: true` to keep a page routable while dropping it from the sidebar, prev/next, the index,
+and the sitemap. A hidden page is served `robots: noindex` and has no breadcrumb or prev/next of its
+own, so it is reachable only by a direct link. Handy for drafts and deep links.
+
+`hidden` must be a **bare boolean**. `hidden: "true"` is a string, which is silently ignored, and the
+draft stays publicly navigable.

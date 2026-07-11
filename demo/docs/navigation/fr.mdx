@@ -5,28 +5,62 @@ tab: "Documentation"
 group: "Configuration"
 order: 2
 icon: "list"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-La barre latérale de la documentation est assemblée à partir des front-matter de chaque page - il n'y a pas de
-fichier de configuration de navigation séparé à maintenir synchronisé.
+Chaque page déclare sa propre place dans la barre latérale via ses front-matter `tab`, `group` et
+`order`. Les options `tabs` et `groups` de l'instance `Docs` déterminent, elles, l'ordre et les
+libellés des sections.
 
-## Onglets
+## Placer une page dans un onglet
 
-Le `tab` d'une page la place sous une section de premier niveau. Lorsqu'il existe plus d'un onglet, la
-barre latérale affiche un sélecteur d'onglets ; un onglet unique le masque.
+Le `tab` d'une page la place sous une section de premier niveau. Avec plusieurs onglets, une barre
+d'onglets apparaît au-dessus de la barre latérale ; avec un seul onglet, elle est masquée.
 
-## Groupes
+## Regrouper les pages dans la barre latérale
 
-Les pages partageant un même `group` sont listées ensemble sous un intitulé en majuscules. Les pages sans
-`group` tombent dans un ensemble sans étiquette.
+Les pages partageant un même `group` sont listées ensemble sous un intitulé en majuscules. Les pages
+sans `group` tombent dans un ensemble sans étiquette.
 
-## Ordonnancement
+`tab` et `group` sont comparés comme des chaînes exactes : `"Get started"` et `"Get Started"` sont
+donc deux sections distinctes.
 
-`order` trie les pages au sein de leur groupe, par ordre croissant. Les pages sans ordre sont triées après les pages ordonnées,
-puis par ordre alphabétique - ainsi un dossier est toujours déterministe.
+## Ordonner les sections
 
-## Pages masquées
+Les onglets et les groupes sont triés selon leur position dans les tableaux `tabs` et `groups` de
+l'instance `Docs`. Un onglet ou un groupe absent de ces tableaux est trié après tous ceux qui y
+figurent : listez-les donc tous.
 
-Définissez `hidden: true` pour garder une page accessible par route mais hors de la barre latérale, de la navigation précédent/suivant et de
-l'index - pratique pour les brouillons et les liens profonds.
+```ts
+export const docs = new Docs({
+  contentDir: "./docs",
+  tabs: ["Documentation", "Guides"],
+  groups: ["Get started", "Configuration", "Recipes"],
+});
+```
+
+Passez `{ id, label }` au lieu d'une simple chaîne pour renommer une section dans l'interface sans
+modifier une seule page.
+
+## Ordonner les pages dans un groupe
+
+`order` trie les pages au sein de leur groupe, par ordre croissant. Une page sans `order` est triée
+après toutes les pages ordonnées, et deux pages dépourvues d'`order` conservent simplement l'ordre
+dans lequel elles ont été lues sur le disque. Deux pages partageant le même `order` sont départagées
+par ordre alphabétique de `title`.
+
+Donnez donc à chaque page d'un groupe son propre `order`, dense à partir de 1, si vous voulez que la
+barre latérale se lise comme vous l'avez écrite.
+
+`order` doit être un **nombre nu**. Entre guillemets (`order: "3"`), il est silencieusement ignoré :
+la page continue de s'afficher, mais elle tombe dans l'ensemble non ordonné, en bas de son groupe.
+
+## Masquer une page de la navigation
+
+Définissez `hidden: true` pour garder une page accessible par route tout en la retirant de la barre
+latérale, de la navigation précédent/suivant, de l'index et du sitemap. Une page masquée est servie
+avec `robots: noindex` et n'a ni fil d'Ariane ni précédent/suivant : elle n'est atteignable que par
+un lien direct. Pratique pour les brouillons et les liens profonds.
+
+`hidden` doit être un **booléen nu**. `hidden: "true"` est une chaîne, silencieusement ignorée, et le
+brouillon reste publiquement navigable.

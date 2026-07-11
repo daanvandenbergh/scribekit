@@ -195,6 +195,10 @@ once the pages were placed side by side:
 
 Name the target slug and the suggested `rewrite`/`write` invocation. Do not fix any of it here.
 
+If what you are really looking at is a corpus whose **content** you no longer trust - not two pages you can
+name, but a general "are any of these still true?" - hand that to **[deep-verify](./deep-verify.md)**, which
+re-verifies every page against the current code in parallel and tells you exactly which ones need a `rewrite`.
+
 ## Guardrails
 - **Never rename a slug or move a `<slug>/` folder.** Report them (Step 7); that is the whole contract.
 - **Never edit a page body**, and never create, delete, split, or merge pages - that is `write` /

@@ -1,27 +1,114 @@
 ---
 title: "Rédiger des pages de documentation"
-description: "Le contrat des front-matter, le corps MDX, et les icônes de la barre latérale."
+description: "La structure des fichiers, le contrat du front-matter, le corps MDX et les icônes."
 tab: "Guides"
 group: "Recipes"
 order: 1
 icon: "document"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-Une page de documentation est un dossier contenant un fichier MDX. Ses front-matter pilotent tout
-ce que les composants affichent.
+Ajoutez une page en déposant un dossier dans votre répertoire de contenu. Le nom du dossier est le
+slug, et le **nom du fichier est la langue**. Le front-matter place la page et remplit son titre, son
+chapô et sa ligne de métadonnées ; le corps MDX, lui, est la page.
 
-## Front-matter
+## Nommer correctement le fichier
 
-`title` et `description` deviennent le H1 et le chapô. `tab`, `group` et `order` placent
-la page dans la barre latérale. `updated`, `icon`, `keywords` et `image` sont optionnels.
+Seuls trois noms de fichier sont lus dans un dossier `<slug>/` :
 
-## Corps MDX
+```
+docs/
+  writing-docs/
+    en.mdx        # la page dans la locale par défaut
+    fr.mdx        # une par locale déclarée dans la configuration Docs
+```
 
-Rédigez du MDX standard. Les titres `##` et `###` reçoivent automatiquement des identifiants d'ancre injectés, de sorte que
-la minicarte « Sur cette page » et son défilement synchronisé fonctionnent sans effort.
+- `<localeParDéfaut>.mdx` (par exemple `en.mdx`) est la page dans la langue par défaut.
+- `<lang>.mdx` est une traduction, pour une locale déclarée dans votre configuration `Docs`.
+- `post.mdx` reste accepté comme repli neutre du point de vue de la langue.
 
-## Icônes
+Tout autre nom (`index.mdx`, `page.mdx`, ou une locale que vous n'avez jamais configurée) est
+**silencieusement ignoré** : aucune page, aucune erreur. Et un dossier contenant à la fois `post.mdx`
+et `en.mdx` lève `DuplicateDocError`, ce qui fait échouer la compilation entière, pas seulement cette
+page.
 
-`icon` nomme un glyphe de l'ensemble intégré - `book`, `rocket`, `gear`, `globe`, et plus encore.
-Les noms inconnus se rabattent sur une icône de document neutre, ou passez votre propre `renderIcon`.
+## Rédiger le front-matter
+
+```mdx
+---
+title: "Writing docs pages"
+description: "The file layout and the front-matter contract."
+tab: "Guides"
+group: "Recipes"
+order: 1
+icon: "document"
+updated: "2026-07-11"
+---
+```
+
+| Champ | Type | Rôle |
+| --- | --- | --- |
+| `title` | chaîne | le H1 et le libellé par défaut dans la barre latérale. Repli : le slug |
+| `description` | chaîne | le chapô, la meta description et la carte OG. Repli : `""` |
+| `tab` | chaîne | la section de premier niveau. Voir [Navigation et onglets](/fr/docs/navigation) |
+| `group` | chaîne | l'intitulé du groupe dans la barre latérale |
+| `order` | **nombre nu** | position de tri dans le groupe |
+| `icon` | chaîne | un nom de glyphe de l'ensemble intégré |
+| `label` | chaîne | un libellé plus court quand `title` est trop long |
+| `keywords` | **liste YAML** | mots-clés de recherche |
+| `image` | chaîne | l'image OG, en chemin racine commençant par une barre oblique |
+| `date` | date entre guillemets | première publication |
+| `updated` | date entre guillemets | dernière révision |
+| `hidden` | **booléen nu** | accessible par route, mais hors nav, index et sitemap |
+
+Il n'existe aucun champ `author`, `categories` ou `tags` : le lecteur ignore tout champ qu'il ne
+reconnaît pas. `readingTime` est calculé à partir du corps : ne l'écrivez jamais vous-même.
+
+### Les types sont déterminants
+
+Trois champs ne sont conservés que si leur type YAML est correct, et silencieusement ignorés sinon.
+Rien ne lève d'erreur : la page paraît correcte alors que la navigation est fausse.
+
+- `order: 3` est conservé ; `order: "3"` est ignoré, et la page tombe en bas de son groupe.
+- `hidden: true` est conservé ; `hidden: "true"` est ignoré, et le brouillon reste navigable.
+- `keywords` doit être une liste YAML. Une chaîne séparée par des virgules est ignorée.
+
+## Rédiger le corps MDX
+
+Le corps commence à `##` : `title` produit déjà le H1, n'en ajoutez donc jamais un second.
+
+Le GitHub Flavored Markdown est actif par défaut : tableaux, listes de tâches, texte barré et liens
+automatiques fonctionnent. Les greffons remark ou rehype supplémentaires passés via `mdxOptions` sont
+fusionnés avec GFM, et non substitués. Un composant personnalisé comme `<Callout>` n'affiche rien
+tant que vous ne l'enregistrez pas via la prop `components` de `DocsPage`.
+
+Les titres `##` et `###` reçoivent automatiquement des identifiants d'ancre, ce qui alimente la
+minicarte « Sur cette page » et son défilement synchronisé. Deux réserves : seuls `##` et `###` sont
+pris en compte (un `####` n'obtient ni identifiant ni entrée dans la minicarte), et si vous
+redéfinissez `h2` ou `h3` dans la prop `components` de `DocsPage`, vous devez réinjecter les
+identifiants vous-même.
+
+## Choisir une icône
+
+`icon` nomme un glyphe issu d'un ensemble intégré et fixe :
+
+`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `plug`, `link`, `mail`,
+`grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`.
+
+Tout autre nom affiche silencieusement le glyphe neutre `document` au lieu de lever une erreur : une
+faute de frappe passe donc pour un choix délibéré. Pour utiliser vos propres icônes, passez une prop
+`renderIcon` à `DocsSidebar` ou `DocsIndex`.
+
+La première page d'un groupe fournit l'icône de la carte de ce groupe sur l'index : donnez donc à la
+page qui arrive en premier une icône représentative de tout le groupe.
+
+## Traduire une page
+
+Déposez un `<lang>.mdx` à côté du fichier par défaut, dans le même dossier, pour toute locale déclarée
+dans votre configuration `Docs`. La langue est le nom du fichier, jamais un champ de front-matter.
+
+Gardez `tab`, `group`, `order` et `icon` identiques dans tous les fichiers de langue d'une page : la
+navigation est reconstruite par langue à partir des fichiers de cette langue, donc s'ils divergent,
+les barres latérales divergent. Traduisez `title`, `description`, `label` et `keywords`, et
+réorientez chaque lien interne vers son propre préfixe de locale (`/fr/docs/navigation`, et non
+`/docs/navigation`).

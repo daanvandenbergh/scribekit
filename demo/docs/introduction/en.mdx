@@ -1,30 +1,39 @@
 ---
 title: "Introduction"
-description: "What scribekit is, and how the blog and docs surfaces fit together."
+description: "What Scribekit is, and how the blog and docs surfaces fit together."
 tab: "Documentation"
 group: "Get started"
 order: 1
 icon: "book"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-Scribekit is a small TypeScript package that turns a folder of MDX files into a
-production-ready blog *and* documentation site for the Next.js App Router - server
-components for the pages, a portable agent skill for writing them, and SEO wired in.
+Scribekit is a small TypeScript package that turns a folder of MDX files into a production-ready
+blog *and* documentation site for the Next.js App Router - server components for the pages, portable
+agent skills for writing them, and SEO wired in.
 
-## Overview
+## What you bring, and what Scribekit renders
 
-You bring the content (one folder per page) and the site chrome (your navbar and
-footer). Scribekit renders the body: the post grid, the article, the docs navigation,
-and the structured data.
+You bring the content: one folder per page. How much chrome you bring depends on the surface.
+
+- For the **docs**, Scribekit ships the whole shell: the navbar, the tab bar, the sidebar, the
+  language picker, the command palette, and the minimap. You supply the logo and any right-hand
+  actions.
+- For the **blog**, you bring the page chrome (your own navbar, footer, and hero) and Scribekit
+  renders the card grid and the article.
 
 ## What you get
 
-- A searchable, paginated **blog** overview and post pages.
+- A **blog** overview with fuzzy search, category filters, and an infinite-scroll card grid (with a
+  "Load more" fallback), plus the post pages.
 - A tabbed, grouped **docs** site with a command palette and a scroll-spy minimap.
 - `Metadata`, JSON-LD, and i18n sitemaps derived from your site config.
 
 ## How it fits together
 
-The `Blog` and `Docs` classes read your MDX at build time. Their data flows into the
-React components as props, so the filesystem never crosses into the client bundle.
+The `Blog` and `Docs` classes read your MDX on the server: they are `server-only`, so the filesystem
+can never cross into the client bundle. With Next's static rendering that read happens once at build
+time.
+
+You pass the instance itself to the server components, which derive what they need and hand plain,
+serialisable data down to the interactive client parts.

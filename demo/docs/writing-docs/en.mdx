@@ -1,27 +1,111 @@
 ---
 title: "Writing docs pages"
-description: "The front-matter contract, the MDX body, and sidebar icons."
+description: "The file layout, the front-matter contract, the MDX body, and sidebar icons."
 tab: "Guides"
 group: "Recipes"
 order: 1
 icon: "document"
-updated: "2026-07-09"
+updated: "2026-07-11"
 ---
 
-A docs page is one folder with an MDX file inside. Its front-matter drives everything
-the components render.
+Add a page by dropping a folder into your content directory. The folder name is the slug, and the
+**file name is the language**. Front-matter places the page and fills its title, lead, and meta row;
+the MDX body is the page itself.
 
-## Front-matter
+## Name the file correctly
 
-`title` and `description` become the H1 and the lead. `tab`, `group`, and `order` place
-the page in the sidebar. `updated`, `icon`, `keywords`, and `image` are optional.
+Only three file names are ever read inside a `<slug>/` folder:
 
-## MDX body
+```
+docs/
+  writing-docs/
+    en.mdx        # the default-locale page
+    fr.mdx        # one per locale listed in the Docs config
+```
 
-Write standard MDX. `##` and `###` headings get anchor ids injected automatically, so
-the "On this page" minimap and its scroll-spy just work.
+- `<defaultLocale>.mdx` (for example `en.mdx`) is the default-language page.
+- `<lang>.mdx` is a translation, for a locale listed in your `Docs` config.
+- `post.mdx` still works as a language-neutral fallback.
 
-## Icons
+Any other name (`index.mdx`, `page.mdx`, or a locale you never configured) is **silently ignored**:
+no page, no error. And a folder holding both `post.mdx` and `en.mdx` throws `DuplicateDocError`,
+which fails the build, not just that page.
 
-`icon` names a glyph from the built-in set - `book`, `rocket`, `gear`, `globe`, and more.
-Unknown names fall back to a neutral document icon, or pass your own `renderIcon`.
+## Write the front-matter
+
+```mdx
+---
+title: "Writing docs pages"
+description: "The file layout and the front-matter contract."
+tab: "Guides"
+group: "Recipes"
+order: 1
+icon: "document"
+updated: "2026-07-11"
+---
+```
+
+| Field | Type | What it does |
+| --- | --- | --- |
+| `title` | string | the H1 and the default sidebar label. Falls back to the slug |
+| `description` | string | the lead, the meta description, and the OG card. Falls back to `""` |
+| `tab` | string | the top-level section. See [Navigation & tabs](/docs/navigation) |
+| `group` | string | the sidebar group heading |
+| `order` | **bare number** | sort position within the group |
+| `icon` | string | a glyph name from the built-in set |
+| `label` | string | a shorter sidebar label when `title` is too long |
+| `keywords` | **YAML list** | search keywords |
+| `image` | string | the OG/social card image, as a root path with a leading slash |
+| `date` | quoted date | first published |
+| `updated` | quoted date | last revised |
+| `hidden` | **bare boolean** | routable, but out of the nav, index, and sitemap |
+
+There is no `author`, `categories`, or `tags` field: the reader drops any field it does not
+recognise. `readingTime` is computed from the body, so never write it yourself.
+
+### Types are load-bearing
+
+Three fields are kept only when their YAML type is right, and silently dropped otherwise. Nothing
+errors, so the page looks fine while the nav is quietly wrong:
+
+- `order: 3` is kept; `order: "3"` is dropped, and the page sorts to the bottom of its group.
+- `hidden: true` is kept; `hidden: "true"` is dropped, and the draft stays publicly navigable.
+- `keywords` must be a YAML list. A comma-separated string is dropped.
+
+## Write the MDX body
+
+The body starts at `##`: `title` already renders the H1, so never add a second one.
+
+GitHub Flavored Markdown is on by default, so tables, task lists, strikethrough, and autolinks all
+work. Extra remark or rehype plugins passed through `mdxOptions` are merged with GFM rather than
+replacing it. A custom component such as `<Callout>` renders nothing unless you register it through
+`DocsPage`'s `components` prop.
+
+`##` and `###` headings get anchor ids injected automatically, which is what feeds the "On this page"
+minimap and its scroll-spy. Two caveats: only `##` and `###` are picked up (an `####` gets neither an
+id nor a minimap entry), and if you override `h2` or `h3` in `DocsPage`'s `components` map you must
+add the ids back yourself.
+
+## Pick an icon
+
+`icon` names a glyph from a fixed built-in set:
+
+`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `plug`, `link`, `mail`,
+`grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`.
+
+Any other name silently renders the neutral `document` glyph rather than erroring, so a typo looks
+like a deliberate choice forever. To use your own icons, pass a `renderIcon` prop to `DocsSidebar` or
+`DocsIndex`.
+
+The first page in a group supplies that group's card icon on the docs index, so give whichever page
+sorts first an icon that represents the whole group.
+
+## Translate a page
+
+Drop a `<lang>.mdx` beside the default file in the same folder, for any locale listed in your `Docs`
+config. Language is the file name, never a front-matter field.
+
+Keep `tab`, `group`, `order`, and `icon` identical across every locale file of a page: the nav is
+rebuilt per language from that language's own files, so if they disagree, the sidebars disagree.
+Translate `title`, `description`, `label`, and `keywords`, and re-point every internal link at its own
+locale prefix (`/fr/docs/navigation`, not `/docs/navigation`).

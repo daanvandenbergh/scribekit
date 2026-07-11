@@ -53,10 +53,8 @@ body {
     padding: 2rem 1.25rem 4rem;
 }
 
-/* The docs app owns its own 64px DocsNavbar; stack the sticky tab bar (below the 64px navbar) and
-   the sidebar/ToC columns (below navbar + 47px tab bar) so nothing overlaps while scrolling. */
+/* The package derives the sticky offsets from the chrome that is actually rendered (navbar + tab
+   bar), so only the shell height is set here. */
 .scribekit-docs {
-    --scribekit-docs-tabbar-top: 64px;
-    --scribekit-docs-content-top: 111px;
     --scribekit-docs-body-min-height: calc(100vh - 111px);
 }
