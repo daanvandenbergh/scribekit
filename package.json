@@ -1,6 +1,6 @@
 {
     "name": "@daanvandenbergh/scribekit",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Drop-in, SEO-ready MDX blog and docs for Next.js App Router: server components for the post grid, articles, and a tabbed docs site, plus Claude Code skills that research and write them.",
     "license": "UNLICENSED",
     "type": "module",
