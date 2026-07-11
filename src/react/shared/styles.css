@@ -421,7 +421,7 @@
     font-size: inherit;
 }
 
-/* Tables (GFM, when the consumer enables remark-gfm; also unstyled in the source project). */
+/* Tables (GFM pipe tables, enabled by default via `shared/mdx.ts` - see `withGfm`). */
 .scribekit-prose table {
     width: 100%;
     margin: 0 0 20px;

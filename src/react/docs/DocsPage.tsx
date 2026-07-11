@@ -3,6 +3,7 @@ import { MDXRemote, type MDXRemoteProps } from "next-mdx-remote/rsc";
 import type { Docs } from "../../docs/docs.js";
 import { docsLabels } from "../shared/i18n.js";
 import { withHeadingId } from "../shared/headings.js";
+import { withGfm } from "../shared/mdx.js";
 import { JsonLd } from "../shared/JsonLd.js";
 import { DocsToc } from "./DocsToc.js";
 import { DocsFeedback } from "./DocsFeedback.js";
@@ -19,7 +20,11 @@ export interface DocsPageProps {
     lang?: string;
     /** Custom component map for MDX elements, forwarded to `MDXRemote` (e.g. code highlighting). */
     components?: MDXRemoteProps["components"];
-    /** remark/rehype options forwarded to `MDXRemote` (e.g. `remark-gfm`, `rehype-pretty-code`). */
+    /**
+     * EXTRA remark/rehype options forwarded to `MDXRemote` (e.g. `rehype-pretty-code`). GFM
+     * (tables, strikethrough, task lists, autolinks) is already on by default - plugins passed
+     * here are merged with it, never replace it. See `shared/mdx.ts`.
+     */
     mdxOptions?: MDXRemoteProps["options"];
     /** Element used for prev/next links. Defaults to `"a"`; pass `next/link` for client-side nav. */
     linkComponent?: ElementType;
@@ -177,7 +182,7 @@ export function DocsPage({
             ) : null}
 
             <div className="scribekit-prose">
-                <MDXRemote source={content} components={mergedComponents} options={mdxOptions} />
+                <MDXRemote source={content} components={mergedComponents} options={withGfm(mdxOptions)} />
             </div>
 
             {showFeedback ? (

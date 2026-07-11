@@ -501,7 +501,14 @@ Re-prefixing an *already*-prefixed href is usually a no-op, so every sidebar, ta
 
 The rule: an href **you** author bare (`/pricing`, `homeHref`) gets your locale-aware link; an href **scribekit** hands you gets a plain one.
 
-> **Cookie-based locale preference?** If your middleware redirects a bare URL to the visitor's preferred language (from a cookie or `Accept-Language`), a link-based picker cannot switch *to* the default locale at all - the bare `/docs/<slug>` gets bounced straight back. `DocsLanguagePicker` is plain links by design, so in that setup render your **own** picker in `DocsNavbar`'s `languagePicker` slot: one that writes the preference **first**, then navigates.
+> **Cookie-based locale preference? Pass `onSelect`.** If your middleware resolves a bare URL's language from a stored preference (a cookie or `Accept-Language`), a plain link **cannot** switch *to* the default locale: navigating to the unprefixed `/docs/<slug>` gets 307'd straight back to the old stored language, so the reader clicks "English", stays in Dutch, and can never leave. Give `DocsLanguagePicker` an **`onSelect`** and it hands you the chosen code instead of navigating (the click is `preventDefault`ed), so you can write the preference **first** and then route. Wire it to your locale setter - with [i18nkit](https://www.npmjs.com/package/@daanvandenbergh/i18nkit) that is one line, since `useSetLocale()` writes the cookie synchronously and its provider does the navigation:
+>
+> ```tsx
+> const setLocale = useSetLocale();
+> <DocsLanguagePicker locales={docs.locales} currentLang={lang} onSelect={setLocale} /* … */ />
+> ```
+>
+> The `href`/`hrefLang` stay on each anchor either way, so the links remain crawlable. Leave `onSelect` unset on a purely URL-routed site and the links navigate on their own, as before.
 
 **i18n sitemap.** `blog.sitemapEntries()` (and `docs.sitemapEntries()`) returns one entry per `(slug, lang)` with its absolute URL and hreflang `alternates.languages` (every translation plus `x-default`) - assignable straight to a Next.js `sitemap.ts` (needs `siteUrl`/`brandName`):
 
@@ -543,15 +550,17 @@ Class names are namespaced `.scribekit-*` and MDX body tags are scoped under `.s
 
 ## MDX plugins
 
-By default MDX renders with no plugins (headings, lists, links, blockquotes, inline code, and fenced code blocks are all styled out of the box). To add GFM tables, autolinked headings, or syntax highlighting, pass options through to `next-mdx-remote` (works the same on `BlogPage` and `DocsPage`):
+**GFM is on by default.** `BlogPage` and `DocsPage` render MDX with [`remark-gfm`](https://github.com/remarkjs/remark-gfm) already applied, so **tables**, strikethrough, task lists, and autolinks just work - along with headings, lists, links, blockquotes, inline code, and fenced code blocks, all styled out of the box. (Pipe tables are a GFM extension, not core Markdown: without the plugin a `| a | b |` table does not error, it silently renders as a paragraph of literal `|` characters. That is a content bug you only see on the published page, so it is not left to the consumer to remember.)
+
+To add anything *extra* - syntax highlighting, autolinked headings - pass options through to `next-mdx-remote` (works the same on `BlogPage` and `DocsPage`). **Your plugins are merged with GFM, never replace it:**
 
 ```tsx
-import remarkGfm from "remark-gfm";
+import rehypePrettyCode from "rehype-pretty-code";
 
 <BlogPage
     blog={blog}
     slug={slug}
-    mdxOptions={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+    mdxOptions={{ mdxOptions: { rehypePlugins: [rehypePrettyCode] } }}   // gfm stays enabled
     components={{ pre: MyCodeBlock }}
 />;
 ```
@@ -618,7 +627,7 @@ Every component below takes `linkComponent` (default `"a"` - pass `next/link`). 
 - **`DocsSearchProvider`** (client) - owns the shared ⌘K command palette; wrap your docs shell in it. Props: `nav`, `lang`, `linkComponent`, `searchPlaceholder`, `searchEmptyLabel`, `renderIcon`. Any descendant opens it via **`useDocsSearch().open()`**, or drop a **`DocsSearchButton`** (`placeholder`, `lang`, `className`).
 - **`DocsNavbar`** (client, optional) - the top bar. Props: `logo`, `logoSize` (default 22), `brandName`, `docsText` (the pill, default `"Docs"`; `""`/`null` hides it), `homeHref`, `linkComponent`, `lang`, `showSearch` (default `true`), `searchPlaceholder`, **`actions`** (the right-hand section - the part most sites edit), and **`languagePicker`** (a slot before the actions). `actions` takes **arbitrary nodes**: drop in `DocsNavbarButton`s, or your own site's CTA component. A link that carries a class of its own keeps its own styling; only a genuinely raw, unstyled `<a>` picks up the navbar's muted fallback colour.
 - **`DocsNavbarButton`** (optional) - a navbar action: `variant` `"link"` / `"primary"` / `"secondary"`. Props: `href` (renders a link, else a `<button>`) / `onClick`, `variant`, `linkComponent`, `icon`, `target`, `rel`, `ariaLabel`. Pass a list to `DocsNavbar`'s `actions`.
-- **`DocsLanguagePicker`** (client, optional) - the navbar language switcher: a flag-and-caret trigger opening a menu of the docs' languages, each a `hreflang` link. **Auto-hides for single-locale docs**, so you can always render it. Flags come from [i18nkit](https://www.npmjs.com/package/@daanvandenbergh/i18nkit)'s `localeFlag` (override with `renderFlag`). Props: `locales`, `currentLang`, `activePath`, `basePath`, `defaultLocale`, `prefixDefaultLocale`, `linkComponent`, `lang`, `renderFlag`, `changeLanguageLabel`, `headingLabel`. Pass it to `DocsNavbar`'s `languagePicker`.
+- **`DocsLanguagePicker`** (client, optional) - the navbar language switcher: a flag-and-caret trigger opening a menu of the docs' languages, each a `hreflang` link. **Auto-hides for single-locale docs**, so you can always render it. Flags come from [i18nkit](https://www.npmjs.com/package/@daanvandenbergh/i18nkit)'s `localeFlag` (override with `renderFlag`). Props: `locales`, `currentLang`, `activePath`, `basePath`, `defaultLocale`, `prefixDefaultLocale`, `linkComponent`, **`onSelect`** (`(code) => void` - takes over the switch instead of navigating; **required if your middleware resolves a bare URL's language from a cookie**, see [above](#️-linkcomponent-must-render-href-as-given)), `lang`, `renderFlag`, `changeLanguageLabel`, `headingLabel`. Pass it to `DocsNavbar`'s `languagePicker`.
 - **`DocsTabs`** (client) - the top tab bar (underline tabs + sliding indicator); each tab links to its section's first page. Props: `nav`, `activePath`, `linkComponent`, `lang`, `label`. Renders nothing for a single-tab tree.
 - **`DocsSidebar`** (client) - the left nav (active tab's groups) + ⌘K palette. Props: `nav`, `activePath`, `linkComponent`, `lang`, `renderIcon`, and label overrides (`searchPlaceholder`, `searchEmptyLabel`, `label`).
 - **`DocsToc`** (client) - the right "on this page" minimap with scroll-spy. Rendered by `DocsPage`. Props: `toc`, `title`.

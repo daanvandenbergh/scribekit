@@ -5,6 +5,7 @@ import { localePath } from "../../shared/locales.js";
 import type { Blog } from "../../blog/blog.js";
 import { blogLabels } from "../shared/i18n.js";
 import { withHeadingId } from "../shared/headings.js";
+import { withGfm } from "../shared/mdx.js";
 import { JsonLd } from "../shared/JsonLd.js";
 import { BlogSidebar } from "./BlogSidebar.js";
 
@@ -22,7 +23,11 @@ export interface BlogPageProps {
     basePath?: string;
     /** Custom component map for MDX elements, forwarded to `MDXRemote` (e.g. code highlighting). */
     components?: MDXRemoteProps["components"];
-    /** remark/rehype options forwarded to `MDXRemote` (e.g. `remark-gfm`, `rehype-pretty-code`). */
+    /**
+     * EXTRA remark/rehype options forwarded to `MDXRemote` (e.g. `rehype-pretty-code`). GFM
+     * (tables, strikethrough, task lists, autolinks) is already on by default - plugins passed
+     * here are merged with it, never replace it. See `shared/mdx.ts`.
+     */
     mdxOptions?: MDXRemoteProps["options"];
     /** Whether to render the "back to blog" link above the title. Defaults to `true`. */
     showBackLink?: boolean;
@@ -131,7 +136,7 @@ export function BlogPage({
                 <Img className="scribekit-post-image" src={meta.image} alt={meta.title} width={1200} height={630} />
             ) : null}
             <div className="scribekit-prose">
-                <MDXRemote source={content} components={mergedComponents} options={mdxOptions} />
+                <MDXRemote source={content} components={mergedComponents} options={withGfm(mdxOptions)} />
             </div>
             {meta.author ? (
                 <div className="scribekit-author-bio">

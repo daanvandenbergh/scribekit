@@ -261,12 +261,21 @@ describe("BlogPage", () => {
     it("forwards source and options to MDXRemote and merges caller components over the id injectors", () => {
         const h2 = () => null;
         const components = { h2 };
-        const mdxOptions = { parseFrontmatter: false };
+        const callerPlugin = () => undefined;
+        const mdxOptions = { parseFrontmatter: false, mdxOptions: { remarkPlugins: [callerPlugin] } };
         const element = BlogPage({ blog: fakeBlog(), slug: "hello-world", components, mdxOptions });
         const mdx = findFunctionElement(element);
         const merged = mdx?.props.components as Record<string, unknown>;
+        const options = mdx?.props.options as {
+            parseFrontmatter?: boolean;
+            mdxOptions?: { remarkPlugins?: unknown[] };
+        };
         expect(mdx?.props.source).toBe("MDX_BODY_CONTENT");
-        expect(mdx?.props.options).toBe(mdxOptions);
+        // The options object is no longer forwarded by identity: GFM is merged in by default
+        // (`withGfm`), so assert structurally that the caller's options SURVIVED and gfm was added.
+        expect(options.parseFrontmatter).toBe(false); // unrelated caller option carried through
+        expect(options.mdxOptions?.remarkPlugins).toHaveLength(2); // gfm + the caller's own plugin
+        expect(options.mdxOptions?.remarkPlugins?.[1]).toBe(callerPlugin); // caller's plugin preserved
         expect(merged.h2).toBe(h2); // caller's h2 wins over the injected one
         expect(typeof merged.h3).toBe("function"); // injected id renderer for headings the caller left alone
     });

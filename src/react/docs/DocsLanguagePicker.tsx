@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ElementType, type ReactElement, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ElementType, type MouseEvent, type ReactElement, type ReactNode } from "react";
 import { localeFlag } from "@daanvandenbergh/i18nkit/react";
 import type { LocaleConfig } from "../../docs/types.js";
 import { docsLabels } from "../shared/i18n.js";
@@ -27,6 +27,21 @@ export interface DocsLanguagePickerProps {
     prefixDefaultLocale?: boolean | undefined;
     /** Element used for the language links. Defaults to `"a"`; pass `next/link` for client-side nav. */
     linkComponent?: ElementType;
+    /**
+     * Optional. Called with the chosen locale code instead of letting the link navigate - the app
+     * then owns the switch (the click is `preventDefault`ed; the menu still closes).
+     *
+     * REQUIRED whenever your app resolves a bare URL's language from a stored preference (a cookie
+     * or `Accept-Language`) in middleware. A plain link cannot work there: switching TO the default
+     * locale means navigating to the unprefixed `/docs/<slug>`, which your middleware then redirects
+     * straight back to the *old* stored language - so the reader clicks "English", stays in Dutch,
+     * and can never leave. Only a handler that writes the new preference BEFORE navigating can win
+     * that race. Wire it to your locale setter, e.g. i18nkit's `useSetLocale()` (it writes the
+     * cookie synchronously, then its provider navigates).
+     *
+     * Leave it unset for a purely URL-routed site: the links navigate on their own, as before.
+     */
+    onSelect?: (code: string) => void;
     /**
      * Renders a flag (or any node) for a locale code, shown before its name. Defaults to i18nkit's
      * `localeFlag` (inline-SVG flags); pass `() => null` for a text-only picker.
@@ -73,6 +88,7 @@ export function DocsLanguagePicker({
     defaultLocale,
     prefixDefaultLocale,
     linkComponent: Link = "a",
+    onSelect,
     renderFlag,
     lang,
     changeLanguageLabel,
@@ -92,7 +108,7 @@ export function DocsLanguagePicker({
         if (!open) {
             return undefined;
         }
-        const onPointerDown = (event: MouseEvent): void => {
+        const onPointerDown = (event: globalThis.MouseEvent): void => {
             if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
                 setOpen(false);
             }
@@ -144,7 +160,17 @@ export function DocsLanguagePicker({
                                 role="menuitem"
                                 aria-current={active ? "true" : undefined}
                                 className={active ? "scribekit-docs-lang-item is-active" : "scribekit-docs-lang-item"}
-                                onClick={() => setOpen(false)}
+                                onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                                    setOpen(false);
+                                    // With `onSelect`, the app owns the switch: suppress the link's
+                                    // own navigation so it can write the new locale preference FIRST
+                                    // and then route (see the prop's docblock). Without it, nothing
+                                    // changes - the anchor navigates exactly as before.
+                                    if (onSelect) {
+                                        event.preventDefault();
+                                        onSelect(locale.code);
+                                    }
+                                }}
                             >
                                 <span className="scribekit-docs-lang-flag">{flag(locale.code)}</span>
                                 <span className="scribekit-docs-lang-name">{locale.label ?? locale.code}</span>
