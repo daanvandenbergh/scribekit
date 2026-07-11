@@ -985,14 +985,20 @@
     font-size: 14px;
 }
 
-/* Fallback styling for raw top-level <a> actions; a direct child so it excludes DocsNavbarButton
-   (its variant classes win) and the nested language-menu links. */
-.scribekit-docs-navbar-right > a:not(.scribekit-docs-navbar-btn) {
+/* Fallback styling for RAW top-level <a> actions - a bare, unstyled link a consumer dropped into
+   `actions`. Two guards keep it from reaching anything else: a direct child (`>`) excludes the
+   nested language-menu links, and `:not([class])` excludes every link that carries styling of its
+   own - DocsNavbarButton (whose variant classes would otherwise have to out-specify this) and, just
+   as importantly, ANY custom-styled button a consumer passes. `actions` accepts arbitrary nodes, so
+   a consumer's own CTA is a first-class case: this rule used to repaint it (it out-specifies a
+   single-class CSS module, 0-2-1 vs 0-1-0), silently turning e.g. a white-on-gradient pill's label
+   muted grey. A styled link now keeps its own colour; only a genuinely raw one gets the fallback. */
+.scribekit-docs-navbar-right > a:not([class]) {
     color: var(--scribekit-ink-muted, #4a5568);
     text-decoration: none;
 }
 
-.scribekit-docs-navbar-right > a:not(.scribekit-docs-navbar-btn):hover {
+.scribekit-docs-navbar-right > a:not([class]):hover {
     color: var(--scribekit-ink, #0b1b36);
 }
 
@@ -1460,6 +1466,17 @@
     height: 1px;
     margin: 32px 0;
     background: var(--scribekit-border, #eef1f6);
+}
+
+/* Hero image: opens the body, below the header block. `height:auto` scales the 1200x630 hero to the
+   column width at its ratio; the divider above already supplies the top gap. */
+.scribekit-doc-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    margin: 0 0 32px;
 }
 
 /* Docs MDX body: the design's tighter scale (scoped to .scribekit-doc so the blog's prose is

@@ -23,6 +23,8 @@ export interface DocsPageProps {
     mdxOptions?: MDXRemoteProps["options"];
     /** Element used for prev/next links. Defaults to `"a"`; pass `next/link` for client-side nav. */
     linkComponent?: ElementType;
+    /** Element used for the hero image. Defaults to `"img"`; pass `next/image` for optimisation. */
+    imgComponent?: ElementType;
     /** Whether to render the breadcrumb above the title. Defaults to `true`. */
     showBreadcrumb?: boolean;
     /** Whether to render the right-hand "On this page" table-of-contents minimap. Defaults to `true`. */
@@ -72,7 +74,8 @@ function Chevron({ dir }: { dir: "left" | "right" }): ReactElement {
 
 /**
  * Renders a single documentation page: a breadcrumb, the title and lead, a meta row (reading time
- * and last-updated date), the MDX body (compiled with `next-mdx-remote/rsc`) inside a
+ * and last-updated date), the hero image (when the page's front-matter sets `image`, rendered with
+ * `imgComponent`), the MDX body (compiled with `next-mdx-remote/rsc`) inside a
  * `.scribekit-prose` container, a "Was this page helpful?" widget, prev/next cards from the sidebar
  * reading order, and a right-hand "On this page" minimap (the same scroll-spy `BlogSidebar` the
  * blog uses). SEO JSON-LD (a `TechArticle` + `BreadcrumbList`) is derived from `docs.site`.
@@ -100,6 +103,7 @@ export function DocsPage({
     components,
     mdxOptions,
     linkComponent: Link = "a",
+    imgComponent: Img = "img",
     showBreadcrumb = true,
     showToc = true,
     showFeedback = true,
@@ -167,6 +171,10 @@ export function DocsPage({
             </div>
 
             <div className="scribekit-doc-divider" />
+
+            {meta.image ? (
+                <Img className="scribekit-doc-image" src={meta.image} alt={meta.title} width={1200} height={630} />
+            ) : null}
 
             <div className="scribekit-prose">
                 <MDXRemote source={content} components={mergedComponents} options={mdxOptions} />
