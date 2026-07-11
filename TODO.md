@@ -3,16 +3,6 @@
 - [ ] Decide on a license for the package. `package.json` is `"UNLICENSED"` and v1.0.0 was **already
   published** to npm under that. Pick and add a real license, then publish a new version.
 
-- [ ] Publish a new version carrying the `Docs` slug-redirects feature. `package.json` is still at
-  `1.0.2`, but `src/docs/` now exports `DocsConfig.redirects`, `Docs.getRedirect(slug, lang?)`, and
-  `Docs.getRedirectRefs()`, and **both `README.md` ("Renaming a page: `redirects`") and the
-  `/scribekit-docs` `reorganize` skill (step 7) already instruct users to use them** - so anyone on the
-  published package follows those instructions and gets a `TypeError: docs.getRedirectRefs is not a
-  function`. Bump the minor version (it is a backwards-compatible addition) and publish. Do it together
-  with the license decision above, since that publish is blocked on it anyway. Verify with
-  `npm pack --dry-run` that `dist/docs/docs.js` contains `getRedirectRefs`, then after publishing,
-  `npm view @daanvandenbergh/scribekit version`.
-
 - [ ] Fix the duplicate `plug` icon in `src/react/docs/internal/icons.tsx`. The `plug` (line 52) and
   `link` (line 53) entries in `ICON_PATHS` have **byte-identical `<path d="...">` data** - a copy-paste
   slip - so a docs page with `icon: "plug"` renders the chain-link glyph. Both names are advertised as
