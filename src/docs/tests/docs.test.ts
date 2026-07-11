@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { Docs } from "../docs.js";
 import { DocNotFoundError, DuplicateDocError } from "../errors.js";
 import { flattenNav } from "../navigation.js";
+import type { DocsConfig } from "../types.js";
 
 /** Directory of this test file, used to resolve the fixture folders. */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -322,5 +323,154 @@ describe("Docs - edge cases", () => {
     it("defaults the base path to /docs so URLs never fall back to /blog", () => {
         const docs = new Docs({ contentDir: path.join(HERE, "fixtures/docs"), siteUrl: "https://example.com", brandName: "Example" });
         expect(docs.docMetadata(docs.getDoc("quickstart")).alternates?.canonical).toBe("/docs/quickstart");
+    });
+});
+
+/**
+ * Builds a `Docs` over the rich fixture corpus with a `redirects` map, so the renamed-slug cases can
+ * be exercised against real pages (`quickstart` and `introduction` exist; the sources do not).
+ */
+function makeRedirectingDocs(redirects: Record<string, string>, extra?: Partial<DocsConfig>): Docs {
+    return new Docs({
+        contentDir: path.join(HERE, "fixtures/docs"),
+        locales: [
+            { code: "en", label: "English" },
+            { code: "fr", label: "Français" },
+        ],
+        defaultLocale: "en",
+        redirects,
+        ...extra,
+    });
+}
+
+describe("Docs.getRedirect", () => {
+    it("redirects a renamed slug to its new page, unprefixed for the default locale", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
+        expect(docs.getRedirect("getting-started")).toBe("/docs/quickstart");
+        expect(docs.getRedirect("getting-started", "en")).toBe("/docs/quickstart");
+    });
+
+    it("prefixes the destination with a non-default locale", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
+        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/docs/quickstart");
+    });
+
+    it("prefixes the default locale too when prefixDefaultLocale is set", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" }, { prefixDefaultLocale: true });
+        expect(docs.getRedirect("getting-started")).toBe("/en/docs/quickstart");
+        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/docs/quickstart");
+    });
+
+    it("honours a custom basePath", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" }, { basePath: "/handbook" });
+        expect(docs.getRedirect("getting-started")).toBe("/handbook/quickstart");
+        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/handbook/quickstart");
+    });
+
+    it("returns undefined for a slug that is not redirected", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
+        expect(docs.getRedirect("nope")).toBeUndefined();
+    });
+
+    it("returns undefined when no redirects are configured", () => {
+        const docs = new Docs({ contentDir: path.join(HERE, "fixtures/docs") });
+        expect(docs.getRedirect("quickstart")).toBeUndefined();
+        expect(docs.getRedirect("anything")).toBeUndefined();
+    });
+
+    it("lets a real page win over a stale redirect entry that shadows it", () => {
+        const docs = makeRedirectingDocs({ quickstart: "introduction" });
+        expect(docs.getRedirect("quickstart")).toBeUndefined();
+    });
+
+    it("lets an fr-only page win too - a real page in any language is still a real page", () => {
+        const docs = makeRedirectingDocs({ "fr-guide": "quickstart" });
+        expect(docs.getRedirect("fr-guide", "fr")).toBeUndefined();
+    });
+
+    it("follows a chain to its final destination in one hop", () => {
+        const docs = makeRedirectingDocs({ a: "b", b: "quickstart" });
+        expect(docs.getRedirect("a")).toBe("/docs/quickstart");
+        expect(docs.getRedirect("b")).toBe("/docs/quickstart");
+    });
+
+    it("ends a chain at the first real page rather than redirecting onwards", () => {
+        // `quickstart` exists, so `a -> quickstart` stops there even though `quickstart -> introduction`
+        // is in the map (that entry is inert - a real page is never redirected).
+        const docs = makeRedirectingDocs({ a: "quickstart", quickstart: "introduction" });
+        expect(docs.getRedirect("a")).toBe("/docs/quickstart");
+    });
+
+    it("returns undefined for a cycle rather than looping forever", () => {
+        const docs = makeRedirectingDocs({ a: "b", b: "a" });
+        expect(docs.getRedirect("a")).toBeUndefined();
+        expect(docs.getRedirect("b")).toBeUndefined();
+    });
+
+    it("returns undefined for a self-redirect", () => {
+        const docs = makeRedirectingDocs({ a: "a" });
+        expect(docs.getRedirect("a")).toBeUndefined();
+    });
+
+    it("still returns an href when the destination page does not exist, so a typo 404s loudly", () => {
+        const docs = makeRedirectingDocs({ old: "typo-slug" });
+        expect(docs.getRedirect("old")).toBe("/docs/typo-slug");
+    });
+
+    it("never resolves an Object.prototype key from the URL", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
+        expect(docs.getRedirect("constructor")).toBeUndefined();
+        expect(docs.getRedirect("toString")).toBeUndefined();
+        expect(docs.getRedirect("__proto__")).toBeUndefined();
+    });
+});
+
+describe("Docs.getRedirectRefs", () => {
+    it("emits one ref per redirected slug per configured language", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
+        expect(docs.getRedirectRefs()).toEqual([
+            { slug: "getting-started", lang: "en" },
+            { slug: "getting-started", lang: "fr" },
+        ]);
+    });
+
+    it("emits the default locale only for a single-language docs site", () => {
+        const docs = new Docs({
+            contentDir: path.join(HERE, "fixtures/docs"),
+            defaultLocale: "en",
+            redirects: { "getting-started": "quickstart" },
+        });
+        expect(docs.getRedirectRefs()).toEqual([{ slug: "getting-started", lang: "en" }]);
+    });
+
+    it("is empty when no redirects are configured", () => {
+        const docs = new Docs({ contentDir: path.join(HERE, "fixtures/docs") });
+        expect(docs.getRedirectRefs()).toEqual([]);
+    });
+
+    it("skips inert entries - a source that is a real page, and a cycle", () => {
+        const docs = makeRedirectingDocs({ quickstart: "introduction", a: "b", b: "a", old: "quickstart" });
+        expect(docs.getRedirectRefs()).toEqual([
+            { slug: "old", lang: "en" },
+            { slug: "old", lang: "fr" },
+        ]);
+    });
+
+    it("is disjoint from getDocRefs, so generateStaticParams can spread both", () => {
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
+        const pages = new Set(docs.getDocRefs().map((r) => `${r.slug}/${r.lang}`));
+        for (const ref of docs.getRedirectRefs()) {
+            expect(pages.has(`${ref.slug}/${ref.lang}`)).toBe(false);
+        }
+    });
+
+    it("treats a missing content directory as having no real pages, so redirects still work", () => {
+        const docs = new Docs({
+            contentDir: path.join(HERE, "fixtures/does-not-exist"),
+            defaultLocale: "en",
+            redirects: { old: "new" },
+        });
+        expect(docs.getRedirect("old")).toBe("/docs/new");
+        expect(docs.getRedirectRefs()).toEqual([{ slug: "old", lang: "en" }]);
     });
 });

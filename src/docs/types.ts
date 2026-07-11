@@ -227,4 +227,15 @@ export interface DocsConfig extends Partial<SiteConfig> {
      * but for the group headings within each tab.
      */
     groups?: NavConfigEntry[] | undefined;
+    /**
+     * Permanent redirects for pages whose slug has changed, as `{ "<old-slug>": "<new-slug>" }`.
+     * Renaming a `<slug>/` folder changes the page's public URL, so list the old slug here to keep
+     * it alive; the route file serves it as a 308 via {@link import("./docs.js").Docs.getRedirect}.
+     *
+     * A **real page always wins**: an entry whose source slug still exists on disk is ignored, so a
+     * stale entry can never shadow a live page. Chains resolve to their final destination in one
+     * hop (`{ a: "b", b: "c" }` sends `a` straight to `c`), and a cycle yields no redirect (the URL
+     * 404s rather than looping).
+     */
+    redirects?: Record<string, string> | undefined;
 }

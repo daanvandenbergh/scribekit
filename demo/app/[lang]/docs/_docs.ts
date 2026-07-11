@@ -29,4 +29,8 @@ export const docs = new Docs({
     // Display order for the top-level tabs and the sidebar group headings.
     tabs: ["Documentation", "Guides"],
     groups: ["Get started", "Configuration", "Recipes"],
+    // The page folder is the URL, so renaming one changes its public URL. Listing the old slug here
+    // keeps it alive as a 308: /docs/getting-started -> /docs/quickstart (and /fr/... -> /fr/...).
+    // The [slug] route serves it - see its generateStaticParams + permanentRedirect.
+    redirects: { "getting-started": "quickstart" },
 });

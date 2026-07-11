@@ -114,7 +114,7 @@ description: "One sentence - the lead, meta description, and OG/Twitter"  # REQU
 tab: "Documentation"          # top-level section; reuse an EXISTING tab string verbatim (below)
 group: "Get started"          # sidebar group heading; reuse an EXISTING group string verbatim
 order: 3                       # sort within the group, ascending. BARE NUMBER - see YAML types below
-icon: "rocket"                # free-form icon name the frontend maps to an SVG; match sibling pages
+icon: "rocket"                # a glyph name from the frontend's icon set - NOT free-form (see below)
 label: "Quickstart"           # optional sidebar label override; defaults to title
 keywords:                      # optional; a YAML LIST, not a comma string
     - docs
@@ -151,6 +151,37 @@ The `Docs` reader keeps a field **only** when its YAML type is right, else it **
 
 **Verify by re-reading the header you wrote**: `order` a number, `hidden` a boolean, `keywords` a list.
 If any is quoted or wrong-typed, the page silently loses that field.
+
+Two more failures that are silent in exactly the same way, but span *two* files rather than one - so a
+single-page read cannot see either:
+
+- **A duplicate `order` inside one group.** Two pages both at `order: 2` do not error; the reader
+  tie-breaks them **alphabetically by `title`**. The sidebar order is then whatever the alphabet says,
+  not what either author intended. Within a group, `order` must be **dense `1..N` with no ties**.
+- **Cross-locale slot drift.** The nav is rebuilt **per language** from that language's own files, so
+  `tab` / `group` / `order` / `icon` must be **identical across every locale file of a page** - if
+  `fr.mdx` says `order: 2` where `en.mdx` says `order: 1`, the French sidebar is simply a different
+  sidebar. (`title` / `description` / `label` / `keywords` are the opposite: translate them.)
+
+## How the nav uses the front-matter (facts that change what you write)
+
+Verify each against the project's own components before relying on it (a project can override them), but
+in scribekit's shipped React these hold, and each one changes a front-matter choice:
+
+- **`icon` is not free-form.** The sidebar maps it against a **fixed built-in set**: `book`, `rocket`,
+  `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `plug`, `link`, `mail`, `grid`, `list`,
+  `check`, `gear`, `code`, `sparkles`, `shield`, `document`. **Any other name silently renders the
+  neutral `document` glyph** - it does not error, so an invented icon name looks like a typo'd page
+  forever. Pick from the set, or check whether the project passes its own `renderIcon` to
+  `DocsSidebar`/`DocsIndex` (then use *that* set's names).
+- **The docs index card for a group takes the icon of the group's *first* page.** So whichever page sorts
+  first in a group should carry the icon that best represents the **whole group**, not just itself.
+- **The command palette searches `title`, `label`, `group`, and `tab`** - not the body. So those four
+  strings are the entire search surface: name tabs and groups with words a reader would actually type,
+  and give a page a `label` when its `title` is too long to scan in a sidebar.
+- **Prev/next crosses group *and* tab boundaries.** The footer links walk the whole flattened tree, so
+  the last page of one tab links straight into the first page of the next. The corpus has a single linear
+  reading order whether or not anyone designed one.
 
 ## Light metadata check (replaces the blog 100-point rubric)
 

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { formatDate, isoDateString } from "../shared/format.js";
+import { localePath } from "../shared/locales.js";
 import { coerceText, readingMinutes, tableOfContents } from "../shared/content.js";
 import { buildSitemap, type JsonLd } from "../shared/seo.js";
 import { adjacentFor, breadcrumbFor, buildNavTree, flattenNav } from "./navigation.js";
@@ -70,6 +71,12 @@ export class Docs {
     /** Optional group display order + labels, passed through to the navigation builder. */
     readonly groups: NavConfigEntry[];
     /**
+     * Old slug -> new slug for renamed pages. A `Map` (not the raw config object) so a lookup keyed
+     * by an untrusted URL slug can never reach `Object.prototype` - `/docs/constructor` must miss,
+     * not resolve to a function.
+     */
+    private readonly redirects: Map<string, string>;
+    /**
      * Site config assembled from the flat site attributes passed to the constructor, or
      * `undefined` when `siteUrl`/`brandName` were not provided. Its `basePath` is always the
      * resolved docs base (default `/docs`), so URL building never falls back to the blog default.
@@ -93,6 +100,7 @@ export class Docs {
         this.prefixDefaultLocale = config.prefixDefaultLocale ?? false;
         this.tabs = config.tabs ?? [];
         this.groups = config.groups ?? [];
+        this.redirects = new Map(Object.entries(config.redirects ?? {}));
         this.site =
             config.siteUrl !== undefined && config.brandName !== undefined
                 ? {
@@ -240,6 +248,95 @@ export class Docs {
      */
     getDocRefs(): { slug: string; lang: string }[] {
         return this.entries().map((e) => ({ slug: e.slug, lang: e.lang }));
+    }
+
+    /**
+     * Resolves a requested slug through the `redirects` map to the slug it should land on.
+     *
+     * Three rules, in order: a slug that still exists on disk is **never** redirected (a real page
+     * always wins, so a stale entry is inert); a chain is followed to its end, so `{ a: "b",
+     * b: "c" }` resolves `a` straight to `c` in a single hop, and a destination that is itself a
+     * real page ends the chain there; a cycle (including the self-redirect `{ a: "a" }`) resolves
+     * to nothing, so the URL 404s instead of looping forever.
+     *
+     * @param slug - the requested page slug (untrusted - it comes from the URL).
+     * @returns the destination slug, or `undefined` when the slug is not redirected.
+     * @throws {@link DuplicateDocError} when two files resolve to the same `(slug, lang)`.
+     */
+    private redirectTarget(slug: string): string | undefined {
+        const real = new Set(this.getDocSlugs());
+        if (real.has(slug) || !this.redirects.has(slug)) {
+            return undefined;
+        }
+        const seen = new Set<string>([slug]);
+        let current = slug;
+        for (;;) {
+            const next = this.redirects.get(current);
+            if (next === undefined) {
+                return current; // Chain ends: `current` is not itself redirected.
+            }
+            if (seen.has(next)) {
+                return undefined; // Cycle: no redirect at all, rather than an infinite loop.
+            }
+            seen.add(next);
+            current = next;
+            if (real.has(current)) {
+                return current; // Chain ends: a real page is never redirected onwards.
+            }
+        }
+    }
+
+    /**
+     * The URL a renamed page's old slug should permanently redirect to, ready to hand straight to
+     * Next's `permanentRedirect()` - it is already locale-prefixed and `basePath`-rooted, so the
+     * route file needs no path knowledge of its own. Configure the renames via
+     * {@link DocsConfig.redirects}.
+     *
+     * @param slug - the requested page slug (untrusted - it comes from the URL).
+     * @param lang - the language code. Defaults to the docs' default locale.
+     * @returns the root-relative destination URL, or `undefined` when the slug is not redirected
+     *   (unknown, still a real page, or part of a cycle) - in which case the route should 404.
+     * @throws {@link DuplicateDocError} when two files resolve to the same `(slug, lang)`.
+     */
+    getRedirect(slug: string, lang?: string): string | undefined {
+        const target = this.redirectTarget(slug);
+        if (target === undefined) {
+            return undefined;
+        }
+        return localePath({
+            basePath: this.basePath,
+            defaultLocale: this.defaultLocale,
+            lang: lang ?? this.defaultLocale,
+            slug: target,
+            prefixDefaultLocale: this.prefixDefaultLocale,
+        });
+    }
+
+    /**
+     * Lists every `(old slug, lang)` pair that {@link Docs.getRedirect} would redirect - the
+     * counterpart of {@link Docs.getDocRefs}, and the reason a redirect ever fires: a route file
+     * with `dynamicParams = false` 404s an unrendered slug **at the router**, so an old slug must
+     * be prerendered for its page component to run and redirect. Spread both into
+     * `generateStaticParams`:
+     *
+     * ```ts
+     * export function generateStaticParams() {
+     *     return [...docs.getDocRefs(), ...docs.getRedirectRefs()];
+     * }
+     * ```
+     *
+     * Inert entries are skipped (a source slug that still exists as a real page, or one in a
+     * cycle), so nothing is rendered that would not actually redirect.
+     *
+     * @returns one entry per redirected slug per configured language (just the default locale for a
+     *   single-language docs site); empty when no `redirects` were configured.
+     * @throws {@link DuplicateDocError} when two files resolve to the same `(slug, lang)`.
+     */
+    getRedirectRefs(): { slug: string; lang: string }[] {
+        const langs = this.locales.length > 0 ? this.locales.map((l) => l.code) : [this.defaultLocale];
+        return [...this.redirects.keys()]
+            .filter((slug) => this.redirectTarget(slug) !== undefined)
+            .flatMap((slug) => langs.map((lang) => ({ slug, lang })));
     }
 
     /**
