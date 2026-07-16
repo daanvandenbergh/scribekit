@@ -1,0 +1,12 @@
+{
+    "name": "scribekit-docs-site",
+    "private": true,
+    "version": "1.0.0",
+    "description": "scribekit's own documentation site. Renders the repo-root /docs corpus. Imports the built package from ../dist and shares the repo-root node_modules, like demo/.",
+    "type": "module",
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start"
+    }
+}

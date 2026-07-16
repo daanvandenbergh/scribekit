@@ -1,0 +1,120 @@
+---
+title: "scribekit-blog"
+description: "Reference for the /scribekit-blog skill: its two modes, three flags, seven files, outputs, and constraints."
+tab: "Skills"
+group: "Skills"
+order: 2
+icon: "document"
+updated: "2026-07-16"
+image: "/assets/docs/scribekit-blog/hero.en.jpg"
+---
+
+A portable Claude Code skill that writes or rewrites a single MDX blog post for whatever project it
+is dropped into, optimised for classic search and for AI answer engines. It runs a mandatory web
+research pass, plans SEO and GEO targeting against a live SERP read, drafts in the project's own
+learned voice, and self-scores against a 100-point rubric.
+
+```text
+/scribekit-blog [write|rewrite] [topic | slug-or-path] [--scan]
+```
+
+Nothing about any project is baked in. Every invocation begins with Step 0, which learns the
+project's identity, voice, content directory, frontmatter contract, locales, and real routes before
+anything is written.
+
+## Modes
+
+| Mode | What it does | Trigger |
+| --- | --- | --- |
+| `write` | Writes the post **and its hero by default**. On a multi-language blog, also writes a translation for **every** configured locale. | A new post, the argument is a topic or idea, or the verb is create / write / draft. |
+| `rewrite` | Audits an existing post **and applies the fixes**, up to a substantial rewrite. | rewrite / overhaul / redo / review / audit / fact-check / critique / improve / score, or the argument resolves to an existing post file or slug. |
+
+**Never run two modes in one invocation.** If a bare slug matches a post but the verb suggests a
+fresh take, the skill asks one clarifying question first. A `rewrite` with no target lists the posts
+in the content directory and asks which.
+
+## Flags
+
+| Flag | Applies to | Behaviour |
+| --- | --- | --- |
+| `--scan` | `rewrite` only | "Run the audit and print the report **only**. Change **no** files, apply **no** fixes." The report is the deliverable. |
+| `--no-hero` | `write` | Skip the image. Equivalent to saying "skip the image". |
+| `--no-translations` | `write` | Default language only. Without it, a multi-language blog gets every configured locale. |
+
+## Files
+
+| File | Purpose |
+| --- | --- |
+| `SKILL.md` | The router. Step 0 project learning, mode selection, and the non-negotiables. |
+| `write.md` | The write task, 10 steps. |
+| `rewrite.md` | The audit-and-apply task, 9 steps. |
+| `house-style.md` | Voice craft, burstiness, MDX formatting, the banned AI-slop lists, the frontmatter contract. Also read by `/scribekit-docs`. |
+| `research-protocol.md` | Tools, source-quality ladder, the research loop, citing, the sources list. Also read by `/scribekit-docs`, with its polarity inverted. |
+| `seo-checklist.md` | On-page SEO and GEO checklists, 2026 myths, and the 100-point scoring rubric. |
+| `assets/content-dir-README.md` | Template copied verbatim into the project's blog content directory root. |
+
+## What it produces
+
+| Path | When |
+| --- | --- |
+| `<contentDir>/<slug>/<defaultLocale>.<ext>` | Every `write`. The locale-named file is favoured over `post.<ext>`. |
+| `<contentDir>/<slug>/<lang>.<ext>` | Once per non-default locale, unless `--no-translations`. |
+| `<contentDir>/README.md` | Seeded once from `assets/content-dir-README.md`, verbatim. Never overwritten if it already exists. |
+| `<contentDir>/<slug>/hero.js` | Hero parameters, written by `/scribekit-hero`. |
+| `<assets>/blog/<slug>/hero.<code>.jpg` | The rendered hero, wired into the post's `image:` frontmatter. |
+
+The language is the file's name, never a frontmatter field. `<slug>/post.<ext>` still resolves as a
+language-neutral fallback, but the locale-named form is preferred.
+
+## Constraints
+
+| Constraint | Rule |
+| --- | --- |
+| Fabrication | "**Never fabricate** a statistic, quote, date, source, or a named customer / case / event." Unsupported means cut it or soften it to a claim you can defend. Every number is traceable to the sources list. |
+| Banned phrases | Any banned phrase caps the Voice and Anti-slop category at `<=10` out of 20. |
+| Score floor | The `write` task self-scores before finishing and "does not ship below ~90 (a state-of-the-art bar, not a passing grade)". |
+| Dev server | "**Never start a dev server**" - the skill asks the user to run it. |
+| Git | "**Never create git branches.**" Changes stay scoped to the post and its hero asset. |
+| Date | "**Today's real date** comes from `date +%F`, never a guess", for `date:` and `updated:`. |
+| Scope | "Match the project, don't impose a house look." Voice, routes, and frontmatter all come from Step 0. |
+
+## The 100-point rubric
+
+Used by `rewrite` to score a post, and by `write` to self-score before finishing.
+
+| Category | Points |
+| --- | --- |
+| Content and research | 25 |
+| SEO and discoverability | 20 |
+| GEO / AI-answer extractability | 15 |
+| Voice and anti-slop | 20 |
+| Technical and MDX | 10 |
+| Readability and conversion | 10 |
+
+The hero image is not scored numerically. The `rewrite` task's Verify hero step gates it separately
+on being present, on-brand, the correct ratio, legible at card scale, and carrying descriptive alt
+text.
+
+The score is reported per category with a one-line justification, plus a prioritised, concrete fix
+list ordered most impactful first. A bare number is never reported without the fixes.
+
+## How it calls /scribekit-hero
+
+Step 7 of `write` hands the post's hero to [`/scribekit-hero`](/docs/scribekit-hero)'s `blog-hero`
+create flow. This is automatic on every `write` unless `--no-hero` is passed.
+
+On first use the hero skill seeds the project's `hero.settings.js` from the brand, then writes the
+post's `<slug>/hero.js` parameters, renders the hero, saves the JPEG to the project's assets
+directory, and sets the `image:` frontmatter. A single-language blog gets one JPEG; a multi-language
+blog gets one per locale.
+
+The skill is resolved at the first of three paths that exists:
+
+```text
+<this-skill-dir>/../scribekit-hero/SKILL.md
+.claude/skills/scribekit-hero/SKILL.md
+node_modules/@daanvandenbergh/scribekit/skills/scribekit-hero/SKILL.md
+```
+
+If `/scribekit-hero` is not installed, the skill skips the hero, leaves `image:` unset, and tells you
+to install it to add one.

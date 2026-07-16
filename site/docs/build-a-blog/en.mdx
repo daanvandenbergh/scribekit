@@ -1,0 +1,231 @@
+---
+title: "Build a blog from scratch"
+description: "Wire a Next.js App Router app to a folder of MDX and end with a searchable post grid at /blog and a page per post."
+tab: "Tutorials"
+group: "Tutorials"
+order: 1
+icon: "rocket"
+updated: "2026-07-16"
+image: "/assets/docs/build-a-blog/hero.en.jpg"
+---
+
+By the end of this tutorial you have a working blog at `/blog`: a searchable grid of post cards, a
+page per post, and a category filter, all built from a folder of MDX files. You write three small
+route files and two posts. Nothing else.
+
+**Prerequisites.** Node 20 or newer, a Next.js App Router app on version 14 or newer, and
+`@daanvandenbergh/scribekit` plus `next-mdx-remote` installed - see
+[Installation](/docs/installation). This tutorial uses a single language; every path below is
+relative to your Next app root (the directory `next dev` runs from).
+
+## 1. Create the Blog instance
+
+One `Blog` instance is the whole backend. It reads your content directory at build time and every
+route file derives its data from it.
+
+Create `app/blog/_blog.ts`:
+
+```ts
+import { Blog } from "@daanvandenbergh/scribekit";
+
+/** The single configured Blog instance. Every blog route reads from this. */
+export const blog = new Blog({
+    contentDir: "./blog",
+    siteUrl: "https://example.com",
+    brandName: "Example",
+});
+```
+
+`contentDir` resolves against the app root, so `"./blog"` means a `blog/` folder next to your
+`package.json` - not inside `app/`. The leading underscore in `_blog.ts` keeps Next from treating
+the file as a route.
+
+`siteUrl` and `brandName` are both required before any SEO method runs. Set only one of them and
+`blog.overviewMetadata()` throws with a message telling you to pass a site config. You use those
+methods in the next two steps, so set both now.
+
+## 2. Add the overview route
+
+`BlogOverview` renders the whole grid: the search box, the cards, and the infinite-scroll pager.
+
+Create `app/blog/page.tsx`:
+
+```tsx
+import { BlogOverview } from "@daanvandenbergh/scribekit/react";
+import { blog } from "./_blog";
+
+/** SEO metadata for the blog index. */
+export function generateMetadata() {
+    return blog.overviewMetadata();
+}
+
+/** The blog overview at /blog. */
+export default function BlogIndex() {
+    return <BlogOverview blog={blog} />;
+}
+```
+
+`blog` is the only required prop. The component calls `blog.getAllPosts()` itself and paginates at
+`pageSize` posts per batch, which defaults to `9`.
+
+## 3. Add the post route
+
+Create `app/blog/[slug]/page.tsx`:
+
+```tsx
+import { BlogPage } from "@daanvandenbergh/scribekit/react";
+import { blog } from "../_blog";
+
+/** Unknown slugs 404 at the router instead of rendering on demand. */
+export const dynamicParams = false;
+
+/** Prerender one page per post. */
+export function generateStaticParams() {
+    return blog.getPostSlugs().map((slug) => ({ slug }));
+}
+
+/** Per-post SEO metadata. Falls back to a "not found" title. */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    try {
+        return blog.postMetadata(blog.getPost(slug));
+    } catch {
+        return { title: "Post not found" };
+    }
+}
+
+/** A post at /blog/<slug>. */
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    return <BlogPage blog={blog} slug={slug} />;
+}
+```
+
+Three things in that file are load-bearing:
+
+- `params` is a **Promise** and must be awaited. This is the App Router's shape from Next 15 on.
+- `getPostSlugs()` returns distinct slugs, which is exactly the shape a single-language `[slug]`
+  route needs. (A multi-language blog uses `getPostRefs()` instead, which returns `{ slug, lang }`
+  pairs.)
+- `dynamicParams = false` means a slug you never prerendered 404s at the router, before the
+  component runs. That is why no `notFound()` guard is needed here.
+
+## 4. Write your first post
+
+The folder name is the slug. The file name is the language.
+
+Create `blog/hello-world/en.mdx`:
+
+```mdx
+---
+title: "Hello world"
+description: "The first post on this blog."
+date: "2026-07-16"
+author: "Your Name"
+---
+
+## Why this exists
+
+The body starts at `##`. The `title` above renders the H1, so a second one would be a duplicate.
+
+Tables, task lists, and strikethrough all work: `remark-gfm` is always on.
+```
+
+The file is `en.mdx` because the default locale resolves to `en` when you configure no `locales`
+(it falls back to the `locale` option, which defaults to `"en-GB"`, and takes its primary subtag).
+`title`, `description`, and `date` are the fields worth setting on day one. `readingTime` is
+computed from the body - never write it yourself.
+
+## 5. Import the stylesheet
+
+The components ship unstyled without it. Import it once, app-wide, in `app/layout.tsx`:
+
+```tsx
+import "@daanvandenbergh/scribekit/styles.css";
+```
+
+Import it once and only once. It is marked as a side effect, so bundlers keep it.
+
+## 6. See it render
+
+Start your dev server and open `http://localhost:3000/blog`.
+
+You see a search box reading "Search posts…", and below it one card with the title "Hello world",
+its description, its date, and a "Read more →" link. Click the card and you land on
+`/blog/hello-world`: the post title, a "1 min read" line, your `## Why this exists` heading, and a
+"← Blog" back link.
+
+If the grid says "No posts yet - check back soon.", the content directory is wrong. `contentDir`
+resolves against the directory the app runs from, so confirm `blog/hello-world/en.mdx` sits beside
+`package.json`, not inside `app/`.
+
+## 7. Add a second post
+
+One post proves the route. Two prove the grid.
+
+Create `blog/writing-with-mdx/en.mdx`:
+
+```mdx
+---
+title: "Writing with MDX"
+description: "How the front-matter maps to what renders on the card and the page."
+date: "2026-07-15"
+author: "Your Name"
+---
+
+## The folder is the URL
+
+This post lives at `blog/writing-with-mdx/en.mdx`, so it is served at `/blog/writing-with-mdx`.
+```
+
+Reload `/blog`. Both cards are there, "Hello world" first: posts sort by `date` descending. Type
+`mdx` into the search box and the grid narrows to one card as you type. The search runs entirely
+in the browser, so there is no round trip.
+
+## 8. Add categories and see the filter appear
+
+`categories` is a **YAML list**, never a bare string. `categories: "Guides"` is silently dropped -
+the field parses, the page renders, and the post simply has no categories forever.
+
+Add to `blog/hello-world/en.mdx`:
+
+```mdx
+---
+title: "Hello world"
+description: "The first post on this blog."
+date: "2026-07-16"
+author: "Your Name"
+categories:
+    - Announcements
+---
+```
+
+And to `blog/writing-with-mdx/en.mdx`:
+
+```mdx
+---
+title: "Writing with MDX"
+description: "How the front-matter maps to what renders on the card and the page."
+date: "2026-07-15"
+author: "Your Name"
+categories:
+    - Guides
+---
+```
+
+Reload `/blog`. A filter row appears above the grid: "All", "Announcements", "Guides". Click
+"Guides" and only the MDX post stays.
+
+The filter renders **only when there is more than one distinct category**. Give both posts the
+same category and the row disappears again - which is the usual reason a first attempt at this
+step shows nothing.
+
+## What you have now
+
+Two posts, a searchable and filterable card grid at `/blog`, a page per post at `/blog/<slug>`,
+and canonical, OpenGraph, and Twitter metadata on both routes. Every new post is one more folder
+under `blog/`; no route file changes again.
+
+Every prop and default touched here - `pageSize`, `linkComponent`, `imgComponent`, the label
+overrides - is listed in the [API reference](/docs/api-reference). The concepts behind the file
+layout are in [Getting started](/docs/getting-started).

@@ -1,0 +1,296 @@
+---
+title: "Build a docs site from scratch"
+description: "Assemble the full docs shell - navbar, tab bar, sidebar, command palette, breadcrumb, prev/next, and a ToC minimap - from one Docs instance and a folder of MDX."
+tab: "Tutorials"
+group: "Tutorials"
+order: 2
+icon: "book"
+updated: "2026-07-16"
+image: "/assets/docs/build-a-docs-site/hero.en.jpg"
+---
+
+By the end of this tutorial you have a docs site at `/docs` with the whole shell running: a brand
+navbar, a tab bar, a grouped sidebar, a ⌘K search palette, a breadcrumb, prev/next footer links,
+and a table-of-contents minimap. All of it is built from one `Docs` instance and a folder of MDX.
+
+[Quickstart](/docs/quickstart) is the minimal version of this - a single tab, a sidebar, one page.
+This tutorial is its fuller sibling: same instance, the complete chrome around it.
+
+**Prerequisites.** Node 20 or newer, a Next.js App Router app on version 14 or newer, and
+`@daanvandenbergh/scribekit` plus `next-mdx-remote` installed - see
+[Installation](/docs/installation). This tutorial uses a single language; every path is relative to
+your Next app root (the directory `next dev` runs from). If you have not imported
+`@daanvandenbergh/scribekit/styles.css` in your root layout yet, do that first - the components
+ship unstyled without it.
+
+## 1. Create the Docs instance
+
+One `Docs` instance reads your content directory at build time and hands every route its data: the
+nav tree, the breadcrumb, prev/next, the metadata, the JSON-LD.
+
+Create `app/docs/_docs.ts`:
+
+```ts
+import { Docs } from "@daanvandenbergh/scribekit";
+
+/** The single configured Docs instance. Every docs route reads from this. */
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://example.com",
+    brandName: "Example",
+    description: "Documentation for Example.",
+    tabs: ["Documentation"],
+    groups: ["Get started"],
+});
+```
+
+`contentDir` resolves against the app root, so `"./docs"` is a `docs/` folder next to your
+`package.json`, not inside `app/`. `siteUrl` and `brandName` must both be set or the SEO methods
+throw. `tabs` and `groups` are display order only - you extend them in step 7.
+
+## 2. Build the chrome
+
+The navbar, tab bar, and sidebar all need the current pathname to highlight the active page, and
+`usePathname()` is a client hook. So the chrome is one thin client component that reads the
+pathname once and passes it down.
+
+Create `app/docs/_docs-chrome.tsx`:
+
+```tsx
+"use client";
+
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { DocsNavbar, DocsSearchProvider, DocsSidebar, DocsTabs } from "@daanvandenbergh/scribekit/react";
+import type { NavTree } from "@daanvandenbergh/scribekit";
+
+/** The full docs shell: navbar and tab bar on top, sidebar beside the routed content. */
+export function DocsChrome({ nav, children }: { nav: NavTree; children: ReactNode }) {
+    const activePath = usePathname();
+    return (
+        <DocsSearchProvider nav={nav} linkComponent={Link}>
+            <div className="scribekit-docs">
+                <DocsNavbar brandName="Example" homeHref="/" linkComponent={Link} />
+                <DocsTabs nav={nav} activePath={activePath} linkComponent={Link} />
+                <div className="scribekit-docs-body">
+                    <DocsSidebar nav={nav} activePath={activePath} linkComponent={Link} />
+                    <main className="scribekit-docs-main">{children}</main>
+                </div>
+            </div>
+        </DocsSearchProvider>
+    );
+}
+```
+
+`DocsNavbar` **must sit inside `DocsSearchProvider`**. The provider owns the one ⌘K palette that
+both the navbar's search button and the keyboard shortcut open. Put the navbar outside it and
+nothing errors - the search button still renders, it just does nothing when clicked, because
+outside a provider the `open` callback is a no-op. That silence is the whole reason to get the
+nesting right the first time.
+
+## 3. Wire the layout
+
+The chrome belongs in the layout, not the page, so it survives client-side navigation: the open
+tab, the sidebar scroll position, and the palette all persist between pages.
+
+Create `app/docs/layout.tsx`:
+
+```tsx
+import type { ReactNode } from "react";
+import { docs } from "./_docs";
+import { DocsChrome } from "./_docs-chrome";
+
+/** Docs shell layout, shared by the index and every page. */
+export default function DocsLayout({ children }: { children: ReactNode }) {
+    return <DocsChrome nav={docs.getNavTree()}>{children}</DocsChrome>;
+}
+```
+
+`getNavTree()` runs on the server and returns a plain serialisable tree, which is what lets it
+cross into the client chrome as a prop.
+
+## 4. Add the index route
+
+`DocsIndex` renders a hero plus a card per sidebar group, built from the same nav tree.
+
+Create `app/docs/page.tsx`:
+
+```tsx
+import { DocsIndex } from "@daanvandenbergh/scribekit/react";
+import { docs } from "./_docs";
+
+/** SEO metadata for the docs index. */
+export function generateMetadata() {
+    return docs.indexMetadata();
+}
+
+/** The docs landing page at /docs. */
+export default function DocsIndexPage() {
+    return <DocsIndex docs={docs} />;
+}
+```
+
+## 5. Add the page route
+
+Create `app/docs/[slug]/page.tsx`:
+
+```tsx
+import { DocsPage } from "@daanvandenbergh/scribekit/react";
+import { docs } from "../_docs";
+
+/** Unknown slugs 404 at the router instead of rendering on demand. */
+export const dynamicParams = false;
+
+/** Prerender one page per doc, plus every renamed slug from the `redirects` config. */
+export function generateStaticParams() {
+    return [...docs.getDocRefs(), ...docs.getRedirectRefs()].map((ref) => ({ slug: ref.slug }));
+}
+
+/** Per-page SEO metadata. Falls back to a "not found" title. */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    try {
+        return docs.docMetadata(docs.getDoc(slug));
+    } catch {
+        return { title: "Page not found" };
+    }
+}
+
+/** A docs page at /docs/<slug>. */
+export default async function DocSlugPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    return <DocsPage docs={docs} slug={slug} />;
+}
+```
+
+`params` is a Promise and must be awaited - the App Router's shape from Next 15 on.
+
+Spreading **both** `getDocRefs()` and `getRedirectRefs()` is not optional. Both return
+`{ slug, lang }` entries, and on a single-language site `getRedirectRefs()` fills `lang` with your
+default locale, so mapping to `{ slug: ref.slug }` is all a `[slug]` route needs. The reason to
+include them: `dynamicParams = false` makes an unrendered slug 404 **at the router**, before the
+component that would redirect it ever runs. Skip the redirect refs and the day you rename a page,
+its old URL dies rather than redirecting. Adding them now costs one spread and saves that.
+
+## 6. Write two pages and watch the sidebar assemble
+
+The folder name is the slug. The file name is the language.
+
+Create `docs/getting-started/en.mdx`:
+
+```mdx
+---
+title: "Getting started"
+description: "What this project is and how the pieces fit."
+tab: "Documentation"
+group: "Get started"
+order: 1
+icon: "book"
+---
+
+The body starts at `##` - the title above renders the H1.
+
+## What this is
+
+Enough prose here that the minimap has a heading to track.
+```
+
+Then `docs/installation/en.mdx`:
+
+```mdx
+---
+title: "Installation"
+description: "Install the package and its peer dependencies."
+tab: "Documentation"
+group: "Get started"
+order: 2
+icon: "rocket"
+---
+
+## Install the package
+
+The second page in the group, so prev/next now has somewhere to point.
+```
+
+`order` must be a **bare number**. `order: "2"` is silently dropped: the page still renders, but it
+falls into the unordered bucket and sorts after every ordered sibling. Nothing warns you. When a
+page mysteriously sits last in its group, this is why. Within a group, keep `order` dense - `1`,
+`2`, `3` - with no ties, because two pages at the same `order` tie-break alphabetically by title
+rather than by anything you chose.
+
+Start your dev server and open `http://localhost:3000/docs`.
+
+The index shows a "Get started" card listing both pages. Click through to `/docs/getting-started`
+and the shell is there: the navbar with your brand and a search button, the sidebar with a
+"Get started" group and both pages under it, "Getting started" highlighted, a breadcrumb reading
+"Get started / Getting started", a "Next → Installation" link at the foot, and an "On this page"
+minimap tracking your `##` headings as you scroll. Press ⌘K (Ctrl+K on Windows and Linux) and the
+palette opens; type `install` and Installation comes up.
+
+One thing is missing: **there is no tab bar.** That is next.
+
+## 7. Add a second tab and the tab bar appears
+
+`DocsTabs` renders `null` until there is more than one tab. A single-tab corpus has nothing to
+switch between, so the component draws nothing - your `DocsTabs` in step 2 has been returning
+`null` this whole time. It is working correctly.
+
+Give it a second tab. Create `docs/deploy-guide/en.mdx`:
+
+```mdx
+---
+title: "Deploy your site"
+description: "Ship the docs to a static host."
+tab: "Guides"
+group: "Hosting"
+order: 1
+icon: "globe"
+---
+
+## Build the site
+
+A page in a second tab, which is what makes the tab bar render.
+```
+
+Reload `/docs/getting-started`. A tab bar now sits under the navbar with "Documentation" and
+"Guides", and the sidebar shows only the active tab's groups. Click "Guides" and the sidebar swaps
+to "Hosting".
+
+## 8. Control the section order
+
+Tabs and groups sort by their position in the instance config first, and anything unlisted sorts
+after. Your `Guides` tab and `Hosting` group are not listed yet, so they landed at the end by
+accident rather than by design.
+
+Update `app/docs/_docs.ts`:
+
+```ts
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://example.com",
+    brandName: "Example",
+    description: "Documentation for Example.",
+    tabs: ["Documentation", "Guides"],
+    groups: ["Get started", "Hosting"],
+});
+```
+
+Reorder those arrays and the tab bar and sidebar reorder with them. To relabel a section without
+touching a single page, pass an object instead of a string:
+
+```ts
+tabs: ["Documentation", { id: "Guides", label: "How-to guides" }],
+```
+
+The `id` still matches the `tab:` string in your front-matter; only the displayed label changes.
+
+## What you have now
+
+Three pages, two tabs, and the full shell: navbar, tab bar, grouped sidebar with icons, ⌘K
+palette, breadcrumb, prev/next, and the ToC minimap. Every new page is one more folder under
+`docs/` with the right `tab`, `group`, and `order`; no route file changes again.
+
+Every component prop and default used here is listed in the
+[API reference](/docs/api-reference), and the front-matter contract in full is in the
+[docs guide](/docs/docs-guide).

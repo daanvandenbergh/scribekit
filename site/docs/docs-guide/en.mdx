@@ -1,0 +1,350 @@
+---
+title: "Docs recipes"
+description: "Task recipes for adding pages, ordering the sidebar, wiring the chrome, adding a language, renaming slugs, and theming the tokens."
+tab: "Documentation"
+group: "Guides"
+order: 2
+icon: "list"
+updated: "2026-07-16"
+image: "/assets/docs/docs-guide/hero.en.jpg"
+---
+
+Recipes for the jobs you do once the docs site exists: add a page, slot it into the sidebar, wire the chrome, add a language, rename a slug without breaking links, and theme it. Each one stands alone, so read the heading you need and stop.
+
+Prerequisites: the package installed, the stylesheet imported once, and a configured `Docs` instance. See [Installation](/docs/installation) for that, [Build a docs site](/docs/build-a-docs-site) for the end-to-end walkthrough, and [API reference](/docs/api-reference) for every option, default, and token.
+
+## Add a page
+
+Drop a folder into your `contentDir`. **The folder name is the public URL** and the file name is the language:
+
+```
+docs/
+    installation/
+        en.mdx        # the default-locale page -> /docs/installation
+        fr.mdx        # a translation -> /fr/docs/installation
+```
+
+Only immediate subdirectories are walked. There is no recursion and no nested slugs, and the slug is never slugified or escaped: it is the directory name verbatim.
+
+```mdx
+---
+title: "Installation"
+description: "Install the package and wire your first instance."
+tab: "Documentation"
+group: "Get started"
+order: 2
+icon: "rocket"
+updated: "2026-07-16"
+---
+
+## Install the package
+
+The body starts at `##` - `title` already renders the H1.
+```
+
+`title` falls back to the slug when it is missing; `description` falls back to `""`, which ships a blank meta description, so always write one. `readingTime` is computed from the body. There is no `author`, `categories`, or `tags` field.
+
+**Never create both `post.mdx` and `en.mdx` in one folder.** Two files resolving to one page throws `DuplicateDocError` from `entries()`, which fails the build rather than just that page. Pick one file name per language.
+
+## Place the page in the sidebar
+
+Four fields do the slotting. `tab` is the top-level section, `group` is the sidebar heading, `order` sorts within the group, and `icon` names the glyph:
+
+```yaml
+tab: "Documentation"
+group: "Guides"
+order: 2
+icon: "list"
+```
+
+Reuse the exact `tab` and `group` strings your other pages use, character for character. They are matched as literals, so `"Get started"` and `"Get Started"` are two different groups.
+
+Within a group, pages sort by `order` ascending; a page with no `order` sorts after every page that has one.
+
+### The YAML types are load-bearing
+
+The reader keeps a field only when its YAML type is right, and silently drops it otherwise. Nothing errors:
+
+- **`order` must be a bare number.** `order: 3` is kept. `order: "3"` is dropped and the page falls to the bottom of its group.
+- **`hidden` must be a bare boolean.** `hidden: true` is kept. `hidden: "true"` and `hidden: 1` are **not hidden** - the check is a strict `=== true`, so a quoted draft leaks straight into the nav.
+- **`keywords` must be a YAML list** of `- item` lines. A comma-separated string is dropped.
+- **`icon` must be a bare string.** `icon: 2024` is dropped; unlike `title: 2024`, which survives as `"2024"`.
+
+After writing a header, re-read it: `order` a number, `hidden` a boolean, `keywords` a list.
+
+### The icon set is fixed
+
+`icon` maps against a built-in set. Valid names, and only these:
+
+`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`.
+
+Any other name silently renders the neutral `document` glyph rather than erroring, so a typo looks like a deliberate choice forever. To use your own glyphs instead, pass `renderIcon` to `DocsSidebar` or `DocsIndex`.
+
+The docs index card for a group takes the icon of that group's **first** page, so give whichever page sorts first an icon that represents the whole group.
+
+## Order the tabs and groups themselves
+
+`order` sorts pages inside a group. To sort the tabs and the groups, list them on the `Docs` instance. Both arrays are purely presentational and both accept either a bare id or an id with a display label:
+
+```ts
+import { Docs } from "@daanvandenbergh/scribekit";
+
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://example.com",
+    brandName: "My Site",
+    tabs: ["Documentation", { id: "Skills", label: "Claude skills" }],
+    groups: ["Get started", "Guides", "Reference"],
+});
+```
+
+Tabs and groups then sort on three keys, in this order:
+
+1. **Config index.** Everything you listed comes first, in the order you listed it. Anything you did not list comes after.
+2. **Minimum descendant `order`.** Among the unlisted, the section holding the lowest-`order` page wins.
+3. **Discovery order.** The final tie-break is the order the directory was read in.
+
+So listing a tab or a group is how you pin it; leaving it out hands the decision to your page `order` values and then to the filesystem.
+
+## Hide a page
+
+Set the bare boolean:
+
+```yaml
+hidden: true
+```
+
+Be precise about what this does, because it is not access control. The page **stays routable**: it is still in `getDocRefs()`, so `generateStaticParams` still prerenders it and a direct link still works, and it is still in `getAllDocs()`. It gets `robots: { index: false }` in its metadata.
+
+What it loses:
+
+- the nav tree, and therefore the sidebar and the command palette
+- prev/next (`getAdjacent` returns `{}`)
+- the breadcrumb (`getBreadcrumb` returns `undefined`)
+- the sitemap
+- the docs index `ItemList` in the JSON-LD
+- its siblings' hreflang alternates, and the JSON-LD translation cross-links
+
+It is "unlisted", not "private". Anyone with the URL reads the page.
+
+## Add the navbar, tabs, sidebar, and search palette
+
+The chrome is interactive - the ⌘K palette, the sliding tab indicator, the active-page highlight - and all of it needs the current pathname, which is a client hook. So put the chrome in a thin client component and build the nav tree in the server layout above it.
+
+```tsx
+// app/docs/_docs-chrome.tsx
+"use client";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+    DocsNavbar,
+    DocsNavbarButton,
+    DocsSearchProvider,
+    DocsSidebar,
+    DocsTabs,
+} from "@daanvandenbergh/scribekit/react";
+import type { NavTree } from "@daanvandenbergh/scribekit";
+
+export function DocsChrome({ nav, lang, children }: { nav: NavTree; lang: string; children: ReactNode }) {
+    const activePath = usePathname();
+    return (
+        <DocsSearchProvider nav={nav} lang={lang} linkComponent={Link}>
+            <div className="scribekit-docs">
+                <DocsNavbar
+                    brandName="My Site"
+                    docsText="Docs"
+                    homeHref="/"
+                    linkComponent={Link}
+                    lang={lang}
+                    actions={[
+                        <DocsNavbarButton key="blog" href="/blog" linkComponent={Link}>
+                            Blog
+                        </DocsNavbarButton>,
+                    ]}
+                />
+                <DocsTabs nav={nav} activePath={activePath} lang={lang} linkComponent={Link} />
+                <div className="scribekit-docs-body">
+                    <DocsSidebar nav={nav} activePath={activePath} lang={lang} linkComponent={Link} />
+                    <main className="scribekit-docs-main">{children}</main>
+                </div>
+            </div>
+        </DocsSearchProvider>
+    );
+}
+```
+
+Put it in the layout, not the page, so the open tab, the scroll position, and the palette survive client-side navigation:
+
+```tsx
+// app/docs/layout.tsx
+import type { ReactNode } from "react";
+import { docs } from "./_docs";
+import { DocsChrome } from "./_docs-chrome";
+
+export default function DocsLayout({ children }: { children: ReactNode }) {
+    return (
+        <DocsChrome nav={docs.getNavTree()} lang={docs.defaultLocale}>
+            {children}
+        </DocsChrome>
+    );
+}
+```
+
+Four rules that decide whether this works:
+
+- **`DocsNavbar` must sit inside `DocsSearchProvider`.** The provider owns the single palette that both the navbar's search box and the ⌘K shortcut raise. Outside it, `open()` is a no-op: nothing throws, the search box just does nothing forever. The navbar renders that box itself via `showSearch`, which defaults to `true`. To trigger the palette from somewhere else, render `DocsSearchButton` inside the provider, or call `useDocsSearch().open()`.
+- **`DocsTabs` returns `null` when `!nav.multiTab`.** A corpus whose pages all share one `tab`, or carry none, renders no tab bar at all. Leaving `DocsTabs` in the tree costs nothing and starts working the day you add a second tab.
+- **The table of contents is already in `DocsPage`** (`showToc`, default `true`). `DocsToc` is only for placing the minimap yourself, and it returns `null` when `toc.length === 0`, so a page with no `##` or `###` headings renders no empty shell.
+- **Do not override `h2` or `h3` in `DocsPage`'s `components` map.** `DocsPage` injects anchor ids into those two headings, and that is what the minimap jumps to. Your map is spread last, so your `h2` wins and the ids vanish along with the jump links. If you must override them, inject your own ids.
+
+## Add another language
+
+List the locale on the instance first. This is the step people skip:
+
+```ts
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://example.com",
+    brandName: "My Site",
+    locales: [
+        { code: "en", label: "English" },
+        { code: "fr", label: "Français", dateLocale: "fr-FR" },
+    ],
+    defaultLocale: "en",
+});
+```
+
+Then drop `fr.mdx` beside `en.mdx` in the same folder. The file name is the language; there is no front-matter language field.
+
+**A `fr.mdx` whose `fr` is not in `config.locales` is never discovered.** No error, no page, no warning: discovery only looks for the locales you configured, so the file is invisible to `getDocRefs`, the nav, and the sitemap. Configure the locale, then write the file.
+
+### The URL shape
+
+The locale prefix comes **first**, then the base path: `/<lang><basePath>/<slug>`.
+
+| Page | URL |
+| --- | --- |
+| `installation/en.mdx`, `defaultLocale: "en"` | `/docs/installation` |
+| `installation/fr.mdx` | `/fr/docs/installation` |
+| `installation/en.mdx` with `prefixDefaultLocale: true` | `/en/docs/installation` |
+
+It is `/fr/docs/installation`, never `/docs/fr/installation`. Move the route tree to `app/[lang]/docs/[slug]` and map both fields in `generateStaticParams`.
+
+### The language picker
+
+```tsx
+import { DocsLanguagePicker } from "@daanvandenbergh/scribekit/react";
+
+<DocsLanguagePicker
+    locales={docs.locales}
+    currentLang={lang}
+    defaultLocale={docs.defaultLocale}
+    prefixDefaultLocale={docs.prefixDefaultLocale}
+    activePath={activePath}
+    basePath="/docs"
+    linkComponent={Link}
+/>
+```
+
+Pass it to `DocsNavbar`'s `languagePicker` prop.
+
+**`basePath` defaults to `/blog`, so docs consumers must pass `basePath="/docs"` explicitly.** The picker shares the blog's path helper and its default, so omitting it points every language link at your blog. Pass your own `basePath` even when it is the `Docs` default.
+
+The picker returns `null` when `locales.length <= 1`, so it costs nothing to leave in a single-language site.
+
+## Rename a slug without breaking links
+
+Rename the folder, then map the old slug to the new one:
+
+```ts
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://example.com",
+    brandName: "My Site",
+    redirects: {
+        "old-slug": "new-slug",
+    },
+});
+```
+
+The route has to do two things: prerender the old slug, and redirect it when it renders.
+
+```tsx
+// app/docs/[slug]/page.tsx
+import { DocsPage } from "@daanvandenbergh/scribekit/react";
+import { DocNotFoundError } from "@daanvandenbergh/scribekit";
+import { notFound, permanentRedirect } from "next/navigation";
+import { docs } from "../_docs";
+
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+    return [...docs.getDocRefs(), ...docs.getRedirectRefs()].map((ref) => ({ slug: ref.slug }));
+}
+
+export default async function DocSlugPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    try {
+        docs.getDoc(slug);
+    } catch (err) {
+        if (err instanceof DocNotFoundError) {
+            const renamedTo = docs.getRedirect(slug);
+            if (renamedTo) permanentRedirect(renamedTo);
+            notFound();
+        }
+        throw err;
+    }
+    return <DocsPage docs={docs} slug={slug} />;
+}
+```
+
+**`getRedirectRefs()` is not optional.** With `dynamicParams = false`, an unrendered slug 404s **at the router**, before the component that would redirect it ever runs. Without those refs in `generateStaticParams`, the redirect config is dead code.
+
+`getRedirect` hands back a destination that is already locale-prefixed and base-rooted, ready to pass straight to `permanentRedirect()` for a 308.
+
+Three resolution rules govern the map:
+
+1. **A real page always wins.** If the source slug still exists on disk, the entry is inert. A stale redirect can never shadow a live page.
+2. **Chains resolve in one hop.** `{ a: "b", b: "c" }` sends `a` straight to `c`, not through `b`.
+3. **Cycles yield nothing.** `{ a: "b", b: "a" }` returns `undefined`, so the URL 404s instead of looping.
+
+## Theme it
+
+Declare the `--scribekit-*` tokens yourself:
+
+```css
+:root {
+    --scribekit-primary: #6d5df6;
+    --scribekit-ink: #0b1b36;
+    --scribekit-font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+```
+
+**There is no `:root` block in the stylesheet to override.** Every token exists only as an inline `var(--name, fallback)` at each call site, and that fallback is what you see when you declare nothing. Declaring the property anywhere it inherits from makes every call site pick it up. [API reference](/docs/api-reference) lists the tokens.
+
+**No dark mode ships.** The stylesheet has no `prefers-color-scheme` block and no `.dark` class. Dark theming is entirely yours, and the tokens are the whole mechanism:
+
+```css
+:root[data-theme="dark"] {
+    --scribekit-surface: #0b1b36;
+    --scribekit-ink: #f8fafc;
+    --scribekit-border: #1e2f52;
+}
+```
+
+Budget for covering the surfaces, the ink, and the borders at minimum.
+
+### Offsetting an app-level header
+
+The sticky columns (the sidebar and the minimap) must start where the sticky chrome above them ends, or they slide underneath it as the article scrolls. If your docs shell sits under your own app header, set the offset:
+
+```css
+:root {
+    --scribekit-docs-content-top: 64px;
+}
+```
+
+`--scribekit-docs-content-top` is the consumer's override and it always wins.
+
+**Do not set `--scribekit-docs-chrome-top`.** It is internal and computed: sibling-selector rules derive it from which chrome actually rendered, because `DocsTabs` renders nothing for a single-tab corpus and the offset cannot be known ahead of time. Setting it by hand fights those rules.

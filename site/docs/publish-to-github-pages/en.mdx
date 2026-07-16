@@ -1,0 +1,250 @@
+---
+title: "Publish your docs to GitHub Pages"
+description: "Take a working scribekit docs site live on GitHub Pages as a static export, with a workflow that redeploys on every push."
+tab: "Tutorials"
+group: "Tutorials"
+order: 3
+icon: "globe"
+updated: "2026-07-16"
+image: "/assets/docs/publish-to-github-pages/hero.en.jpg"
+---
+
+By the end of this tutorial your docs site is live at a GitHub Pages URL and redeploys itself on
+every push to your default branch. You patch one config file, add two files, flip one setting in
+the GitHub UI, and push.
+
+**Prerequisites.** A working scribekit docs site that renders locally - see
+[Build a docs site from scratch](/docs/build-a-docs-site) - and a GitHub repository with a remote
+set up. Node 20 or newer, and a committed `package-lock.json` (the workflow uses `npm ci`).
+
+A scribekit docs site is already static-export-ready. The `Docs` class reads the filesystem at
+build time, pages render as server components, search is client-side, and every dynamic route
+already ships `generateStaticParams` and `dynamicParams = false`. So this is almost all config,
+with two real trade-offs called out where they bite.
+
+There is a `/scribekit-docs-github-pages` Claude Code skill that does every step below for you -
+but **it is not in the published npm package yet**, so you cannot install it today. See
+[scribekit-docs-github-pages](/docs/scribekit-docs-github-pages) for what it will automate. This
+tutorial is the manual path, and it works right now.
+
+## 1. Turn on static export
+
+Merge two keys into your existing Next config. Preserve everything already in the object.
+
+In `next.config.mjs`:
+
+```js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+    output: "export",
+    images: { unoptimized: true },
+};
+
+export default nextConfig;
+```
+
+`output: "export"` is what makes `next build` emit a static `out/` directory instead of a server
+bundle. `images: { unoptimized: true }` keeps a local build from failing if anything in your app
+uses `next/image`.
+
+Two things **not** to add here:
+
+- **Do not add `trailingSlash: true`.** The export writes `docs/<slug>.html`, which Pages already
+  serves at the extensionless `/docs/<slug>`, and that matches scribekit's no-trailing-slash
+  canonical URLs. Turn trailing slashes on and every canonical disagrees with the URL it is served
+  at.
+- **Do not hardcode `basePath` or `assetPrefix`.** The workflow's `configure-pages` step injects
+  the right values for your Pages URL in step 3. Hardcoding them breaks local builds and fights CI.
+
+## 2. Add public/.nojekyll
+
+Create an empty file at `public/.nojekyll`:
+
+```bash
+touch public/.nojekyll
+```
+
+It stops the exported `_next/` folder from ever being treated as Jekyll source. The artifact
+deploy flow does not run Jekyll anyway, so this is belt and braces - it costs nothing and removes
+the doubt.
+
+## 3. Add the deploy workflow
+
+This file goes at the **git repository root**, not your Next app directory. Workflows only run
+from the repo root's `.github/`.
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+# Least-privilege token: only what deploy-pages needs.
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+# One deploy at a time; let an in-flight run finish rather than cancelling it.
+concurrency:
+    group: pages
+    cancel-in-progress: false
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Configure Pages
+              uses: actions/configure-pages@v5
+              with:
+                  static_site_generator: next
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build static export
+              run: npx --no-install next build
+
+            - name: Upload artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: ./out
+
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v5
+```
+
+Adjust three things to your repo:
+
+- **Default branch.** The trigger says `branches: [main]`. If yours is not `main`, change it.
+- **App in a subdirectory.** If your Next app lives below the repo root (say `web/`), add a
+  `defaults: { run: { working-directory: web } }` block to the `build` job and change the upload
+  `path:` to `./web/out`.
+- **No lockfile.** Both `npm ci` and `cache: npm` need a committed `package-lock.json`. If you have
+  none, commit one, or drop the `cache: npm` line and change `npm ci` to `npm install`.
+
+`configure-pages@v5` with `static_site_generator: next` is the step that injects `basePath` and
+`assetPrefix` for your Pages URL, which is why step 1 left them alone.
+
+## 4. Set siteUrl to the Pages origin
+
+Your `_docs.ts` still carries whatever `siteUrl` you developed against. Leave it and you ship
+canonical, sitemap, and OpenGraph URLs pointing at a site that is not yours.
+
+Which URL depends on the repository:
+
+| Repository | Live at | `siteUrl` |
+| --- | --- | --- |
+| Named `<owner>.github.io` | `https://<owner>.github.io/` | `https://<owner>.github.io` |
+| Any other name | `https://<owner>.github.io/<repo>/` | `https://<owner>.github.io/<repo>` |
+| With a `public/CNAME` | `https://<your-domain>/` | `https://<your-domain>` |
+
+Set it in `app/docs/_docs.ts`:
+
+```ts
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://<owner>.github.io/<repo>",
+    brandName: "Example",
+});
+```
+
+If a sibling `_blog.ts` shares the origin, update it too.
+
+**The project-site sharp edge.** If your repo is not named `<owner>.github.io` and has no custom
+domain, the site is served under a `/<repo>` subpath, and one thing does not come out right:
+navigation and assets work fine, because scribekit's links go through your `linkComponent` and CI
+injects the base path - but the **absolute SEO URLs come out missing the `/<repo>` segment**, even
+with `siteUrl` set as above. Scribekit builds them with `new URL(path, siteUrl)`, and a
+root-relative path discards `siteUrl`'s subpath. That is inherent to subpath hosting, not
+something a setting fixes.
+
+Two clean ways out, both root-hosted and both correct:
+
+- **A custom domain.** Add `public/CNAME` containing the domain, point DNS at Pages, and set
+  `siteUrl` to it. The base path becomes empty.
+- **A user or org site.** Name the repo `<owner>.github.io`. Also root, also correct.
+
+If you keep the project subpath, the site works and reads fine; only its absolute metadata omits
+`/<repo>`.
+
+## 5. Check for middleware
+
+If your app has a `middleware.ts` or `proxy.ts` that rewrites clean locale URLs (`/docs/...` onto
+`/en/docs/...`), **static export drops it**. Middleware does not exist on a static host. Only the
+prefixed paths get generated, and every bare `/docs/...` URL 404s.
+
+The fix is to stop needing the rewrite: set `prefixDefaultLocale: true` on your `Docs` instance so
+every language, including the default, is served under its own prefix. Then delete the
+middleware and remove any `/en`-stripping your chrome did on `usePathname()`, since it assumed the
+rewrite. URLs become `/<lang>/docs/...` across the board - the honest trade for static hosting.
+
+**A single-locale site has no middleware and nothing to do here.** If you followed
+[Build a docs site from scratch](/docs/build-a-docs-site), skip this step: the flat `/docs/...`
+export just works.
+
+One more honesty note while you are here: if you use the `redirects` config for renamed slugs,
+those stop being true `308`s. The build still succeeds and real visitors still land on the new
+URL - Next turns the redirect into a client-side one that fires after hydration. But to a crawler
+or a JS-less client, the old URL is a blank `200` with no `308` and no canonical. If those old URLs
+matter for SEO, serve `public/<oldpath>.html` meta-refresh stubs instead and drop
+`getRedirectRefs()` from `generateStaticParams`. You cannot keep both: a `public/` file and a
+prerendered route at the same path collide.
+
+## 6. Flip the Pages source
+
+This is the one step that cannot be scripted, and skipping it makes the workflow's deploy job fail
+with a Pages-not-enabled error.
+
+In your repository on GitHub:
+
+**Settings → Pages → Build and deployment → Source →** select **"GitHub Actions"**.
+
+## 7. Push and watch it go live
+
+```bash
+git add next.config.mjs public/.nojekyll .github/workflows/deploy.yml app/docs/_docs.ts
+git commit -m "Publish docs to GitHub Pages"
+git push
+```
+
+Open the repository's **Actions** tab. The "Deploy to GitHub Pages" run appears with two jobs,
+`build` then `deploy`. When both go green - about a minute or two - the `deploy` job shows the live
+URL, and Settings → Pages shows it too.
+
+Open it. Your docs index loads, the sidebar and tab bar are there, ⌘K opens the palette, and
+prev/next walks the corpus. The client components hydrate straight from the static HTML, so
+nothing about the shell degrades.
+
+If assets 404 and the page renders unstyled, that is the base-path tell: check that step 1 left
+`basePath` and `assetPrefix` out of `next.config.mjs` and let `configure-pages` set them.
+
+## What you have now
+
+A live docs site on GitHub Pages that rebuilds and redeploys on every push to your default branch,
+with correct canonical and sitemap URLs if you are root-hosted. Writing a new page is a new folder
+under `docs/` and a push.
+
+To sanity-check the export before pushing, run `npx next build` from your app root and confirm
+`out/` holds your docs HTML, a populated `_next/`, and `.nojekyll`.

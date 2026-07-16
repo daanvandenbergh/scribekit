@@ -1,0 +1,300 @@
+---
+title: "Blog recipes"
+description: "Task recipes for adding posts, wiring the routes, filtering categories, tuning the card grid, and overriding the built-in copy."
+tab: "Documentation"
+group: "Guides"
+order: 1
+icon: "document"
+updated: "2026-07-16"
+image: "/assets/docs/blog-guide/hero.en.jpg"
+---
+
+Recipes for the jobs you do once the blog exists: add a post, wire the routes, filter by category, tune the grid, rank similar posts, and swap the copy. Each one stands alone, so read the heading you need and stop.
+
+Prerequisites: the package installed, the stylesheet imported once, and a configured `Blog` instance. See [Installation](/docs/installation) for that, [Build a blog](/docs/build-a-blog) for the end-to-end walkthrough, and [API reference](/docs/api-reference) for every option and default.
+
+## Add a post
+
+Drop a folder into your `contentDir`. The folder name is the slug and the file name is the language:
+
+```
+blog/
+    hello-world/
+        en.mdx        # the default-locale post
+        fr.mdx        # one per locale listed in the Blog config
+```
+
+Only immediate subdirectories are walked, so a stray `notes.txt` at the top of `blog/` is ignored and there is no deeper nesting.
+
+Write the front-matter, then the body:
+
+```mdx
+---
+title: "Hello, world"
+description: "One sentence. It is the card blurb, the meta description, and the OG card."
+date: "2026-07-16"
+updated: "2026-07-16"
+keywords:
+    - mdx
+    - next.js
+categories:
+    - News
+author: "Ada Lovelace"
+author-image: "/assets/authors/ada.jpg"
+image: "/assets/blog/hello-world/hero.en.jpg"
+---
+
+## Your first heading
+
+The body starts at `##` - `title` already renders the H1.
+```
+
+Those are the fields `PostMeta` parses. Anything else is dropped. Three details that bite:
+
+- **The author avatar key is `author-image`**, kebab-case, in the YAML. The parsed field on `PostMeta` is `authorImage`. Writing `authorImage:` in the front-matter gets you nothing.
+- **`slug` and `lang` are never front-matter fields.** They come from the folder name and the file name.
+- **`readingTime` is computed from the body**, so never author it.
+
+### Two silent failures
+
+Nothing errors in either case. The post ships looking fine and quietly wrong.
+
+**`categories` must be a YAML list.** Only an array survives:
+
+```yaml
+categories:
+    - News          # kept
+```
+
+```yaml
+categories: "News"   # silently dropped - the post has no categories at all
+```
+
+`keywords` follows the same rule, and a dropped `keywords` also costs the post its heaviest similarity signal.
+
+**`date` is not validated.** There is no `YYYY-MM-DD` shape check: any string passes through verbatim. `date: "yesterday"` lands in `meta.date`, in the JSON-LD `datePublished`, and in the sort key that orders `getAllPosts()`. Generate the value with `date +%F` rather than typing it.
+
+### Never create both `post.mdx` and `en.mdx`
+
+One folder holding both files resolves two files to one post, and the two read paths disagree about it:
+
+- `entries()` throws `DuplicatePostError`, which takes down `getPostSlugs`, `getAllPosts`, and `sitemapEntries` - so the build fails, not just that post.
+- `getPost` does not throw. It silently returns `en.mdx`.
+
+Pick one file name per language and stay with it.
+
+### There are no drafts
+
+The blog module has no `hidden` and no draft state. Every post it finds on disk is published, in the sitemap, and in the JSON-LD. Keep unfinished work outside `contentDir`.
+
+## Render the overview and the post pages
+
+`BlogOverview` and `BlogPage` are server components: the `Blog` instance reads the filesystem and never crosses into client code. Underneath them sit `BlogOverviewGrid` and `BlogSidebar`, the client components that own the fuzzy search, the infinite scroll, and the scroll-spy minimap. You pass the instance; they receive plain serialisable data.
+
+The overview:
+
+```tsx
+// app/blog/page.tsx
+import { BlogOverview } from "@daanvandenbergh/scribekit/react";
+import { blog } from "./_blog";
+
+export function generateMetadata() {
+    return blog.overviewMetadata();
+}
+
+export default function BlogIndexPage() {
+    return <BlogOverview blog={blog} header={<h1>Blog</h1>} />;
+}
+```
+
+The post pages, prerendered from `getPostRefs()`:
+
+```tsx
+// app/blog/[slug]/page.tsx
+import { BlogPage } from "@daanvandenbergh/scribekit/react";
+import Link from "next/link";
+import { blog } from "../_blog";
+
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+    return blog.getPostRefs().map((ref) => ({ slug: ref.slug }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    try {
+        return blog.postMetadata(blog.getPost(slug));
+    } catch {
+        return { title: "Post not found" };
+    }
+}
+
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    return <BlogPage blog={blog} slug={slug} linkComponent={Link} />;
+}
+```
+
+`getPostRefs()` returns every `(slug, lang)` pair. With no `locales` configured that is one ref per post, so mapping `ref.slug` is enough.
+
+**If you configured `locales`**, move the tree to `app/[lang]/blog/[slug]` and map both fields, or the second language's refs collide with the first:
+
+```ts
+export function generateStaticParams() {
+    return blog.getPostRefs().map((ref) => ({ lang: ref.lang, slug: ref.slug }));
+}
+```
+
+**If you opt out of `dynamicParams = false`**, guard the unknown slug yourself. With it, an unknown slug 404s at the router and `getPost` only ever sees a valid one:
+
+```tsx
+import { PostNotFoundError } from "@daanvandenbergh/scribekit";
+import { notFound } from "next/navigation";
+
+try {
+    blog.getPost(slug);
+} catch (err) {
+    if (err instanceof PostNotFoundError) notFound();
+    throw err;
+}
+```
+
+## Filter posts by category
+
+You do not wire the filter row. `BlogOverview` derives the distinct categories from the posts it is listing and hands them to the grid, and **the filter buttons render only when there are two or more**. A blog where every post carries `categories: [News]` shows no filter UI, because there is nothing to filter to.
+
+To read the categories yourself:
+
+```ts
+import { collectCategories } from "@daanvandenbergh/scribekit";
+
+const all = blog.getAllCategories();                        // default language
+const french = collectCategories(blog.getAllPosts("fr"));   // any list you already hold
+```
+
+`getAllCategories(lang?)` is `collectCategories(getAllPosts(lang))`. Both return distinct labels through a plain `.sort()`, which compares code units rather than using `localeCompare`, so `Zebra` sorts before `apple`.
+
+To render a pre-filtered grid, pass `posts`:
+
+```tsx
+<BlogOverview blog={blog} posts={blog.getAllPosts().filter((p) => p.categories?.includes("News"))} />
+```
+
+The overview then derives its categories from **that subset**, so filtering down to a single category also removes the filter row.
+
+## Tune the card grid
+
+`pageSize` sets how many cards a batch reveals. It defaults to `9`:
+
+```tsx
+<BlogOverview blog={blog} pageSize={12} />
+```
+
+Whenever there are more cards to show, two things render together: an `IntersectionObserver` sentinel that adds another `pageSize` batch when it scrolls into view, and a "Load more" button that adds the same batch on click. The button is not hidden behind observer support - it is always there for anyone whose observer never fires.
+
+Typing in the search box or picking a category resets the visible count back to `pageSize`.
+
+## Show similar posts
+
+`BlogPage` already renders a "Similar pages" list in its sidebar. `similarCount` caps it and defaults to `3`:
+
+```tsx
+<BlogPage blog={blog} slug={slug} similarCount={5} />
+```
+
+To compute the same list yourself:
+
+```ts
+const post = blog.getPost("hello-world");
+const similar = blog.similarPosts(post, 3);
+```
+
+### How the ranking actually works
+
+1. Each post becomes a bag of words. Every **keyword weighs 3**, the **title 2**, the **description 1**. It is raw term frequency with no idf.
+2. Tokens are lowercased, split on anything that is not a letter or a number, and kept only when they are **3 characters or longer** and not in `STOPWORDS`.
+3. Candidates are scored by **cosine similarity** against the current post, with the post itself excluded by slug.
+4. **A score of exactly 0 is dropped.** A post with no shared words never appears, so a short list is a real answer, not a bug.
+5. Ties break by **`date` descending**.
+6. `blog.similarPosts(post)` scores against `getAllPosts(post.meta.lang)` only: **same language, never cross-language**.
+
+Three limits worth knowing before you tune anything:
+
+- **`categories` are not part of the ranking today.** Two posts in the same category that share no title, description, or keyword tokens score 0 and never see each other. Keywords are the lever.
+- **`STOPWORDS` is English-only** - 22 words. In a French post, `pour` and `dans` are long enough to survive tokenizing and count as content words.
+- A post whose title, description, and keywords produce no tokens has an empty vector and gets `[]` back.
+
+To drop the list along with the minimap, pass `showSidebar={false}`.
+
+## Change the copy or the labels
+
+Override the label props on the component. Do not mutate `CATALOG`: every label is a prop that falls back to the resolved translation for `lang`, and that fallback is the whole mechanism.
+
+```tsx
+<BlogOverview
+    blog={blog}
+    emptyLabel="Nothing here yet."
+    readMoreLabel="Read the post →"
+    searchPlaceholder="Search"
+    loadMoreLabel="Show more"
+    allCategoriesLabel="Everything"
+/>
+```
+
+Parameterized copy takes a function rather than a string:
+
+```tsx
+<BlogPage blog={blog} slug={slug} readingLabel={(m) => `${m} min`} />
+```
+
+The English defaults you are replacing:
+
+| Prop | Component | Default |
+| --- | --- | --- |
+| `emptyLabel` | `BlogOverview` | `"No posts yet - check back soon."` |
+| `readMoreLabel` | `BlogOverview` | `"Read more →"` |
+| `searchPlaceholder` | `BlogOverview` | `"Search posts…"` |
+| `loadMoreLabel` | `BlogOverview` | `"Load more"` |
+| `allCategoriesLabel` | `BlogOverview` | `"All"` |
+| `backLabel` | `BlogPage` | `"← Blog"` |
+| `tocTitle` | `BlogPage` | `"On this page"` |
+| `similarTitle` | `BlogPage` | `"Similar pages"` |
+| `readingLabel` | `BlogPage` | ``(m) => `${m} min read` `` |
+
+One catch for a non-English blog: `back` is a uniform string, so `"← Blog"` is what all 24 built-in languages return. Pass `backLabel` per language yourself.
+
+## Use next/image for the chrome images
+
+`imgComponent` swaps the element used for the **chrome** images only: the post hero, the card thumbnails, and the author avatar. It defaults to `"img"`.
+
+```tsx
+import Image from "next/image";
+
+<BlogOverview blog={blog} imgComponent={Image} />
+<BlogPage blog={blog} slug={slug} imgComponent={Image} />
+```
+
+It does **not** reach `<img>` tags inside the MDX body. Those are MDX elements, so they go through the `components` map instead:
+
+```tsx
+<BlogPage
+    blog={blog}
+    slug={slug}
+    components={{ img: (props) => <img {...props} loading="lazy" /> }}
+/>
+```
+
+Use both together when you want both surfaces changed.
+
+## Add a hero image
+
+Point `image:` at a **site-root path with a leading slash** - a path your app serves, which for Next means a file under `public/`:
+
+```yaml
+image: "/assets/blog/hello-world/hero.en.jpg"
+```
+
+That one value does three jobs: `BlogPage` renders it above the body at 1200x630, `BlogOverview` uses it as the card thumbnail, and `postMetadata` / `postJsonLd` use it for the OG and Twitter card. Nothing validates it, so a wrong path is a broken image rather than an error.
+
+To generate one on-brand, run the [/scribekit-hero](/docs/scribekit-hero) skill, which renders the JPEG from HTML and CSS and writes it where the front-matter expects it.

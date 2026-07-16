@@ -1,0 +1,180 @@
+---
+title: "scribekit-docs"
+description: "Reference for the /scribekit-docs skill: its four modes, the mode matrix, flags, files, outputs, and constraints."
+tab: "Skills"
+group: "Skills"
+order: 3
+icon: "book"
+updated: "2026-07-16"
+image: "/assets/docs/scribekit-docs/hero.en.jpg"
+---
+
+A portable Claude Code skill that writes, rewrites, reorganizes, or deep-verifies a project's MDX
+docs site, sourced entirely from the project's own code so every documented fact, option, default,
+and code sample is true. It is not for a marketing or blog article; that is
+[`/scribekit-blog`](/docs/scribekit-blog).
+
+```text
+/scribekit-docs [write|rewrite|reorganize|deep-verify] [topic | slug-or-path] [--scan]
+```
+
+Nothing about any project is baked in. Every invocation begins with Step 0, which learns the
+project's voice and routes, finds the `Docs` wiring, maps the corpus, and reads the real source code.
+The one decisive difference from `/scribekit-blog`: docs are project-dedicated, so the primary source
+is this project's own code, not the open web. Every fact traces to a real `file:line`.
+
+## The mode matrix
+
+Two questions settle the mode: **one page or the whole corpus**, and **the content or the
+structure**.
+
+| | one page | the whole corpus |
+| --- | --- | --- |
+| **content** (the bodies) | `rewrite` | `deep-verify` |
+| **structure** (front-matter, the nav) | `rewrite` (its slot check) | `reorganize` |
+
+...and `write` is the one that adds a page that does not exist yet.
+
+## Modes
+
+| Mode | What it does | Trigger | Gated |
+| --- | --- | --- | --- |
+| `write` | Writes the page, and by default its hero. On a multi-language site, also a translation for every configured locale. Auto-proposes the highest-value gap via a real gap analysis. | A new page, the argument is a topic or idea, or the verb is create / write / draft / document. | No |
+| `rewrite` | Audits an existing page **against the current code** and applies the fixes, up to a substantial rewrite. | rewrite / overhaul / redo / audit / fact-check / update / correct, or the argument resolves to an existing page file or slug. | No |
+| `reorganize` | Redesigns the whole corpus's structure: which tab and group each page belongs to, the order pages read in, and how sections are ordered and labelled. **Never renames a slug.** | reorganize / restructure / reshuffle / "fix the sidebar" / "the nav is a mess" / "these pages are in the wrong section". | **Yes** - plan, approval, apply |
+| `deep-verify` | Proves the whole corpus's content is still true against the code and ready to deploy. Fans out one subagent per page, then computes the defects no single page can reveal. **"The expensive one - it spawns an agent per page."** | verify / validate / "are the docs still up to date?" / "is this ready to ship / release?" / a pre-release docs check. | Report-first; applies only the findings you pick |
+
+`reorganize` never renames a slug: "A reorganize run therefore changes zero URLs." Badly-named slugs
+are reported at the end instead of being touched.
+
+`deep-verify` is report-first always. It lists every finding, numbered, and applies only the ones you
+pick, with an optional note attached to each. The defects it computes across the corpus include
+undocumented API surface, pages that contradict each other, broken links and anchors, translations
+drifted from their original, samples that no longer compile, and docs that are true against `src/`
+but wrong against the published package.
+
+**Never run two modes in one invocation.** A `rewrite` with no target lists the pages and asks which.
+An ambiguous request gets one clarifying question first.
+
+## Flags
+
+| Flag | Applies to | Behaviour |
+| --- | --- | --- |
+| `--scan` | `rewrite` | "Run the audit and print the report **only**. Change **no** files, apply **no** fixes." |
+| `--scan` | `reorganize` | "Audit and print the plan **only**. Change **no** files": runs Steps 1-5, skips Step 6 entirely, then runs Steps 7-8. |
+| `--scan` | `deep-verify` | Prints the report and stops, without offering the gate. |
+| `--no-hero` | `write` | Skip the image. Equivalent to saying "skip the image". |
+
+## Disambiguation rules
+
+| Situation | Resolves to |
+| --- | --- |
+| The request names a single slug, however deep the verb sounds | `rewrite`. "**if the request names a single slug, it is a `rewrite`**, however deep the verb sounds" |
+| A `reorganize` request naming a single slug | `rewrite`. "If a `reorganize` request names a single slug, it is a `rewrite`." |
+| "This page is in the wrong group" | `rewrite` that page |
+| "The docs are a mess / the sidebar makes no sense / reorganize the docs" | `reorganize`, which is about the corpus, not any one page |
+| "Is this page still correct?" | `rewrite --scan` |
+| "Are the docs still true / still up to date / ready to ship?" | `deep-verify`, which is about the corpus |
+| "The sidebar is a mess" vs "the content is out of date" | `reorganize` vs `deep-verify` |
+
+`reorganize` and `deep-verify` both read the whole corpus and do not overlap: `reorganize` reads the
+**front-matter** and judges the **nav**; `deep-verify` reads the **bodies** and judges the
+**content**. deep-verify "reports nav defects it happens to see, but never fixes them - it hands them
+to reorganize."
+
+## Files
+
+| File | Purpose |
+| --- | --- |
+| `SKILL.md` | The router, the `Docs` wiring discovery, and the mode matrix. |
+| `write.md` | The write task, including the gap analysis. |
+| `rewrite.md` | Per-page audit-against-code and apply, 11 steps. **The single source of truth for what "verified" means.** |
+| `reorganize.md` | Whole-corpus information architecture redesign, 8 steps, gated. |
+| `deep-verify.md` | Phases 0 to 6, fanning out one subagent per slug. |
+| `docs-style.md` | The Diátaxis type picker, the per-type page shapes, the `DocMeta` frontmatter contract, the icon set, and the light metadata check. |
+| `assets/content-dir-README.md` | Template copied verbatim into the project's docs content directory root. |
+
+`deep-verify` Phase 1 has its subagents read `rewrite.md` Steps 2-9 under `--scan` semantics, which
+is why that file is the definition of "verified" for the whole skill.
+
+## What it produces
+
+| Path | When |
+| --- | --- |
+| `<contentDir>/<slug>/<defaultLocale><ext>` | Every `write`. |
+| `<contentDir>/<slug>/<lang><ext>` | Once per non-default locale. |
+| `<contentDir>/README.md` | Seeded once, verbatim. Never overwritten if it already exists. |
+| `<contentDir>/<slug>/hero.js` and `<assets>/docs/<slug>/hero.<code>.jpg` | Only when the hero runs (see below). |
+| `_docs.ts` `tabs` / `groups` arrays | **Only** when `write` introduces a brand-new tab or group, or wholesale under `reorganize`. |
+
+The default locale resolves as `config.defaultLocale ?? locales[0].code ?? locale.split("-")[0] ??
+"en"`. The file is `en.mdx` **only** when that resolves to `en`; a German default is `de.mdx`.
+
+`write` touches the `_docs.ts` `tabs` / `groups` array only when it introduces a brand-new tab or
+group, so the new section is ordered and labelled rather than sorted last under its raw id. It
+touches nothing else in that file.
+
+`reorganize` edits the front-matter of **every locale file** of moved pages, plus the `_docs.ts`
+`tabs` / `groups` arrays. It edits **no bodies** and does **not** bump `updated:`.
+
+`deep-verify` writes a scratchpad brief, then edits only the bodies of pages whose findings the user
+approved. "**Findings the user did not approve are dropped.**"
+
+## Constraints
+
+| Constraint | Rule |
+| --- | --- |
+| Fabrication | "**Never fabricate an API detail.**" Every documented export, option name, default value, method signature, route, and the package import string is read from source at authoring time and carries a `file:line` trace. |
+| Import string | The import name is `package.json`'s `name` field. Read it; never recall it. |
+| `DocMeta` fields | "`DocMeta` has **no** `author`/`categories`/`tags` fields; never add them." |
+| JSON-LD | The SEO methods auto-emit schema and throw without `siteUrl` and `brandName`. "never hand-write JSON-LD." |
+| Slugs | "**Never rename a `<slug>/` folder.** The slug is the page's public URL." A deliberate rename is the user's call and needs a `redirects` entry. |
+| JSDoc vs behaviour | "Where a symbol's **JSDoc disagrees with its executed behaviour, the behaviour wins**" - comments drift, and a page that trusted a stale comment is wrong. |
+| YAML types | The frontmatter YAML types are **load-bearing**: `order` a bare number, `hidden` a bare boolean, `keywords` a YAML list. A wrong type is silently dropped to `undefined`. |
+| Reconstruction | "Assume you cannot call `getNavTree`/`getAllDocs`/`getDoc`" - `Docs` is `server-only`. Reconstruct what they would return, and "**say which** - never present a reconstruction as executed truth." |
+| Dev server | "**Never start a dev server**" - the skill asks the user to run it. |
+| Git | "**Never create git branches.**" |
+| Date | "**Today's real date** comes from `date +%F`, never a guess." |
+| `reorganize` | "Never apply without approval"; "**Never edit a page body**"; "**A reorganize run therefore changes zero URLs**". |
+| `deep-verify` | "**Never edit before approval**"; "**Subagents never write.** They verify and report; the parent applies." |
+
+## Its dependency on /scribekit-blog
+
+`scribekit-docs` does not carry its own voice craft or research protocol. It reads two files from the
+sibling [`/scribekit-blog`](/docs/scribekit-blog) skill:
+
+| File | How docs uses it |
+| --- | --- |
+| `house-style.md` | Reuses its voice craft, anti-slop vocabulary, and MDX rules. **Overrides** its blog-specific frontmatter contract, pull-quote, and one-CTA rules; the docs deltas are in `docs-style.md`. |
+| `research-protocol.md` | **Inverted for docs**: the primary source is this project's source code, read directly. `WebSearch` and `WebFetch` are used only for a genuinely external fact such as a published standard or spec. Its SERP, keyword, and GEO instructions are ignored, because docs have no search-intent axis. |
+
+They are resolved at the first path that exists:
+
+```text
+<this-skill-dir>/../scribekit-blog/<file>
+.claude/skills/scribekit-blog/<file>
+node_modules/<package-name>/skills/scribekit-blog/<file>
+```
+
+**If none exists, STOP** and tell the user to install the `scribekit-blog` skill alongside
+`scribekit-docs`. The skill does not proceed without the shared standards. Install the two together.
+
+## How it calls /scribekit-hero
+
+Step 7 of `write` is conditional, unlike the blog's. It first checks whether sibling pages carry
+`image:` or a `hero.js`. If the docs corpus has none, the skill matches it: it skips the hero and
+leaves `image:` unset unless the user asks for one. `DocMeta.image` is an optional social-card field
+the page never renders inline, and a lone hero no sibling has breaks consistency.
+
+If siblings do have heroes, or the user opts in, the page's hero goes to
+[`/scribekit-hero`](/docs/scribekit-hero)'s `docs-hero` create flow. The skill is resolved at the
+first of three paths that exists:
+
+```text
+<this-skill-dir>/../scribekit-hero/SKILL.md
+.claude/skills/scribekit-hero/SKILL.md
+node_modules/<package-name>/skills/scribekit-hero/SKILL.md
+```
+
+If `/scribekit-hero` is not installed, the skill skips the hero, leaves `image:` unset, and tells you
+to install it.

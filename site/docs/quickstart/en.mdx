@@ -1,0 +1,156 @@
+---
+title: "Quickstart"
+description: "Go from an installed package to your first docs page rendering in the browser, in four files."
+tab: "Documentation"
+group: "Get started"
+order: 3
+icon: "workflow"
+updated: "2026-07-16"
+image: "/assets/docs/quickstart/hero.en.jpg"
+---
+
+By the end of this page you have a docs page rendering at `http://localhost:3000/docs/hello` and a docs index at `/docs`, built from four files. It is the shortest path that works: one language, one tab, no search palette. For the full shell, see [Build a docs site](/docs/build-a-docs-site); for individual recipes, see the [Docs guide](/docs/docs-guide).
+
+**Prerequisites:** a Next.js App Router app, and `@daanvandenbergh/scribekit` plus `next-mdx-remote` installed with the stylesheet imported in your root layout, as described in [Installation](/docs/installation).
+
+## 1. Create the Docs instance
+
+The instance is the single place your routes read from. Create `app/docs/_docs.ts`:
+
+```ts
+// app/docs/_docs.ts
+import { Docs } from "@daanvandenbergh/scribekit";
+
+/** The one configured Docs instance. Every /docs route reads from it. */
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://example.com",
+    brandName: "Example",
+});
+```
+
+Three things this file decides:
+
+- `contentDir: "./docs"` resolves against `process.cwd()`, so it means `<project-root>/docs/`, alongside your `package.json` and not inside `app/`.
+- `siteUrl` and `brandName` are both required before any SEO method runs. Omit either and `docMetadata` throws.
+- `basePath` is unset, so it defaults to `/docs`. That is why the routes below live at `app/docs/`.
+
+The leading underscore keeps Next from treating `_docs.ts` as a route.
+
+Nothing renders yet. There is no content and no route.
+
+## 2. Write your first page
+
+The folder name is the slug and the file name is the language. Create `docs/hello/en.mdx`:
+
+```mdx
+---
+title: "Hello"
+description: "My first docs page."
+group: "Get started"
+order: 1
+icon: "book"
+---
+
+## What this page proves
+
+The body starts at `##`, because the `title` above renders the H1.
+```
+
+Front-matter rules that matter right now:
+
+- `order` is a **bare number**. Write `order: "1"` and the field is silently dropped, sending the page to the bottom of its group.
+- `icon` must come from the built-in set: `book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`. Any other name silently renders the neutral `document` glyph.
+- `description` is the lead paragraph, the meta description, and the OG description. Leave it out and all three ship empty.
+
+There is no `tab` here, so the page falls into the single implicit tab and no tab bar renders.
+
+Your instance can see the page now. Nothing serves it yet.
+
+## 3. Add the page route
+
+Create `app/docs/[slug]/page.tsx`:
+
+```tsx
+// app/docs/[slug]/page.tsx
+import { DocsPage } from "@daanvandenbergh/scribekit/react";
+import { docs } from "../_docs";
+
+/** Unknown slugs 404 at the router instead of rendering on demand. */
+export const dynamicParams = false;
+
+/** Prerender one route per page found on disk. */
+export function generateStaticParams() {
+    return docs.getDocRefs().map((ref) => ({ slug: ref.slug }));
+}
+
+/** Per-page SEO metadata: title, description, canonical, OpenGraph, Twitter. */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    return docs.docMetadata(docs.getDoc(slug));
+}
+
+/** The page at /docs/<slug>. */
+export default async function DocSlugPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    return <DocsPage docs={docs} slug={slug} />;
+}
+```
+
+`getDocRefs()` returns one entry per page file, as `{ slug, lang }` pairs. With the one page you just wrote, it returns:
+
+```ts
+[{ slug: "hello", lang: "en" }];
+```
+
+You only need `slug` here, because this app has one language. `lang` is what a `[lang]` route segment would consume.
+
+`params` is a Promise and must be awaited: that is the App Router's shape, not Scribekit's. Because `dynamicParams = false`, only the slugs from `generateStaticParams` ever reach these functions, so `getDoc` cannot miss.
+
+Later, when you rename a slug and list the old one in the instance's `redirects` map, spread `docs.getRedirectRefs()` into `generateStaticParams` as well. An unrendered slug 404s at the router before the component could redirect it, so the redirect would never fire. See the [Docs guide](/docs/docs-guide).
+
+Run `npm run dev` and open `http://localhost:3000/docs/hello`. You see the title as an H1, the description as the lead, a reading-time pill, your `## What this page proves` heading, and a "Was this page helpful?" widget at the bottom. There are no prev/next links yet, because there is nowhere to go: the corpus has one page.
+
+## 4. Add the docs index
+
+Create `app/docs/page.tsx`:
+
+```tsx
+// app/docs/page.tsx
+import { DocsIndex } from "@daanvandenbergh/scribekit/react";
+import { docs } from "./_docs";
+
+/** SEO metadata for the /docs landing page. */
+export function generateMetadata() {
+    return docs.indexMetadata();
+}
+
+/** The docs landing page at /docs: a hero plus a card per section. */
+export default function DocsIndexPage() {
+    return <DocsIndex docs={docs} />;
+}
+```
+
+This route has no dynamic segment, so it needs no `generateStaticParams` and no `await`.
+
+Open `http://localhost:3000/docs`. You see a hero headed "Documentation" and one card for the "Get started" group, listing your Hello page and linking to `/docs/hello`. The card takes its icon from the group's first page, which is the `book` you set in step 2.
+
+## 5. Confirm the loop is closed
+
+Add a second page to watch the navigation build itself. Create `docs/second/en.mdx` with the same shape and `order: 2`:
+
+```mdx
+---
+title: "Second"
+description: "Proving the nav is built from front-matter."
+group: "Get started"
+order: 2
+icon: "check"
+---
+
+## Still here
+
+The sidebar order, the index card, and the prev/next links all came from the front-matter above.
+```
+
+Reload `http://localhost:3000/docs/hello`. A "Next" link to Second now appears at the foot of the page, and the index card lists both pages in `order`. You never touched a route file, a nav file, or a config: adding the file was the whole operation.

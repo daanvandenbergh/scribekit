@@ -35,5 +35,8 @@ server modules (e.g. `comments/`, `database/`) are new siblings under `src/`.
 ## Git
 - Never create new git branches unless asked, if you really feel it is needed, ask for permission first.
 
+## Maintained Docs
+When changing `src/` or `skills/`, update the matching docs in `site/docs/` in the same change.
+
 ## Maintained README.md
 When making changes to the library, ensure the README.md instructions for how to use the library are still up to date.

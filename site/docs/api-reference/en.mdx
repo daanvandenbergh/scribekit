@@ -1,0 +1,978 @@
+---
+title: "API reference"
+description: "Every export, option, method, default, type, prop, icon name, and CSS token in @daanvandenbergh/scribekit."
+tab: "Documentation"
+group: "Reference"
+order: 1
+icon: "code"
+updated: "2026-07-16"
+image: "/assets/docs/api-reference/hero.en.jpg"
+---
+
+`@daanvandenbergh/scribekit` publishes three entry points: the root (the `Blog` and `Docs` classes plus the framework-free helpers), `/react` (the components), and `/styles.css` (the stylesheet). This page lists every public export, its signature, and its default. To learn the wiring, read [Getting started](/docs/getting-started); for task steps, read [the blog guide](/docs/blog-guide) or [the docs guide](/docs/docs-guide).
+
+## The entry points
+
+| Subpath | Resolves to | Exports |
+| --- | --- | --- |
+| `@daanvandenbergh/scribekit` | `dist/index.js` | `Blog`, `Docs`, their errors, SEO builders, nav builders, shared helpers, shared types |
+| `@daanvandenbergh/scribekit/react` | `dist/react/index.js` | Blog components, docs components, the i18n core |
+| `@daanvandenbergh/scribekit/styles.css` | `dist/react/styles.css` | The stylesheet. Import once in your app |
+
+The root entry re-exports `./shared`, `./blog`, and `./docs` in that order. Both the `Blog` and `Docs` class modules carry `import "server-only"` and read `node:fs`, so they resolve only in a server component, a route handler, or a build script. Importing either from a client component is a build error.
+
+```ts
+import { Blog, Docs, slugify, formatDate, localePath } from "@daanvandenbergh/scribekit";
+import { BlogPage, DocsPage, DocsSidebar } from "@daanvandenbergh/scribekit/react";
+import "@daanvandenbergh/scribekit/styles.css";
+```
+
+Peer dependencies: `next` (>=14), `react` (>=18), `react-dom` (>=18), and `next-mdx-remote` (`^5 || ^6`, optional, required by `BlogPage` and `DocsPage`). `remark-gfm` (`^4.0.1`) is a real dependency, not a peer.
+
+## Docs
+
+```ts
+new Docs(config: DocsConfig)
+```
+
+`DocsConfig` extends `Partial<SiteConfig>`, so the site attributes are flat on the config object. The constructor does not throw.
+
+### DocsConfig options
+
+| Option | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `contentDir` | `string` | required | Directory holding one `<slug>/` folder per page. A relative path resolves against `process.cwd()` |
+| `extension` | `string` | `".mdx"` | Page file extension, leading dot included |
+| `basePath` | `string` | `"/docs"` | Route the docs are mounted at |
+| `locale` | `string` | `"en-GB"` | BCP 47 locale used by `formatDate` |
+| `locales` | `LocaleConfig[]` | `[]` | Languages published. Each `label` defaults to its `code`. Unset means single-language |
+| `defaultLocale` | `string` | `config.defaultLocale`, else `locales[0].code`, else `locale.split("-")[0]`, else `"en"` | Locale served without a URL prefix, and the `x-default` target |
+| `prefixDefaultLocale` | `boolean` | `false` | When `true`, the default locale is URL-prefixed too |
+| `tabs` | `NavConfigEntry[]` | `[]` | Display order and labels for top-level tabs. Purely presentational |
+| `groups` | `NavConfigEntry[]` | `[]` | Display order and labels for sidebar groups |
+| `redirects` | `Record<string, string>` | `{}` | Old slug to new slug, for renamed pages |
+| `siteUrl` | `string` | `undefined` | Absolute origin. Sets `metadataBase` and absolute JSON-LD URLs |
+| `brandName` | `string` | `undefined` | Title suffix, `og:siteName`, JSON-LD publisher |
+| `defaultAuthor` | `string` | `undefined`, falls back to `brandName` | Author used when a page omits one |
+| `description` | `string` | `undefined`, falls back to `` `The ${brandName} documentation.` `` | Index page description |
+| `organizationId` | `string` | `undefined`, which inlines a standalone `Organization` publisher | `@id` of an existing `Organization` |
+| `authorId` | `string` | `undefined`, which inlines a name-only author | `@id` of a `Person` or `Organization` author |
+| `websiteId` | `string` | `undefined`, which omits `isPartOf` | `@id` of the host `WebSite` entity |
+
+`this.site` is assembled only when **both** `siteUrl` and `brandName` are defined; otherwise it is `undefined` and every SEO method throws. `site.basePath` is always the resolved `basePath`.
+
+### Public fields
+
+| Field | Type |
+| --- | --- |
+| `readonly locale` | `string` |
+| `readonly locales` | `LocaleConfig[]` |
+| `readonly defaultLocale` | `string` |
+| `readonly prefixDefaultLocale` | `boolean` |
+| `readonly tabs` | `NavConfigEntry[]` |
+| `readonly groups` | `NavConfigEntry[]` |
+| `readonly site` | `SiteConfig \| undefined` |
+
+`contentDir`, `extension`, `basePath`, and `redirects` are private.
+
+### Methods
+
+Every `lang?` parameter defaults to `this.defaultLocale`.
+
+| Signature | Returns | Throws |
+| --- | --- | --- |
+| `getDocSlugs()` | `string[]` of distinct slugs across all languages | `DuplicateDocError` |
+| `getDocRefs()` | `{ slug: string; lang: string }[]`, every pair, including `hidden` pages | `DuplicateDocError` |
+| `getRedirect(slug, lang?)` | `string \| undefined`. A root-relative, locale-prefixed destination; `undefined` means 404 | `DuplicateDocError` |
+| `getRedirectRefs()` | `{ slug: string; lang: string }[]`, one per live redirect per language; inert entries filtered | `DuplicateDocError` |
+| `getDoc(slug, lang?)` | `Doc` | `DocNotFoundError` |
+| `getAllDocs(lang?)` | `DocMeta[]` for one language in on-disk order, including `hidden` | `DuplicateDocError` |
+| `getTranslations(slug)` | `string[]` of language codes, default first. Does not filter `hidden` | `DuplicateDocError` |
+| `getNavTree(lang?)` | `NavTree`. `hidden` pages excluded | `DuplicateDocError` |
+| `getBreadcrumb(slug, lang?)` | `Breadcrumb \| undefined`; `undefined` for hidden or unknown | `DuplicateDocError` |
+| `getAdjacent(slug, lang?)` | `Adjacent`; `{}` for hidden or unknown | `DuplicateDocError` |
+| `dateLocale(lang?)` | `string`, the resolved BCP 47 date locale | no |
+| `formatDate(iso, lang?)` | `string`. An unparseable value is returned as-is | no |
+| `readingMinutes(doc)` | `number`, whole minutes, floored at 1 | no |
+| `tableOfContents(doc)` | `TocEntry[]` from `##` and `###` headings | no |
+| `docMetadata(doc)` | `PageMetadata` | `Error` when `site` is unset |
+| `indexMetadata(lang?)` | `PageMetadata` | `Error` when `site` is unset |
+| `docJsonLd(doc)` | `JsonLd`: `TechArticle` + `BreadcrumbList` | `Error` when `site` is unset |
+| `indexJsonLd(lang?)` | `JsonLd`: `CollectionPage` + `BreadcrumbList` + `ItemList` | `Error` when `site` is unset |
+| `sitemapEntries()` | `SitemapEntry[]`, one per non-hidden `(slug, lang)`, with hreflang alternates | `Error` when `site` is unset |
+
+The five SEO methods route through a private `requireSite()`, which throws this message verbatim:
+
+```text
+This Docs was created without a `site` config; pass `siteUrl` and `brandName` to use the SEO helpers.
+```
+
+`dateLocale(lang?)` resolves in this order: the matched locale's own `dateLocale`; then, if the code equals `defaultLocale`, the instance `locale`; then the matched `code`; then the instance `locale`. An unconfigured language returns the instance `locale`, not the code.
+
+### Page file resolution
+
+`entries()` walks the immediate subdirectories of `contentDir` only. There is no recursion and no nested slugs, and a missing `contentDir` yields `[]`. Per `<slug>/` folder it checks `post<ext>` first, then `<defaultLocale><ext>`; **both present is a `DuplicateDocError`**. It then checks each configured non-default locale as `<code><ext>`. A `<slug>/fr.mdx` whose `fr` is not in `config.locales` is never discovered.
+
+`getDoc()` uses the opposite priority:
+
+```ts
+const candidates =
+    resolved === this.defaultLocale
+        ? [`${slug}/${resolved}${this.extension}`, `${slug}/post${this.extension}`]
+        : [`${slug}/${resolved}${this.extension}`];
+```
+
+For the default locale, `<defaultLocale><ext>` wins and `post<ext>` is the fallback. A non-default locale has no `post` fallback. A resolved path that escapes `contentDir` throws `DocNotFoundError`.
+
+### hidden
+
+A `hidden: true` page stays in `entries()`, `getDocRefs()`, and `getAllDocs()`, so `generateStaticParams` still renders it and a direct link works. It is excluded from the nav tree, and therefore from `getAdjacent` (returns `{}`), `getBreadcrumb` (returns `undefined`), and `indexJsonLd`'s `ItemList`. It receives `robots: { index: false }`, and is dropped from the sitemap, from siblings' hreflang, and from JSON-LD translation cross-links.
+
+### redirects
+
+`getRedirect(slug, lang?)` resolves against three rules, in order:
+
+1. A real page always wins. An entry whose source slug still exists on disk is inert.
+2. Chains resolve in one hop. `{ a: "b", b: "c" }` sends `a` straight to `c`.
+3. Cycles yield `undefined`, so the URL 404s rather than looping.
+
+The returned string is already locale-prefixed and base-rooted, ready for Next's `permanentRedirect()`. `getRedirectRefs()` exists because a route with `dynamicParams = false` 404s an unrendered slug at the router, before the page component can redirect.
+
+```ts
+export function generateStaticParams() {
+    return [...docs.getDocRefs(), ...docs.getRedirectRefs()];
+}
+```
+
+## DocMeta
+
+The normalized front matter of one docs page. `slug` and `lang` are injected by the reader and are never read from YAML.
+
+| Field | Type | Required | Normalization |
+| --- | --- | --- | --- |
+| `slug` | `string` | yes | The directory name |
+| `lang` | `string` | yes | From filename resolution |
+| `title` | `string` | yes | Text coercion, else the `slug` |
+| `description` | `string` | yes | Text coercion, else `""` |
+| `tab` | `string?` | no | Text coercion |
+| `group` | `string?` | no | Text coercion |
+| `order` | `number?` | no | Kept only if `typeof === "number"` and `Number.isFinite` |
+| `icon` | `string?` | no | `typeof data.icon === "string"`, strict |
+| `label` | `string?` | no | Text coercion |
+| `keywords` | `string[]?` | no | `Array.isArray` then map/filter; a non-array becomes `undefined` |
+| `image` | `string?` | no | `typeof data.image === "string"`, strict |
+| `date` | `string?` | no | `isoDateString(data.date)` |
+| `updated` | `string?` | no | `isoDateString(data.updated)` |
+| `readingTime` | `number?` | set in practice | `readingMinutes(content)`, computed from the body. A front-matter value is ignored |
+| `hidden` | `boolean?` | no | `data.hidden === true ? true : undefined`, strict identity |
+
+### Which YAML types are silently dropped
+
+**Text coercion** is the rule applied to `title`, `description`, `tab`, `group`, `label`, and each `keywords` element. It accepts exactly three shapes: a `string` as-is; a **finite** `number`, stringified; and a `Date`, converted to `YYYY-MM-DD`. Everything else becomes `undefined`. The coercion step itself is internal and not exported; only its effect is observable. Nothing errors, so a mistyped field is invisible until the page misbehaves.
+
+| YAML | Result |
+| --- | --- |
+| `order: "3"` | Dropped. The page sorts into the unordered bucket, after every ordered sibling |
+| `hidden: "true"` or `hidden: 1` | **Not hidden.** Only the bare boolean `true` hides a page |
+| `keywords: "a, b"` | Dropped. `keywords` must be a YAML list |
+| `keywords: [foo, true, 3, null]` | `["foo", "3"]`. Booleans, nulls, and objects are filtered out |
+| `keywords: []` | Stays `[]`, not `undefined` |
+| `title: 2024` | Survives as `"2024"` |
+| `icon: 2024` or `image: 2024` | Dropped. Those two use a strict `typeof === "string"` check |
+| Booleans, arrays, objects, `null`, `~`, `NaN`, `.inf` in a text field | Dropped |
+| A dropped `title` | Falls back to the slug |
+| A dropped `description` | Becomes `""`, shipping a blank meta and OG description |
+| `date: "not-a-date"` | Survives verbatim. `isoDateString` passes any string through unvalidated, with no `YYYY-MM-DD` shape check |
+
+## Blog
+
+```ts
+new Blog(config: BlogConfig)
+```
+
+`BlogConfig` extends `Partial<SiteConfig>`. The site attributes are flattened onto the config; **there is no nested `site` key**.
+
+### BlogConfig options
+
+| Option | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `contentDir` | `string` | required | Directory holding one `<slug>/` folder per post. A relative path resolves against `process.cwd()` |
+| `extension` | `string` | `".mdx"` | Post file extension, leading dot included |
+| `locale` | `string` | `"en-GB"` | BCP 47 locale for `formatDate` |
+| `locales` | `LocaleConfig[]` | `[]` | Languages published. Unset means single-language |
+| `defaultLocale` | `string` | `config.defaultLocale`, else `locales[0].code`, else `locale.split("-")[0]`, else `"en"` | Unprefixed locale and `x-default` target |
+| `prefixDefaultLocale` | `boolean` | `false` | Prefix the default locale too |
+| `basePath` | `string` | `"/blog"` | Mount route, run through `normalizeBasePath` |
+| `siteUrl` | `string` | `undefined` | Origin for `metadataBase` and absolute JSON-LD. Gates `site` |
+| `brandName` | `string` | `undefined` | Title suffix, `og:siteName`, publisher. Gates `site` |
+| `defaultAuthor` | `string` | `undefined` | Author fallback |
+| `description` | `string` | falls back to `` `The ${brandName} blog.` `` | Index description |
+| `organizationId` | `string` | `undefined` | `@id` reference for the publisher |
+| `authorId` | `string` | `undefined` | `@id` reference for the author |
+| `websiteId` | `string` | `undefined` | `@id` reference for `isPartOf` |
+
+`site` is built only when `siteUrl !== undefined && brandName !== undefined`.
+
+### Public fields
+
+| Field | Type |
+| --- | --- |
+| `readonly locale` | `string` |
+| `readonly locales` | `LocaleConfig[]` |
+| `readonly defaultLocale` | `string` |
+| `readonly prefixDefaultLocale` | `boolean` |
+| `readonly site` | `SiteConfig \| undefined` |
+
+`contentDir` and `extension` are private.
+
+### Methods
+
+| Signature | Returns | Throws |
+| --- | --- | --- |
+| `getPostSlugs()` | `string[]` of distinct slugs across all languages | `DuplicatePostError` |
+| `getPostRefs()` | `{ slug: string; lang: string }[]`, every pair | `DuplicatePostError` |
+| `getPost(slug, lang?)` | `Post` | `PostNotFoundError` |
+| `getAllPosts(lang?)` | `PostMeta[]` for one language, sorted by `date` **descending** | `DuplicatePostError` |
+| `getTranslations(slug)` | `string[]`, default first | `DuplicatePostError` |
+| `getAllCategories(lang?)` | `string[]`, distinct and sorted | `DuplicatePostError` |
+| `dateLocale(lang?)` | `string` | no |
+| `formatDate(iso, lang?)` | `string` | no |
+| `readingMinutes(post)` | `number`, whole minutes, floored at 1 | no |
+| `tableOfContents(post)` | `TocEntry[]` | no |
+| `similarPosts(post, limit?)` | `PostMeta[]`, same-language neighbours. `limit` defaults to `3` | `DuplicatePostError` |
+| `postMetadata(post)` | `PageMetadata` | `Error` when `site` is unset |
+| `overviewMetadata(lang?)` | `PageMetadata` | `Error` when `site` is unset |
+| `postJsonLd(post)` | `JsonLd` | `Error` when `site` is unset |
+| `overviewJsonLd(posts, lang?)` | `JsonLd` | `Error` when `site` is unset |
+| `sitemapEntries()` | `SitemapEntry[]` | `DuplicatePostError`, `Error` when `site` is unset |
+
+`requireSite()` throws this message verbatim:
+
+```text
+This Blog was created without a `site` config; pass `site` to use the SEO helpers.
+```
+
+**That message is misleading.** `BlogConfig` has no `site` key. The config is flat: pass `siteUrl` **and** `brandName`. Do not look for a `site` option; there is none.
+
+`Blog.dateLocale`'s JSDoc claims the fallback is the language code itself. The code returns the instance `locale` for an unconfigured language.
+
+### Post file resolution
+
+`entries()` walks the immediate subdirectories of `contentDir` only; non-directories are skipped, so a stray `notes.txt` is ignored. Both `<slug>/post<ext>` and `<slug>/<defaultLocale><ext>` are checked, and having both is a `DuplicatePostError`. Each configured non-default locale is `<slug>/<code><ext>`. Any other file stem is ignored. In `getPost`, the locale-named file wins and `post<ext>` is the fallback.
+
+There is an asymmetry: `post.mdx` and `en.mdx` together throw from `entries()`, and therefore from `getPostSlugs`, `getAllPosts`, and `sitemapEntries`, but **`getPost` does not throw** and silently returns `en.mdx`.
+
+Drafts and hidden posts do not exist in the blog module. Every discovered post is published. `PageMetadata.robots` exists in the type, but no blog builder ever sets it.
+
+### similarPosts
+
+```ts
+similarPosts(current: PostMeta, all: PostMeta[], limit: number = 3): PostMeta[]
+```
+
+1. Build a term vector for `current`; if empty, return `[]`.
+2. Exclude `current` by slug.
+3. Score every candidate by cosine similarity, which returns a value in `[0, 1]`.
+4. Drop every candidate whose score is `0`.
+5. Sort by score descending, tie-broken by `date` descending.
+6. Slice to `Math.max(0, limit)`.
+
+Term weights: each **keyword counts 3**, the **title 2**, the **description 1**. Scoring is term-frequency only, with no idf. **`categories` are not used in the ranking.** Tokenization lowercases, splits on `/[^\p{L}\p{N}]+/u`, and keeps tokens of length 3 or more that are not among the 22 English-only stopwords: the, and, for, with, that, this, from, into, are, was, were, you, your, how, why, what, when, who, our, its, their, about.
+
+`Blog.similarPosts` calls this with `this.getAllPosts(post.meta.lang)`, so candidates are same-language only.
+
+### collectCategories
+
+```ts
+collectCategories(posts: PostMeta[]): string[]
+```
+
+Returns `[...new Set(posts.flatMap((p) => p.categories ?? []))].sort()`: distinct labels in default lexicographic order, not `localeCompare`.
+
+## PostMeta
+
+| Field | Type | Required | Normalization |
+| --- | --- | --- | --- |
+| `slug` | `string` | yes | The directory name |
+| `lang` | `string` | yes | From the filename stem |
+| `title` | `string` | yes | Text coercion, else the `slug` |
+| `date` | `string` | yes | `isoDateString(data.date) ?? ""` |
+| `description` | `string` | yes | Text coercion, else `""` |
+| `keywords` | `string[]?` | no | `Array.isArray` then map/filter, else `undefined` |
+| `categories` | `string[]?` | no | Same shape as `keywords` |
+| `readingTime` | `number?` | set in practice | `readingMinutes(content)` |
+| `author` | `string?` | no | `typeof === "string"`, strict |
+| `authorImage` | `string?` | no | `typeof === "string"`, strict. **The YAML key is `author-image`**, kebab-case |
+| `image` | `string?` | no | `typeof === "string"`, strict |
+| `updated` | `string?` | no | `isoDateString(data.updated)` |
+
+The camelCase `authorImage` field is populated from the kebab-case `author-image` YAML key:
+
+```yaml
+---
+title: "A post"
+date: "2026-07-16"
+author: "Ada Lovelace"
+author-image: "/assets/authors/ada.jpg"
+---
+```
+
+Normalization notes:
+
+| YAML | Result |
+| --- | --- |
+| `categories: "news"` | Dropped. Only an array survives |
+| `author: 404` | `undefined`. `author`, `authorImage`, and `image` are string-only, unlike `title: 404`, which becomes `"404"` |
+| `date: "yesterday"` | Survives into `meta.date`, `datePublished`, and the sort. `date` is not validated |
+
+`Post` is `{ meta: PostMeta; content: string }`, where `content` is the MDX body with the front matter stripped.
+
+## Errors
+
+All four are declared in fs-free modules, so client code can `instanceof` them.
+
+| Error | Fields | Message |
+| --- | --- | --- |
+| `DocNotFoundError` | `readonly slug: string` | `` `No docs page found for slug "${slug}".` `` |
+| `DuplicateDocError` | `slug`, `lang`, `files: [string, string]` | `` `Two files resolve to the same docs page (slug "${slug}", lang "${lang}"): "${a}" and "${b}".` `` |
+| `PostNotFoundError` | `readonly slug: string` | `` `No blog post found for slug "${slug}".` `` |
+| `DuplicatePostError` | `slug`, `lang`, `files: [string, string]` | `` `Two files resolve to the same post (slug "${slug}", lang "${lang}"): "${a}" and "${b}".` `` |
+
+| Error | Thrown when |
+| --- | --- |
+| `DocNotFoundError` | No candidate file exists for the slug, or the resolved path escapes `contentDir` |
+| `DuplicateDocError` | Two files map to one `${slug}/${lang}`; in practice `<slug>/post.mdx` and `<slug>/<defaultLocale>.mdx` both exist |
+| `PostNotFoundError` | No candidate file exists, or the path escapes `contentDir` |
+| `DuplicatePostError` | Two files map to one `${slug}/${lang}`; in practice `post.mdx` and `en.mdx` both exist |
+
+```ts
+import { Docs, DocNotFoundError } from "@daanvandenbergh/scribekit";
+
+try {
+    docs.getDoc(slug);
+} catch (err) {
+    if (err instanceof DocNotFoundError) {
+        console.error(err.slug);
+    }
+}
+```
+
+## Navigation builders
+
+Pure and fs-free. They import no `next` and no `react`, and none of them throw.
+
+| Signature |
+| --- |
+| `buildNavTree(metas: DocMeta[], opts: NavBuildOptions): NavTree` |
+| `flattenNav(tree: NavTree): NavItem[]` |
+| `adjacentFor(slug: string, flat: NavItem[]): Adjacent` |
+| `breadcrumbFor(slug: string, tree: NavTree): Breadcrumb \| undefined` |
+
+`NavBuildOptions`:
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `basePath` | `string?` | no |
+| `defaultLocale` | `string` | **yes** |
+| `prefixDefaultLocale` | `boolean?` | no |
+| `tabs` | `NavConfigEntry[]?` | no |
+| `groups` | `NavConfigEntry[]?` | no |
+
+An omitted `basePath` falls back to `"/blog"`, because `normalizeBasePath` supplies that default. `Docs` always passes its own `basePath`, so this only affects direct callers of `buildNavTree`.
+
+### Sort rules
+
+Bucketing: `hidden` pages are skipped. `tabId = meta.tab ?? ""` and `groupId = meta.group ?? ""`.
+
+**Pages within a group** compare on two keys:
+
+1. `order`, ascending, where an unset `order` becomes `Number.POSITIVE_INFINITY`, so unordered pages sort after every ordered one.
+2. On a tie, `a.title.localeCompare(b.title)`, by **title**, not label and not slug.
+
+**Tabs and groups** compare on three keys:
+
+1. `configIndex`, the position in the `tabs` or `groups` config array. An unlisted entry is `-1`, mapped to `Infinity`, so configured entries come first in config order and unconfigured entries follow.
+2. `minOrder`, the minimum `order` among descendant pages.
+3. `firstSeen`, discovery order from `fs.readdirSync`, as the final tie-break.
+
+A tab or group label is the `label` given for that `id` in the `tabs` or `groups` config, falling back to the `id` itself. The implicit `""` tab and `""` group therefore get an empty-string label, which is falsy, so they contribute no breadcrumb segment.
+
+`adjacentFor` walks the flattened tree, so **prev/next crosses group and tab boundaries**: the last page of one tab links straight into the first page of the next.
+
+**Known behaviour:** when two pages in a group **both** lack `order`, the comparator computes `Infinity - Infinity`, which is `NaN`; `Array#sort` coerces that to `0`. Those two pages keep their **on-disk order** rather than sorting alphabetically by title. The alphabetical tie-break applies only when both pages carry the same finite `order`. This is tracked in the repository's `TODO.md`.
+
+## SEO builders
+
+Pure and fs-free. Each takes a `SiteConfig` whose `siteUrl` and `brandName` are required at the type level. At runtime, `new URL(site.siteUrl)` throws `TypeError [ERR_INVALID_URL]` on a missing or invalid `siteUrl`; the readable `Error` comes only from the `Blog` and `Docs` wrapper methods via `requireSite()`.
+
+### Docs
+
+| Signature | Emits |
+| --- | --- |
+| `buildDocMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `metadataBase`, `` title: `${meta.title} \| ${site.brandName}` ``, `description`, `keywords`, `authors`, `alternates.canonical` and `languages`, OpenGraph (`type: "article"`, `publishedTime`, `modifiedTime: meta.updated ?? meta.date`, `images`, `locale`, `alternateLocale`), Twitter (`card: "summary_large_image"`). Sets `robots: { index: false }` **iff `meta.hidden`**. hreflang is `undefined` when `translations.length <= 1` |
+| `buildIndexMetadata(site, lang?, langs = []): PageMetadata` | `` title: `Docs \| ${site.brandName}` ``, OG `type: "website"` with `` title: `${brandName} Docs` ``. No `robots` key; the index is never noindexed |
+| `docJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `TechArticle` and a `BreadcrumbList` (Home, Docs, the group name only, the page title). The `tab` never appears in JSON-LD breadcrumbs |
+| `indexJsonLd(items, site, lang?): JsonLd` | `CollectionPage`, `BreadcrumbList`, and an `ItemList` **only when `items.length > 0`** |
+
+The docs section name in breadcrumbs is the literal `"Docs"`.
+
+### Blog
+
+| Signature | Emits |
+| --- | --- |
+| `buildPostMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `` title: `${meta.title} \| ${site.brandName}` ``, `alternates.canonical`, OG `type: "article"`, `publishedTime: meta.date \|\| undefined`, `modifiedTime: meta.updated ?? (meta.date \|\| undefined)`, `locale`, `twitter.card: "summary_large_image"`. **Never sets `robots`** |
+| `buildOverviewMetadata(site, lang?, langs = []): PageMetadata` | `` title: `Blog \| ${site.brandName}` ``, OG `type: "website"` with `` title: `${brandName} Blog` ``. hreflang only when `langs.length > 1` |
+| `postJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `BlogPosting` and a `BreadcrumbList` of 3 items (Home, Blog, the title) |
+| `overviewJsonLd(posts, site, lang?): JsonLd` | `CollectionPage`, a `BreadcrumbList` of 2 items, and an `ItemList` **only when `posts.length > 0`** |
+
+## Shared helpers
+
+| Signature | Behaviour |
+| --- | --- |
+| `readingMinutes(content: string, wpm = 200): number` | `Math.max(1, Math.round(words / wpm))`. Floored at 1, rounded rather than ceiled |
+| `slugify(text: string): string` | Lowercases, strips everything that is not a letter, number, space, or hyphen, and collapses runs to `-`. Unicode letters are preserved. **May return `""`** |
+| `tableOfContents(content: string): TocEntry[]` | One entry per `##` or `###` ATX heading in document order. **Skips headings inside code fences.** `id = slugify(text)`, so duplicate heading text yields duplicate ids |
+| `formatDate(iso: string, locale = "en-GB"): string` | `""` returns `""`. Parses at **UTC midnight**, so there is no timezone day-shift. An unparseable value is **returned unchanged**. Otherwise renders a long date, for example `"28 June 2026"` |
+| `isoDateString(value: unknown): string \| undefined` | A `string` is **passed through unvalidated**. A valid `Date` becomes `YYYY-MM-DD`. Anything else, including an invalid `Date`, becomes `undefined` |
+| `normalizeBasePath(basePath: string \| undefined): string` | `basePath ?? "/blog"`, then adds a leading `/` and strips a trailing `/`. `"/"` returns `""`, a root mount |
+| `buildSitemap(refs, site, translationsOf): SitemapEntry[]` | One entry per ref **in the order given**. `alternates` are emitted only when a slug has more than one translation |
+
+### localePath
+
+```ts
+localePath(opts: {
+    basePath?: string | undefined;
+    defaultLocale: string;
+    lang: string;
+    slug?: string | undefined;
+    prefixDefaultLocale?: boolean | undefined;
+}): string
+```
+
+Builds the root-relative URL path for a page, or for a locale's index page when `slug` is omitted. It is the single source of truth shared by the SEO metadata and the rendered links.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `basePath` | `string?` | no | The section base path. Defaults to `/blog` |
+| `defaultLocale` | `string` | **yes** | The locale code served without a prefix |
+| `lang` | `string` | **yes** | The target locale code |
+| `slug` | `string?` | no | Omit for the locale's index URL |
+| `prefixDefaultLocale` | `boolean?` | no | When `true`, the default locale is prefixed too |
+
+**The locale prefix comes first, then the base path.** The URL shape is `/<lang><basePath>/<slug>`.
+
+| Case | Result |
+| --- | --- |
+| Default locale, `prefixDefaultLocale` false | `/blog/post` |
+| Non-default locale | `/fr/blog/post` |
+| Default locale, no slug | `/blog` |
+| Non-default locale, no slug | `/fr/blog` |
+| `prefixDefaultLocale: true`, default locale | `/en/blog/post` and `/en/blog` |
+| `prefixDefaultLocale: true`, non-default locale | `/fr/blog/post`, prefixed either way |
+| `basePath: "/docs"` | `/docs/quickstart` and `/fr/docs/quickstart` |
+
+`prefixDefaultLocale` affects the default locale only. The slug is never escaped or slugified; it is the directory name verbatim. `localePath` takes plain serializable inputs rather than an instance, because it is called from a client component.
+
+The JSDoc on `blog.ts`, `blog/types.ts`, `docs/types.ts`, and `docs/docs.ts` claims a translation is served under `<basePath>/<code>/`, that is `/blog/fr/post`. **That comment is wrong.** The code and its tests produce `/fr/blog/post`.
+
+## Types
+
+| Type | Shape |
+| --- | --- |
+| `LocaleConfig` | `{ code: string; label?: string; dateLocale?: string }` |
+| `TocEntry` | `{ depth: 2 \| 3; text: string; id: string }` |
+| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?`, `defaultLocale?`, `prefixDefaultLocale?`, `organizationId?`, `authorId?`, `websiteId?` |
+| `SitemapEntry` | `{ url: string; alternates?: { languages?: Record<string, string> } }` |
+| `PageMetadata` | A structural subset of Next's `Metadata` with **no `next` type dependency**: `metadataBase?: URL`, `title?`, `description?`, `keywords?: string[]`, `robots?: { index?: boolean; follow?: boolean }`, `authors?: { name: string }[]`, `alternates?: { canonical?; languages? }`, `openGraph?`, `twitter?` |
+| `JsonLd` | `Record<string, unknown>` |
+
+Docs navigation types:
+
+| Type | Shape |
+| --- | --- |
+| `Doc` | `{ meta: DocMeta; content: string }`, where `content` is the MDX body with front matter stripped |
+| `NavConfigEntry` | `string \| { id: string; label?: string }` |
+| `NavItem` | `{ slug, title, label, icon?, href, lang, tab?, group?, order? }`. `label` is `meta.label ?? meta.title`; `href` comes from `localePath` |
+| `NavGroup` | `{ id, label, items }`. `id` is `""` for the ungrouped bucket |
+| `NavTab` | `{ id, label, groups }`. `id` is `""` for the implicit single tab |
+| `NavTree` | `{ tabs, multiTab }`, where `multiTab === tabs.length > 1` |
+| `BreadcrumbSegment` | `{ label: string; href?: string }`. **`breadcrumbFor` never sets `href`**, so the field exists but is always absent |
+| `Breadcrumb` | `{ tab?, group?, title, segments }` |
+| `Adjacent` | `{ prev?: NavItem; next?: NavItem }` |
+
+## React components
+
+Import from `@daanvandenbergh/scribekit/react`.
+
+### Blog
+
+| Component | Kind | Required props |
+| --- | --- | --- |
+| `BlogOverview` | server | `blog` |
+| `BlogOverviewGrid` | client | `posts`, `categories`, `basePath`, `defaultLocale`, `prefixDefaultLocale`, `locale`, `pageSize`, `imgComponent`, `linkComponent` |
+| `BlogPage` | server | `blog`, `slug` |
+| `BlogSidebar` | client | `toc` |
+
+#### BlogOverview
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `blog` | `Blog` | required |
+| `lang` | `string` | `blog.defaultLocale` |
+| `posts` | `PostMeta[]` | `blog.getAllPosts(resolvedLang)` |
+| `basePath` | `string` | `blog.site?.basePath ?? "/blog"` |
+| `header` | `ReactNode` | none |
+| `imgComponent` | `ElementType` | `"img"` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `emptyLabel` | `string` | translated |
+| `readMoreLabel` | `string` | translated |
+| `pageSize` | `number` | `9` |
+| `searchPlaceholder` | `string` | translated |
+| `loadMoreLabel` | `string` | translated |
+| `allCategoriesLabel` | `string` | translated |
+
+#### BlogOverviewGrid
+
+The interactive body rendered by `BlogOverview`: fuzzy search, category filters, and infinite scroll via `IntersectionObserver`. Category filters **render only when `categories.length > 1`**. Optional props are `lang` and the five label props.
+
+#### BlogPage
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `blog` | `Blog` | required |
+| `slug` | `string` | required |
+| `lang` | `string` | `blog.defaultLocale` |
+| `basePath` | `string` | `blog.site?.basePath ?? "/blog"` |
+| `components` | `MDXRemoteProps["components"]` | merged over `{ h2, h3 }`; the caller wins |
+| `mdxOptions` | `MDXRemoteProps["options"]` | merged with GFM |
+| `showBackLink` | `boolean` | `true` |
+| `backLabel` | `string` | `"← Blog"` |
+| `imgComponent` | `ElementType` | `"img"` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `showSidebar` | `boolean` | `true` |
+| `tocTitle` | `string` | `"On this page"` |
+| `similarTitle` | `string` | `"Similar pages"` |
+| `similarCount` | `number` | passes `undefined` through, so the backend default `3` applies |
+| `readingLabel` | `(minutes: number) => string` | translated |
+
+#### BlogSidebar
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `toc` | `TocEntry[]` | required |
+| `title` | `string` | `"On this page"`, hardcoded English |
+| `similarTitle` | `string` | `"Similar pages"`, hardcoded English |
+| `similar` | `ReactNode` | none |
+
+### Docs
+
+| Component | Kind | Required props |
+| --- | --- | --- |
+| `DocsPage` | server | `docs`, `slug` |
+| `DocsIndex` | server | `docs` |
+| `DocsNavbar` | client | none |
+| `DocsNavbarButton` | server-safe, no hooks | `children` |
+| `DocsTabs` | client | `nav` |
+| `DocsSidebar` | client | `nav` |
+| `DocsLanguagePicker` | client | `locales`, `currentLang`, `defaultLocale` |
+| `DocsToc` | client | `toc` |
+| `DocsSearchProvider` | client | `nav`, `children` |
+| `DocsSearchButton` | client | none |
+| `DocsFeedback` | client | `question` |
+| `DocsIcon` | server-safe | none |
+
+#### DocsPage
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `docs` | `Docs` | required |
+| `slug` | `string` | required |
+| `lang` | `string` | `docs.defaultLocale` |
+| `components` | `MDXRemoteProps["components"]` | merged over `{ h2, h3 }`; the caller wins |
+| `mdxOptions` | `MDXRemoteProps["options"]` | merged with GFM |
+| `linkComponent` | `ElementType` | `"a"` |
+| `imgComponent` | `ElementType` | `"img"` |
+| `showBreadcrumb` | `boolean` | `true` |
+| `showToc` | `boolean` | `true` |
+| `showFeedback` | `boolean` | `true` |
+| `tocTitle` | `string` | `"On this page"` |
+| `previousLabel` | `string` | `"Previous"` |
+| `nextLabel` | `string` | `"Next"` |
+| `feedbackQuestion` | `string` | `"Was this page helpful?"` |
+| `feedbackYesLabel` | `string` | `"Yes"` |
+| `feedbackNoLabel` | `string` | `"No"` |
+| `feedbackThanksLabel` | `string` | `"Thanks for the feedback!"` |
+| `onFeedback` | `(vote: "yes" \| "no") => void` | none |
+| `readingLabel` | `(minutes: number) => string` | translated |
+| `updatedLabel` | `(date: string) => string` | translated |
+
+`DocsPage` renders a hero `<img>` at `width={1200} height={630}` when `meta.image` is set.
+
+#### DocsIndex
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `docs` | `Docs` | required |
+| `lang` | `string` | `docs.defaultLocale` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `title` | `string` | the localized word **"Documentation"** |
+| `description` | `string` | `site?.description` |
+| `header` | `ReactNode` | the built-in hero |
+| `renderIcon` | `(name: string \| undefined) => ReactNode` | `<DocsIcon name={name} size={18} />` |
+
+The JSDoc suggesting `title` defaults to `"<brand> docs"` is wrong. The default is `docsLabels(lang).title`, the localized word "Documentation".
+
+#### DocsNavbar
+
+Must be rendered inside `DocsSearchProvider`.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `logo` | `ReactNode` | none |
+| `logoSize` | `number` | `22` |
+| `brandName` | `string` | none |
+| `docsText` | `string \| null` | `"Docs"`. Pass `null` or `""` to hide |
+| `homeHref` | `string` | `"/"` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `lang` | `string` | none |
+| `showSearch` | `boolean` | `true` |
+| `searchPlaceholder` | `string` | translated |
+| `actions` | `ReactNode[]` | none |
+| `languagePicker` | `ReactNode` | none |
+
+#### DocsNavbarButton
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `children` | `ReactNode` | required |
+| `href` | `string` | none. When set, renders a link; otherwise a `<button>` |
+| `onClick` | `() => void` | none. **Ignored when `href` is set** |
+| `variant` | `DocsNavbarButtonVariant` | `"link"`. The type is `"link" \| "primary" \| "secondary"` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `icon` | `ReactNode` | none |
+| `target` | `string` | none |
+| `rel` | `string` | none |
+| `ariaLabel` | `string` | none |
+| `className` | `string` | none |
+
+#### DocsTabs
+
+**Returns `null` when `!nav.multiTab`**, so a single-tab corpus renders no tab bar.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `nav` | `NavTree` | required |
+| `activePath` | `string` | none |
+| `lang` | `string` | `"en"` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `label` | `string` | translated |
+
+#### DocsSidebar
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `nav` | `NavTree` | required |
+| `activePath` | `string` | none |
+| `lang` | `string` | `"en"` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `label` | `string` | translated |
+| `renderIcon` | `(name: string \| undefined) => ReactNode` | `<DocsIcon name={name} />` at size 16 |
+
+#### DocsLanguagePicker
+
+**Returns `null` when `locales.length <= 1`.**
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `locales` | `LocaleConfig[]` | required |
+| `currentLang` | `string` | required |
+| `defaultLocale` | `string` | required |
+| `activePath` | `string` | `""` |
+| `basePath` | `string` | `"/blog"` via `normalizeBasePath`. **Docs consumers must pass `basePath="/docs"`** |
+| `prefixDefaultLocale` | `boolean` | `false` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `onSelect` | `(code: string) => void` | none |
+| `renderFlag` | `(code: string) => ReactNode` | i18nkit's `localeFlag` |
+| `lang` | `string` | `currentLang` |
+| `changeLanguageLabel` | `string` | translated |
+| `headingLabel` | `string` | translated |
+| `className` | `string` | none |
+
+#### DocsToc
+
+**Returns `null` when `toc.length === 0`.**
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `toc` | `TocEntry[]` | required |
+| `title` | `string` | `"On this page"`, hardcoded English |
+
+#### DocsSearchProvider
+
+Owns the ⌘K palette.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `nav` | `NavTree` | required |
+| `children` | `ReactNode` | required |
+| `lang` | `string` | `"en"` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `searchPlaceholder` | `string` | `"Search docs…"` |
+| `searchEmptyLabel` | `string` | `"No results"` |
+| `renderIcon` | `(name: string \| undefined) => ReactNode` | none |
+
+#### DocsSearchButton
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `placeholder` | `string` | `"Search docs…"` |
+| `lang` | `string` | `"en"` |
+| `className` | `string` | none |
+
+#### DocsFeedback
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `question` | `string` | required |
+| `yesLabel` | `string` | `"Yes"`, hardcoded English |
+| `noLabel` | `string` | `"No"`, hardcoded English |
+| `thanksLabel` | `string` | `"Thanks for the feedback!"`, hardcoded English |
+| `onVote` | `(vote: "yes" \| "no") => void` | none. Fires **once**, on the first answer |
+
+#### DocsIcon
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `name` | `string?` | none. An unknown or missing name renders the `document` glyph |
+| `size` | `number?` | `16` |
+| `className` | `string?` | none |
+
+#### useDocsSearch
+
+```ts
+useDocsSearch(): { open: () => void }
+```
+
+Opens the palette owned by `DocsSearchProvider`. Call it from any client component beneath that provider.
+
+### Exported prop types
+
+`BlogOverviewProps`, `BlogOverviewGridProps`, `BlogPageProps`, `BlogSidebarProps`, `DocsPageProps`, `DocsIndexProps`, `DocsNavbarProps`, `DocsNavbarButtonProps`, `DocsNavbarButtonVariant`, `DocsTabsProps`, `DocsSidebarProps`, `DocsLanguagePickerProps`, `DocsTocProps`, `DocsSearchProviderProps`, `DocsSearchButtonProps`, `DocsFeedbackProps`, `Language`, `BlogLabels`, `DocsLabels`.
+
+## The icon set
+
+`DocMeta.icon` and `DocsIcon`'s `name` accept these names:
+
+`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`
+
+Any other name silently renders the neutral `document` glyph. It does not error. A missing or `undefined` name also falls back to `document`. Lookup uses `Object.prototype.hasOwnProperty.call(...)`, so `icon: "toString"` cannot resolve to an inherited member. Every glyph uses a `0 0 24 24` viewBox, `fill="none"`, `stroke="currentColor"`, `strokeWidth={1.7}`, round caps and joins, and `aria-hidden="true"`. The path table itself is module-private and not exported.
+
+Pass a `renderIcon` prop to `DocsSidebar` or `DocsIndex` to substitute your own icon set, in which case that set's names apply instead.
+
+## CSS custom properties
+
+**There is no `:root` block in the stylesheet.** Every `--scribekit-*` token exists only as a `var(--name, fallback)` reference at each call site, so each "default" below is that inline fallback, not a declared value. You override a token by declaring the property yourself:
+
+```css
+:root {
+    --scribekit-primary: #6d5df6;
+    --scribekit-ink: #101828;
+}
+```
+
+52 distinct tokens are referenced. **No dark mode ships.** The stylesheet contains no `prefers-color-scheme` block and no `.dark` class; its only four media queries are two `max-width: 1080px` rules and two `prefers-reduced-motion: reduce` rules. Dark theming is entirely your job, via token overrides.
+
+### Tokens with no single default
+
+Six tokens are referenced with **different fallbacks at different call sites**, so they have no single default value. Set them explicitly if you want them consistent.
+
+| Token | Value to set |
+| --- | --- |
+| `--scribekit-primary-subtle` | `#eef2ff` |
+| `--scribekit-ink-subtle` | `#94a3b8` |
+| `--scribekit-bg-subtle` | `#f7f9fc` |
+| `--scribekit-border` | `#e5eaf0` |
+| `--scribekit-card-shadow` | `0 14px 34px -18px rgba(11, 27, 54, 0.35)` |
+| `--scribekit-docs-tabbar-top` | `0` |
+
+### Brand and accent
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-primary` | `#2563eb` |
+| `--scribekit-primary-soft` | `#c7d2fe` |
+| `--scribekit-primary-subtle` | no single default; see above |
+| `--scribekit-primary-line` | `#dbe4fe` |
+| `--scribekit-violet` | `#6d5df6` |
+| `--scribekit-violet-subtle` | `#f0eefe` |
+| `--scribekit-violet-line` | `#e4e0fc` |
+| `--scribekit-success` | `#15a34a` |
+| `--scribekit-on-primary` | `#ffffff` |
+| `--scribekit-on-ink` | `#ffffff` |
+
+### Text
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-ink` | `#0b1b36`, the main text colour |
+| `--scribekit-ink-body` | `#41506a` |
+| `--scribekit-ink-muted` | `#4a5568` |
+| `--scribekit-ink-soft` | `#5a6b82` |
+| `--scribekit-ink-subtle` | no single default; see above |
+| `--scribekit-ink-hover` | `#15264a` |
+| `--scribekit-nav-ink` | `#475569` |
+| `--scribekit-toc-ink` | `#64748b` |
+
+### Surfaces and borders
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-surface` | `#ffffff` |
+| `--scribekit-bg-subtle` | no single default; see above |
+| `--scribekit-border` | no single default; see above |
+| `--scribekit-border-strong` | `#eaeef4` |
+| `--scribekit-navbar-bg` | `rgba(255, 255, 255, 0.9)` |
+| `--scribekit-docs-nav-bg` | `linear-gradient(180deg, #fcfdfe, #fbfcfe)` |
+| `--scribekit-docs-nav-hover` | `#f1f4f9` |
+| `--scribekit-scrim` | `rgba(11, 27, 54, 0.32)` |
+
+### Shadows and focus
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-card-shadow` | no single default; see above |
+| `--scribekit-menu-shadow` | `0 14px 40px -12px rgba(11, 27, 54, 0.28)` |
+| `--scribekit-palette-shadow` | `0 24px 70px rgba(11, 27, 54, 0.28)` |
+| `--scribekit-focus-ring` | `rgba(37, 99, 235, 0.18)` |
+
+### Typography
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-font-sans` | `"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` |
+| `--scribekit-font-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
+
+### Code blocks
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-code-bg` | `#0b1b36` |
+| `--scribekit-code-border` | `#10203f` |
+| `--scribekit-code-ink` | `#c7d2fe` |
+
+### Layout widths
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-overview-width` | `1040px` |
+| `--scribekit-post-width` | `760px` |
+| `--scribekit-doc-width` | `760px` |
+| `--scribekit-sidebar-width` | `240px` |
+| `--scribekit-docs-max-width` | `none` |
+| `--scribekit-docs-min-height` | `auto` |
+| `--scribekit-docs-body-min-height` | `60vh` |
+| `--scribekit-docs-nav-width` | `300px` |
+| `--scribekit-docs-toc-width` | `250px` |
+| `--scribekit-docs-index-width` | `1040px` |
+| `--scribekit-docs-navbar-search-width` | `440px` |
+
+### Sticky-chrome offsets
+
+| Token | Default | Notes |
+| --- | --- | --- |
+| `--scribekit-docs-navbar-height` | `64px` | |
+| `--scribekit-docs-tabbar-height` | `47px` | |
+| `--scribekit-docs-navbar-top` | `0` | |
+| `--scribekit-docs-tabbar-top` | no single default | Set `0`; see above |
+| `--scribekit-docs-chrome-top` | computed | **Internal. Do not set.** Sibling-selector rules derive it from which chrome actually rendered, because `DocsTabs` renders nothing for a single tab. This is the only token the stylesheet itself assigns |
+| `--scribekit-docs-content-top` | none | **The consumer override, and it always wins.** Set it when the docs shell sits under an app-level header |
+
+## i18n
+
+Exported from `@daanvandenbergh/scribekit/react`.
+
+| Export | Type |
+| --- | --- |
+| `ui` | An `@daanvandenbergh/i18nkit` `I18n` instance over 24 locales, with `default: "en"` |
+| `CATALOG` | The copy catalog, 24 entries |
+| `blogLabels` | `(lang: string) => BlogLabels` |
+| `docsLabels` | `(lang: string) => DocsLabels` |
+| `resolveLanguage` | `(raw: string \| undefined) => Language` |
+
+The i18n module imports no react, next, or server-only code, so both server and client components can use it.
+
+`ui` covers the 24 official EU languages, keyed by primary BCP 47 subtag:
+
+`en`, `fr`, `de`, `es`, `it`, `pt`, `nl`, `pl`, `ro`, `el`, `sv`, `da`, `fi`, `cs`, `sk`, `hu`, `bg`, `hr`, `sl`, `et`, `lv`, `lt`, `ga`, `mt`
+
+`resolveLanguage(raw)` matches on the primary subtag, so `"pt-BR"` resolves to `pt`. An unknown or missing code resolves to `"en"`.
+
+### Overriding copy
+
+**You do not mutate the catalog.** Every label is a component prop that falls back to the resolved translation. Parameterized copy is overridden with a function.
+
+```tsx
+<BlogPage
+    blog={blog}
+    slug={slug}
+    tocTitle="Contents"
+    readingLabel={(minutes) => `${minutes} min`}
+/>
+```
+
+### Default English strings
+
+| `CATALOG` key | Default English |
+| --- | --- |
+| `empty` | `"No posts yet - check back soon."` |
+| `readMore` | `"Read more →"` |
+| `searchPlaceholder` | `"Search posts…"` |
+| `loadMore` | `"Load more"` |
+| `allCategories` | `"All"` |
+| `back` | `"← Blog"` |
+| `onThisPage` | `"On this page"` |
+| `similarPages` | `"Similar pages"` |
+| `filterByCategory` | `"Filter by category"` |
+| `writtenBy` | `"Written by"` |
+| `publishedOn` | `` (d) => `Published ${d}` `` |
+| `readingTime` | `` (m) => `${m} min read` `` |
+| `docsPrevious` | `"Previous"` |
+| `docsNext` | `"Next"` |
+| `docsFeedbackQuestion` | `"Was this page helpful?"` |
+| `docsFeedbackYes` | `"Yes"` |
+| `docsFeedbackNo` | `"No"` |
+| `docsFeedbackThanks` | `"Thanks for the feedback!"` |
+| `docsSearchPlaceholder` | `"Search docs…"` |
+| `docsSearchEmpty` | `"No results"` |
+| `docsUpdatedOn` | `` (d) => `Updated ${d}` `` |
+| `docsTitle` | `"Documentation"` |
+| `docsLanguage` | `"Language"` |
+| `docsChangeLanguage` | `"Change language"` |
+
+`back` is authored with `ui.uniform("← Blog")`, so it is one string for all 24 languages.
+
+`blogLabels(lang)` returns `BlogLabels`: `empty`, `readMore`, `searchPlaceholder`, `loadMore`, `allCategories`, `back`, `onThisPage`, `similarPages`, `filterByCategory`, `writtenBy`, `publishedLabel(date)`, `readingLabel(minutes)`.
+
+`docsLabels(lang)` returns `DocsLabels`: `title`, `onThisPage`, `previous`, `next`, `feedbackQuestion`, `feedbackYes`, `feedbackNo`, `feedbackThanks`, `searchPlaceholder`, `searchEmpty`, `language`, `changeLanguage`, `updatedLabel(date)`, `readingLabel(minutes)`.
+
+`BlogSidebar`'s `title` and `similarTitle`, `DocsToc`'s `title`, and `DocsFeedback`'s `yesLabel`, `noLabel`, and `thanksLabel` hardcode English defaults instead of reading the catalog. Their parent components always pass the translated values, so this surfaces only when you render those components directly.
+
+## MDX
+
+`BlogPage` and `DocsPage` both render with `MDXRemote` from `next-mdx-remote/rsc`, passing your `components` and `mdxOptions` through their own merge steps. Those merge steps are internal; the observable contract is below.
+
+**`remark-gfm` is always on and cannot be disabled.** It is prepended to `options.mdxOptions.remarkPlugins` on every render, so tables, strikethrough, task lists, and autolinks are always available. There is no prop, config option, or plugin ordering that turns it off. Your own plugins are **preserved, never replaced**; `rehypePlugins`, `parseFrontmatter`, and the rest pass through untouched.
+
+**Only `h2` and `h3` receive `id` attributes.** Each id is the shared `slugify` applied to the heading's text content, and `tableOfContents` derives its ids the same way, so anchor ids always match ToC entry ids. Your `components` are spread **after** the injected `h2` and `h3`, so **the caller wins**: overriding `h2` or `h3` drops the injected ids and breaks minimap jump links unless you set your own.
+
+```tsx
+<DocsPage
+    docs={docs}
+    slug={slug}
+    components={{ h2: MyHeading }}
+/>
+```
+
+Levels other than `h2` and `h3` never receive an id, whether or not you override them.
+
+`imgComponent` is **not** an MDX component. It styles the chrome images only, meaning the hero, card thumbnails, and the author avatar, and not `<img>` elements inside the MDX body. It defaults to `"img"`; pass `next/image` to use it. To restyle images inside the MDX body, use `components={{ img: ... }}`.

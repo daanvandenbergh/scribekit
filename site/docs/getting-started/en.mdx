@@ -1,0 +1,98 @@
+---
+title: "Getting started"
+description: "What Scribekit is, how its pieces fit together, and why it is shaped the way it is."
+tab: "Documentation"
+group: "Get started"
+order: 1
+icon: "book"
+updated: "2026-07-16"
+image: "/assets/docs/getting-started/hero.en.jpg"
+---
+
+Scribekit is a TypeScript package that turns folders of MDX files into a blog, a documentation site, or both, for the Next.js App Router. This page explains what the pieces are and why they fit together the way they do. To install it, read [Installation](/docs/installation); to build your first page, read [Quickstart](/docs/quickstart).
+
+## What Scribekit gives you
+
+Scribekit is one npm package, `@daanvandenbergh/scribekit`, with three entry points:
+
+| Import | What it holds |
+| --- | --- |
+| `@daanvandenbergh/scribekit` | The `Blog` and `Docs` classes, their types and errors, and the shared helpers |
+| `@daanvandenbergh/scribekit/react` | The React components that render both surfaces |
+| `@daanvandenbergh/scribekit/styles.css` | The stylesheet for those components |
+
+You write content as MDX. A class reads it. Components render it. Nothing else sits in between.
+
+## The two surfaces, and what each one ships
+
+Scribekit renders two surfaces, and they draw the line between "what ships" and "what you bring" in different places.
+
+The **docs** surface ships the whole shell. `DocsNavbar` gives you the brand row and a ⌘K search palette, `DocsTabs` the tab bar, `DocsSidebar` the grouped nav, `DocsToc` the scroll-spy minimap, and `DocsPage` the breadcrumb, title, lead, reading time, MDX body, feedback widget, and prev/next links. `DocsIndex` builds a landing page of section cards from the same nav tree. You bring the logo, the right-hand navbar actions, and the layout that arranges them.
+
+The **blog** surface ships less on purpose. `BlogOverview` renders a searchable, category-filtered card grid that pages in as you scroll, and `BlogPage` renders one post with its minimap and similar-posts list. The navbar, the footer, and the marketing chrome around them stay yours, because a blog usually lives inside a site that already has a design, while a docs site usually is the design.
+
+Two pieces stay quiet until they have something to say: `DocsTabs` renders nothing when the corpus has one tab, and `DocsLanguagePicker` renders nothing when there is one locale. A single-language, single-tab site needs no configuration to avoid the chrome it does not need.
+
+## Why the filesystem is the source of truth
+
+`Blog` and `Docs` are Node classes that read your MDX from disk. Both are marked `server-only`, so importing one from a client component fails the build rather than leaking a filesystem read into the browser bundle.
+
+```ts
+import { Docs } from "@daanvandenbergh/scribekit";
+
+export const docs = new Docs({
+    contentDir: "./docs",
+    siteUrl: "https://example.com",
+    brandName: "Example",
+});
+```
+
+`contentDir` resolves against `process.cwd()`. Each immediate subdirectory of it is one page, and the folder name is the slug, which is the URL. There is no recursion and no nesting: `docs/hello/en.mdx` is the page `/docs/hello`.
+
+The trade-off this design accepts is that content is a build-time input, not runtime data. What it buys is that your content is files in git. It gets reviewed in pull requests, it diffs, it reverts, and it deploys as static HTML. There is no database to run, no migration to write, and no CMS to keep logged in. Renaming a folder changes a public URL, which is why `Docs` takes a `redirects` map instead of pretending slugs are stable.
+
+## Why front-matter is the config
+
+There is no file that lists your pages. A page's own YAML front-matter carries where it belongs:
+
+```yaml
+---
+title: "Hello"
+description: "One sentence. This is the lead, the meta description, and the OG description."
+tab: "Documentation"
+group: "Get started"
+order: 1
+icon: "book"
+---
+```
+
+From those fields, `Docs` builds the sidebar tree, the tab bar, the breadcrumb, the prev/next links, the search index, the page metadata, and the sitemap. Adding a page is adding a file. There is no second place to update, so the nav cannot drift from the content.
+
+The `new Docs({...})` call is site configuration, not page configuration. Its `tabs` and `groups` arrays only set the display order and labels of sections that your pages already declare; `siteUrl` and `brandName` are what the SEO helpers require, and they throw without both.
+
+Handing the config to YAML has a cost, and it is worth knowing before it bites you: **YAML types are load-bearing**. `order` must be a bare number, because `order: "3"` is silently dropped and the page sorts last. `hidden` must be a bare boolean, because `hidden: "true"` does not hide anything. The reader drops a wrong-typed field rather than failing, so the page still builds and simply sits in the wrong place.
+
+## Why the React layer splits server and client
+
+The components that touch your content are server components. `DocsPage` and `BlogPage` read the instance and parse the MDX body with `next-mdx-remote/rsc`; `DocsIndex` and `BlogOverview` assemble their card grids from the nav tree and the post list instead, without touching MDX. All four render on the server, so the MDX compiler and your page bodies never reach the browser bundle.
+
+Only what genuinely needs a browser is a client component: the search palette, the scroll-spy minimap, the sidebar, the language picker, the feedback buttons, and the blog's search-and-filter grid. That split is the reason a page of prose costs you almost no JavaScript while the interactive parts still work.
+
+MDX rendering has one fixed behaviour worth knowing up front: `remark-gfm` is always on and cannot be turned off, so tables, task lists, and strikethrough always parse. Your own remark and rehype plugins are added to it, never instead of it.
+
+## The skills that write the content
+
+Scribekit also ships portable Claude Code skills, because the format is only half the problem: something has to write the pages. Three of them are in the published package today. `scribekit-blog` researches and writes posts, `scribekit-docs` writes documentation sourced from your own code, and `scribekit-hero` renders hero images deterministically from HTML and CSS. A fourth, `scribekit-docs-github-pages`, handles deployment and is not in the published 1.1.1 package yet. See [Skills](/docs/skills) for what each one does.
+
+The skills are portable by design. They learn the project they are dropped into rather than imposing a house look, so they carry craft, not content.
+
+## What Scribekit does not do
+
+Being clear about the edges is faster than discovering them:
+
+- **No dark mode ships.** The stylesheet has no `prefers-color-scheme` block and no `.dark` class. Every colour is a `var(--scribekit-*, fallback)` at its call site, so dark theming is yours to do by declaring those custom properties.
+- **No CMS and no database.** There is no admin UI, no editor, and no runtime content store. Content is MDX in your repo.
+- **No comments, no analytics, no auth.** The package renders content and its navigation. Everything else is your app's job.
+- **No custom MDX components.** Scribekit registers none, so `<Callout>` or `<Note>` in a body renders nothing unless you pass your own via the `components` prop.
+
+For the full option tables and method signatures, see the [API reference](/docs/api-reference).

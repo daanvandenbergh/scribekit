@@ -1,0 +1,136 @@
+---
+title: "scribekit-docs-github-pages"
+description: "Reference for the /scribekit-docs-github-pages skill: its eight steps, the deploy workflow it writes, and the static-export trade-offs it will not paper over."
+tab: "Skills"
+group: "Skills"
+order: 5
+icon: "globe"
+updated: "2026-07-16"
+image: "/assets/docs/scribekit-docs-github-pages/hero.en.jpg"
+---
+
+`/scribekit-docs-github-pages` takes a project that already renders a Scribekit docs site with Next.js and makes it publish to **GitHub Pages** as a static export. It learns the project first, then patches the Next.js config, writes the deploy workflow, sets `siteUrl` to the Pages origin, and reports the one step it cannot do for you.
+
+## This skill is not in the published package yet
+
+**A reader who installs Scribekit today will not have this skill.** It is untracked in git and absent from the published v1.1.1 tarball. `package.json` includes `skills/` in its `files` array by path, so the next `npm publish` will pack it, but that release has not happened. Do not expect `ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages .claude/skills/scribekit-docs-github-pages` to resolve against a current install.
+
+Once it ships, there is an escape hatch that needs no Claude Code at all: the deploy workflow is a plain file, copyable directly from `node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages/assets/deploy.yml` to `.github/workflows/deploy.yml`.
+
+## Invoke the skill
+
+```bash
+/scribekit-docs-github-pages [--verify]
+```
+
+The skill has **no modes**. It is one linear job of eight steps. `--verify` additionally runs the local export build and the browser check in Step 7; without it, Step 7 is a config sanity check only.
+
+## What it is not
+
+This is not a content skill. Writing, rewriting, or reorganizing docs pages is [`/scribekit-docs`](/docs/scribekit-docs). This skill only makes an existing docs site deployable, and it edits deploy config exclusively: `next.config.*`, the `_docs.ts` `siteUrl` and routing flags, `.github/`, and `public/`. If Step 0 finds no `Docs` instance, the skill stops and points the user at `/scribekit-docs` rather than scaffolding docs itself.
+
+For the guided walkthrough, see [Publish to GitHub Pages](/docs/publish-to-github-pages).
+
+## The eight steps
+
+| Step | What it does |
+| --- | --- |
+| **Step 0** | Learn the project: find the `Docs` wiring (`contentDir`, `siteUrl`, `basePath`, `locales`, `defaultLocale`, `prefixDefaultLocale`, `redirects`), find the Next app root, derive the Pages origin and base path from `git remote get-url origin`, and detect the static-export blockers present. Stops here if no `Docs` instance exists. |
+| **Step 1** | Patch `next.config.*`: merge in `output: "export"` and `images: { unoptimized: true }`. |
+| **Step 2** | Create an empty `public/.nojekyll` so the exported `_next/` folder is never treated as Jekyll source. |
+| **Step 3** | Copy `assets/deploy.yml` to `.github/workflows/deploy.yml` at the **git repo root**, not the app subdir. Workflows only run from the repo root's `.github/`. |
+| **Step 4** | Set `siteUrl` in `_docs.ts` to the derived Pages origin, so canonical, sitemap, `hreflang`, and OG URLs point at the real site. The domain is confirmed with the user first. |
+| **Step 5** | Fix the blockers found in Step 0, and only those present. |
+| **Step 6** | Report the one manual step that cannot be scripted. |
+| **Step 7** | Verify. Config sanity always; the full build and browser check with `--verify`. |
+
+Step 0 derives the origin three ways: a repo named exactly `<owner>.github.io` is a user/org site served at the root with an empty base path; a `public/CNAME` file means a custom domain, also root-served with an empty base path; anything else is a project site under `https://<owner>.github.io/<repo>/` with a base path of `/<repo>`.
+
+## Why it is mostly config, not code
+
+A Scribekit docs site is already static-export-ready:
+
+- The `Docs` class reads the filesystem at build time.
+- Pages render as React Server Components with `next-mdx-remote/rsc`.
+- Search is client-side Fuse.js.
+- Every dynamic route already ships `generateStaticParams` and `export const dynamicParams = false`.
+
+So `next build` with `output: "export"` prerenders the whole site to static HTML. The only things affected are two **routing-layer** conveniences a project may layer on top, handled in Step 5.
+
+Note that `output: "export"` exports the **whole** Next app. A `Blog` section on the same app is exported too and is subject to the same rules.
+
+## What the workflow contains
+
+`assets/deploy.yml` triggers on `push` to `branches: [main]` plus `workflow_dispatch`, takes least-privilege permissions (`contents: read`, `pages: write`, `id-token: write`), and runs one deploy at a time with `concurrency: { group: pages, cancel-in-progress: false }`.
+
+The `build` job on `ubuntu-latest`:
+
+| Step | Action or command |
+| --- | --- |
+| Checkout | `actions/checkout@v4` |
+| Set up Node | `actions/setup-node@v4` with `node-version: 22` and `cache: npm` |
+| Configure Pages | `actions/configure-pages@v5` with `static_site_generator: next` |
+| Install dependencies | `npm ci` |
+| Build static export | `npx --no-install next build` |
+| Upload artifact | `actions/upload-pages-artifact@v3` with `path: ./out` |
+
+The `deploy` job needs `build`, targets the `github-pages` environment, and runs `actions/deploy-pages@v5`.
+
+The template carries a commented-out `defaults.run.working-directory` block for an app in a subdirectory; uncommenting it also means changing the upload `path:` to `<subdir>/out`. Both `npm ci` and `setup-node`'s `cache: npm` need a committed `package-lock.json`. If the repo's default branch is not `main`, the trigger changes. If `.github/workflows/deploy.yml` already exists, the skill shows the diff and asks before overwriting.
+
+## The static-export trade-offs
+
+Being honest about these is one of the skill's non-negotiables.
+
+### Middleware clean-URLs are a hard blocker
+
+A `proxy.ts` or `middleware.ts` that rewrites `/docs/...` onto a `/<defaultLocale>/docs/...` route tree **cannot run on a static host**. Static export drops middleware entirely, so only the prefixed paths (`/en/docs/...`, `/fr/docs/...`) get generated and the bare `/docs/...` clean URLs 404.
+
+The clean fix is **`prefixDefaultLocale: true`** on the `Docs` (and `Blog`) instance, so every locale including the default is served under its own prefix with no middleware. That means deleting the `proxy.ts` or `middleware.ts`, removing any `/en`-stripping the client chrome did on `usePathname()` (it assumed the rewrite), and optionally adding a static entry redirect from `/docs` to `/<defaultLocale>/docs`. URLs become `/<lang>/docs/...` for every language: the honest trade for static hosting.
+
+A single-locale site usually has no middleware and nothing to do here. The flat `/docs/...` export just works.
+
+### Runtime slug redirects degrade, but do not hard-break
+
+A `redirects` config served via `permanentRedirect()` in the `[slug]` route **still builds** under `output: "export"`. Next turns the 308 into a client-side redirect: the old slug exports as a near-empty `200` HTML page carrying a `NEXT_REDIRECT` marker in its payload, and once its JS hydrates the router navigates to the new URL and applies the deployment base path. Renamed slugs do redirect for real visitors.
+
+The loss is SEO and no-JS. To a crawler or a JS-less client, the old URL is a blank `200` with no `308`, no `<meta refresh>`, and no canonical: a weak signal. There is no server on Pages, so a true 308 is not available either way. Two options:
+
+| Option | Trade |
+| --- | --- |
+| **Leave it** | Zero work. JS visitors get redirected. Correct when the old URLs are not SEO-critical. |
+| **Static stubs** | Drop `...getRedirectRefs()` from the route's `generateStaticParams` **and** the `permanentRedirect` branch, then write a `public/<oldpath>.html` stub with `<meta http-equiv="refresh" content="0; url=<newUrl>">` and `<link rel="canonical" href="<newUrl>">`. |
+
+You cannot keep both: a `public/` file and a prerendered route at the same path collide. `getRedirect(slug, lang)` returns `<newUrl>` rooted at the docs section base path (`/docs/...`); on a project site the stub must **also** carry the deployment base path (`/<repo>`) or it lands on a 404.
+
+### The project-site base path is a sharp edge
+
+On a project site at `https://<owner>.github.io/<repo>/`, `configure-pages` injects Next's `basePath` and `assetPrefix`, so **navigation and assets work**: Scribekit's links go through `next/link`, which applies the base path.
+
+**But** Scribekit builds absolute SEO URLs with `new URL(path, siteUrl)`, and a root-relative path drops `siteUrl`'s subpath. Canonical, sitemap, `hreflang`, and OG URLs come out **missing the `/<repo>` segment**, even with `siteUrl` set to include it. This is inherent to hosting under a subpath. The fixes, in order:
+
+1. **Use a custom domain.** Add `public/CNAME`, set `siteUrl` to it. The base path becomes empty and everything is correct.
+2. **Use a user/org `<owner>.github.io` repo.** Also root-hosted, also correct.
+
+Keeping the project subpath leaves a working site whose absolute SEO metadata omits `/<repo>`.
+
+## The one manual step
+
+The skill cannot script this, so Step 6 reports it. Without it the workflow's deploy fails with a Pages-not-enabled error:
+
+> **GitHub -> repo Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".**
+
+Then commit, push to the default branch (or run the workflow from the Actions tab), and the site publishes at the Pages URL derived in Step 0.
+
+## Anti-rules
+
+- **Do not hardcode `basePath` or `assetPrefix`** in `next.config.*`. The workflow's `configure-pages` step injects the right values per environment.
+- **Do not add `trailingSlash: true`.** The export writes `docs/<slug>.html`, which GitHub Pages already serves at the extensionless `/docs/<slug>`, and that matches Scribekit's no-trailing-slash canonical URLs. Turning trailing slashes on would make every canonical disagree with its served URL.
+
+## Constraints
+
+- **Preserve the user's config.** Merge into `next.config.*` and `_docs.ts`; never rewrite the file from scratch or drop existing keys. Every edit is **idempotent**, so re-running the skill does not duplicate keys, workflows, or stub pages.
+- **Do not touch docs content.** No editing MDX bodies, front-matter, slugs, or the nav.
+- **Be honest about static-export limits.** Middleware clean-URLs, true 308 redirects, and correct absolute SEO URLs under a project subpath are the real trade-offs.
+- **Confirm before destructive or outward-facing edits.** Overwriting an existing workflow, deleting a `proxy.ts` or `middleware.ts`, and changing the public URL scheme via `prefixDefaultLocale` all change how the live site behaves.
+- Never start a dev server. Never create git branches.

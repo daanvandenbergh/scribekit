@@ -1,0 +1,100 @@
+---
+title: "Installation"
+description: "Install the Scribekit package, wire up its stylesheet, and link the Claude Code skills."
+tab: "Documentation"
+group: "Get started"
+order: 2
+icon: "rocket"
+updated: "2026-07-16"
+image: "/assets/docs/installation/hero.en.jpg"
+---
+
+This page gets the package and the Claude Code skills installed in an existing Next.js App Router project. It stops there: to build your first page, follow [Quickstart](/docs/quickstart); for what the pieces are, read [Getting started](/docs/getting-started).
+
+## Install the package
+
+Install Scribekit together with `next-mdx-remote`, which renders the MDX bodies:
+
+```bash
+npm install @daanvandenbergh/scribekit next-mdx-remote
+```
+
+Scribekit declares four peer dependencies. Your project supplies them:
+
+| Peer dependency | Range | Notes |
+| --- | --- | --- |
+| `next` | `>=14` | Optional peer. Required in practice: the components target the App Router |
+| `react` | `>=18` | Required peer |
+| `react-dom` | `>=18` | Optional peer |
+| `next-mdx-remote` | `^5 \|\| ^6` | Optional peer. Required to render any post or docs page body |
+
+The optional markings keep npm quiet for consumers who only import the `Blog` or `Docs` class in a script. If you render pages, install `next-mdx-remote`.
+
+## Import the stylesheet once
+
+Import the stylesheet in your root layout, not in each page. It is a global sheet, and importing it more than once is wasted work:
+
+```tsx
+// app/layout.tsx
+import "@daanvandenbergh/scribekit/styles.css";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <html lang="en">
+            <body>{children}</body>
+        </html>
+    );
+}
+```
+
+The package sets `sideEffects: ["**/*.css"]`, so bundlers will not tree-shake the import away.
+
+## Set metadataBase
+
+`Docs.docMetadata` and `Blog.postMetadata` already emit their own `metadataBase` from the `siteUrl` you pass the instance. Set one in the root layout as well, so relative URLs elsewhere in your app resolve against the same origin:
+
+```tsx
+// app/layout.tsx
+export const metadata = {
+    metadataBase: new URL("https://example.com"),
+};
+```
+
+Use the same origin you give the instance. A mismatch produces canonical URLs that disagree with your other pages.
+
+## Link the Claude Code skills
+
+The skills ship inside the npm tarball. Symlink each one into `.claude/skills/` so Claude Code picks it up:
+
+```bash
+mkdir -p .claude/skills
+ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-blog .claude/skills/scribekit-blog
+ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs .claude/skills/scribekit-docs
+ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-hero .claude/skills/scribekit-hero
+```
+
+Check the links resolve:
+
+```bash
+ls -la .claude/skills/
+```
+
+Each entry should point at its target under `node_modules/@daanvandenbergh/scribekit/skills/`. A broken arrow means the package is not installed, or the relative path does not climb far enough out of `.claude/skills/`.
+
+Three skills are what published version 1.1.1 contains. A fourth, `scribekit-docs-github-pages`, exists in the repository but is **not in the published 1.1.1 tarball**, so linking it today gives you a dangling symlink. It ships on a later release. See [Skills](/docs/skills) for what each skill does.
+
+### Install scribekit-docs and scribekit-blog together
+
+`scribekit-docs` has a hard dependency on `scribekit-blog`. It reads two files from it, `house-style.md` for voice and MDX rules and `research-protocol.md` for how it sources facts, and it **stops** when it cannot resolve them. Linking `scribekit-docs` on its own gives you a skill that refuses to run. Link both, in the same directory, as shown above.
+
+`scribekit-hero` is self-contained and depends on nothing, but `scribekit-blog` and `scribekit-docs` hand off to it to render hero images. Without it, they skip the hero and leave `image:` unset.
+
+## Create the content directory
+
+Each surface reads one directory, with one subfolder per page:
+
+```bash
+mkdir -p docs
+```
+
+A missing content directory is not an error: the reader returns no pages until the folder exists. `contentDir` resolves against `process.cwd()`, the directory holding the `package.json` you run Next from, so `"./docs"` means `<project-root>/docs/`.

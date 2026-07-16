@@ -1,0 +1,173 @@
+---
+title: "scribekit-hero"
+description: "Reference for the /scribekit-hero skill: its six modes, the three-files model, the six gradients, and the output shape for every surface."
+tab: "Skills"
+group: "Skills"
+order: 4
+icon: "grid"
+updated: "2026-07-16"
+image: "/assets/docs/scribekit-hero/hero.en.jpg"
+---
+
+`/scribekit-hero` generates hero images for a project's blog posts, docs pages, and its README. Every hero is rendered **deterministically from HTML/CSS via headless Chrome** - never an AI image generator and never a stock photo. All heroes share one family: white text on a full-bleed gradient, with a badge and eyebrow, an auto-fit H1, a subtitle, and an optional byline.
+
+The skill is self-contained. It carries its own design assets in `assets/` and depends on no other skill. Every mode starts by learning the current project (brand tokens, site font, logo, assets dir, and whether the surface is multi-language) so nothing about any project is baked in.
+
+## Invoke the skill
+
+```bash
+/scribekit-hero [blog-hero|regenerate-heroes|docs-hero|regenerate-docs-heroes|readme-hero|tune-gradients] [slug | blog|docs|readme]
+```
+
+The skill has **no `--` flags**. The only argument after the mode is the mode's target. Never run two modes in one invocation; an ambiguous verb gets one clarifying question first.
+
+## Modes
+
+| Mode | Argument | What it does |
+| --- | --- | --- |
+| `blog-hero` | `<slug\|path>` | Create one blog post's hero, or update an existing one. No target lists the content dir and asks. |
+| `regenerate-heroes` | none | Re-render **every** blog hero from its saved params. |
+| `docs-hero` | `<slug\|path>` | Create one docs page's hero, or update an existing one. No target lists the docs content dir and asks. |
+| `regenerate-docs-heroes` | none | Re-render **every** docs hero from its saved params. |
+| `readme-hero` | none | Create or update the README/banner hero. |
+| `tune-gradients` | `[blog\|docs\|readme]` | Review and adjust that surface's gradient palette. Tunes the blog palette when the argument is omitted. |
+
+The `regenerate-*` modes exist for design changes: edit the component or a `hero.settings.js`, re-run, and every hero picks the change up with zero per-page edits. Neither touches frontmatter, because the `image:` paths are unchanged.
+
+## The three files
+
+Design, brand, and content are separated so a design change never means re-editing posts. Each hero is built from exactly three files.
+
+| File | Scope | Contents |
+| --- | --- | --- |
+| **Component** - `assets/hero.js` | Ships with the skill | The reusable hero design: structure, base styles, auto-fit, readiness. **Never copied into a project, never recoloured.** |
+| **Settings** - `hero.settings.js` | One per surface | `brand` (font, badge/logo, eyebrow, default byline) and `gradients`. The **only** place a project customises how heroes look. |
+| **Params** - `<slug>/hero.js` | One per hero | Pure data: the gradient pick, title, and subtitle, plus an optional byline. Saved so any hero is reproducible. |
+
+Settings are seeded from `assets/hero.settings.template.js`, which exports `brand` and `gradients`. Where the file lives depends on the surface:
+
+| Surface | Settings path |
+| --- | --- |
+| Blog | `<content-dir>/hero.settings.js` |
+| Docs | `<docs-content-dir>/hero.settings.js` |
+| README | `claude/scribekit-hero/readme/hero.settings.js` |
+
+A params file carries the gradient name plus the text, and nothing else. The eyebrow comes from `hero.settings.js` and is never repeated per hero:
+
+```js
+export default {
+    gradient: "aurora-glow",                 // the rotated gradient name
+    title:    "The exact page title",        // auto-fit shrinks long ones
+    subtitle: "One tight supporting line",
+};
+```
+
+Docs heroes omit the byline: `DocMeta` has no author field. Blog heroes may define one; any field left out is filled from the settings `brand.byline`.
+
+## The gradients
+
+Six gradients are defined in `hero.settings.js`. A hero uses one by name.
+
+| Name |
+| --- |
+| `radial-mesh` |
+| `diagonal-ribbon` |
+| `aurora-glow` |
+| `soft-sweep` |
+| `horizon-glow` |
+| `veil` |
+
+**Rotation rule.** A new post or page picks `gradients[(number of existing pages) mod gradients.length].name`, so index 0 is `radial-mesh`, 1 is `diagonal-ribbon`, and so on. The pick is deterministic; there is no random selection. Count distinct page folders (`<content-dir>/<slug>/`), including `hidden` pages, and count each slug **once** - a page keeps its gradient across every language, because there is one params file per page. Updating an existing hero keeps its gradient unless the user is restyling.
+
+A README hero has no rotation: it uses its own `gradient` value, defaulting to the first gradient.
+
+## Output shape per surface
+
+The two shapes are never conflated.
+
+| Surface | Format | Size | Rounding |
+| --- | --- | --- | --- |
+| Blog, docs | Opaque rectangle **JPEG**, ~80 KB | 1200x630 | **Never baked in.** The site rounds and borders it in CSS. |
+| README | **PNG** with rounding baked into transparent corners | 1200x630 by default | Baked in at 10px by default. GitHub strips README CSS, so the `<img>` cannot be rounded there, and a JPEG cannot hold an alpha channel. |
+
+Blog and docs heroes are encoded with:
+
+```bash
+sips -z 630 1200 -s format jpeg -s formatOptions 82 <out>.png --out <assets>/docs/<slug>/hero.<code>.jpg
+```
+
+The README PNG is downscaled with a plain `sips -z H W` resize, which keeps the format PNG and preserves the transparent corners. Its size and radius are optional exports on the README `hero.settings.js` (`export const size = { w: 1200, h: 400 }`, `export const radius = 10`), never edits to the shared component. Keep `h` no smaller than about 420 so the auto-fit title does not clip.
+
+## Output paths
+
+| Surface | Rendered image |
+| --- | --- |
+| Blog | `<assets>/blog/<slug>/hero.<code>.jpg` |
+| Docs | `<assets>/docs/<slug>/hero.<code>.jpg` |
+| README | `claude/scribekit-hero/readme/hero.png` |
+
+Every language is named by its code, the default included: `hero.en.jpg`, `hero.fr.jpg`, matching the page files `en.mdx` and `fr.mdx`.
+
+## Localised heroes
+
+The hero bakes in the page's text, so **every translation gets its own rendered JPEG**, and a translation's `image:` must never point at another language's file. There is still **one params file per page**, not one per language. `<slug>/hero.js` exports a `(locale) => params` function:
+
+```js
+// <docs-content-dir>/<slug>/hero.js - one file, all languages.
+const text = {
+    en: { title: "Configure a Docs instance", subtitle: "Wire your docs content dir in one file." },
+    fr: { title: "Configurer une instance Docs", subtitle: "Reliez votre dossier docs en un fichier." },
+};
+export default (locale = "en") => ({ gradient: "aurora-glow", ...text[locale] });
+```
+
+The gradient is the single `gradient` value in the shared file, so it is the same across every language and no re-rotation is possible or needed. The render loops the configured locales, one JPEG each. If a configured locale returns no text, the run stops and the params file is fixed, because that language would render a blank title.
+
+## How `image:` is wired
+
+The rendered hero is wired into each language's front-matter as **always a site-root path with a leading slash**, never a bare filename and never a full URL:
+
+```yaml
+image: "/assets/docs/<slug>/hero.en.jpg"
+```
+
+For docs this is `DocMeta.image`, the page's OG/social-card image. The docs page component does not render it inline. OG emits `DocMeta.image` as-is under `metadataBase` and JSON-LD absolutizes it, so only a leading-slash root path is correct on both. Updating an existing hero also bumps `updated:` (from `date +%F`, quoted). See [Docs guide](/docs/docs-guide) for the rest of the front-matter contract.
+
+## Files
+
+| File | Lines | Purpose |
+| --- | --- | --- |
+| `SKILL.md` | 177 | The router and the shared design foundation: Step 0, the three-files model, auto-create settings, the 6 gradients, `tune-gradients`, the render pipeline, guardrails. |
+| `blog.md` | 87 | `blog-hero` and `regenerate-heroes`. |
+| `docs.md` | 88 | `docs-hero` and `regenerate-docs-heroes`. |
+| `readme.md` | 126 | `readme-hero`: size and radius, the transparent rounded PNG, README wiring. |
+| `assets/hero.js` | 285 | The reusable hero component. Exports `renderHero` and `renderGallery`. |
+| `assets/hero.settings.template.js` | 137 | The seed copied to each surface as `hero.settings.js`. Exports `brand` and `gradients`. |
+| `assets/hero.host.html` | 47 | Single-hero render host. Tokens `{{HERO_COMPONENT}}`, `{{HERO_SETTINGS}}`, `{{HERO_PARAMS}}`. |
+| `assets/hero.gallery.html` | 29 | The `tune-gradients` gallery host. Two tokens. |
+
+## Constraints
+
+- Only `hero.settings.js` carries brand, colour, size, and radius. A project's colours are never hardcoded into the shared `assets/hero.js`, and the component is never copied into a project.
+- The output shape per surface is never conflated: blog and docs are opaque JPEG rectangles with no baked rounding; the README is a rounded transparent PNG.
+- Every hero is a **local asset**, never a remote URL.
+- **Committed files are never modified by a render.** The host HTML is filled into a throwaway scratchpad copy, and that copy is what gets screenshotted.
+- A render touches only hero assets, the surface's `hero.settings.js` and `hero.js` params, and (blog and docs) the page's `image:` and `updated:` front-matter, or (README, on the user's OK) `README.md`.
+- Never start a dev server. Never create git branches.
+
+## The render pipeline
+
+The claude-in-chrome MCP blocks `file://`, so the render runs **headless Chrome from the CLI** (`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` on macOS, `google-chrome` or `chromium` on Linux):
+
+```bash
+"<chrome>" --headless=new --hide-scrollbars --force-device-scale-factor=2 \
+  --window-size=<W>,<H> --virtual-time-budget=6000 --default-background-color=00000000 \
+  --allow-file-access-from-files --user-data-dir="<fresh temp dir>" \
+  --screenshot="<out>.png" "file://<scratchpad-host>.html[?lang=<code>]"
+```
+
+- `--allow-file-access-from-files` is **required**. It lets the host's ES-module `import`s resolve over `file://`, which Chrome CORS-blocks otherwise.
+- Use a **fresh `--user-data-dir` per render**. A running or stale Chrome locks the profile.
+- **Chrome lingers about 60 seconds** after writing the screenshot in `--headless=new`, so the render is backgrounded and polled for the `.png` rather than blocked on. macOS has no GNU `timeout`.
+- The stage sits at the page origin, so a `W x H` window captures exactly the hero, and DPR 2 gives a crisp `2W x 2H` source. The component sets `document.documentElement.dataset.ready="1"` once the font swaps, any logo image decodes, and the title is auto-fit. The default `W,H` is `1200,630`.
+- Blog and docs heroes pass the locale via the URL query (`?lang=<code>`), one screenshot per locale. A README hero renders once, with no `?lang=`.

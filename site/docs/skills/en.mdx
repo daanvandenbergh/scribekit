@@ -1,0 +1,146 @@
+---
+title: "Skills"
+description: "Why Scribekit ships Claude Code skills, how the four of them divide the work, and what each one depends on."
+tab: "Skills"
+group: "Skills"
+order: 1
+icon: "sparkles"
+updated: "2026-07-16"
+image: "/assets/docs/skills/hero.en.jpg"
+---
+
+Scribekit is two products in one package. The runtime half renders your blog and docs; the authoring
+half is a set of Claude Code skills that write the content. This page explains what those skills are,
+why they are shaped the way they are, and how they fit together.
+
+## What a skill is here
+
+A Claude Code skill is a folder of Markdown instructions that Claude Code loads when you invoke it.
+It is not code. Nothing imports it, nothing bundles it, and the runtime package does not depend on it
+at all. `scribekit-blog` is seven Markdown files; `scribekit-docs` is another seven. Invoking
+`/scribekit-blog` puts those instructions in front of the agent, and the agent does the work.
+
+The package ships them because writing content for a Scribekit site means knowing things that only
+your repo knows: your frontmatter contract, your real routes, your voice, your source code. An agent
+without that context writes plausible prose about a project that does not exist. The skills exist to
+close that gap, which is why they live next to the runtime rather than in a separate package.
+
+## Nothing about any project is baked in
+
+The design idea worth understanding is that these skills carry craft, not content. Every one of them
+opens with a Step 0 that learns the current project before it writes a word: identity and audience
+from `CLAUDE.md` and the README, voice from the strongest existing pages, the content directory and
+its reader, the exact frontmatter fields the project parses, the configured locales, the real routes
+from the router, and the project's own style rules down to whether it bans em-dashes.
+
+`scribekit-blog` states the rule directly: "Match the project, don't impose a house look." That is
+the whole reason one skill works in any repo. A skill with a house voice baked in would produce the
+same post in every project it touched. A skill that reads the project first produces a post that
+sounds like the project.
+
+The trade-off is real. Step 0 costs tokens and time on every single invocation, and it re-learns the
+same project on every run because a skill has no memory between sessions. The alternative would be a
+config file the skill reads instead, which is faster but goes stale the moment the project changes
+and nobody updates it. Scribekit takes the slower, always-correct option.
+
+## Blog researches the web; docs invert that
+
+The sharpest distinction between the two writing skills is where truth comes from.
+
+`/scribekit-blog` researches the **open web**. A blog post competes in search results and in AI
+answer engines, so the skill runs a mandatory research pass with `WebSearch` and `WebFetch`, reads a
+live SERP to see what already ranks, plans SEO and GEO targeting against it, and cites its sources.
+The facts it needs are outside your repo, so it goes and gets them.
+
+`/scribekit-docs` **inverts** it. Documentation is project-dedicated: it makes no claims about the
+world, only about your software. The open web has no opinion on what your `Docs` constructor
+defaults to. So the skill reads `research-protocol.md` with the polarity flipped, and the primary
+source becomes **your own source code, read directly**. Every option, default, signature, route, and
+code sample carries a `file:line` trace. `WebSearch` survives only for a genuinely external fact such
+as a published standard or spec.
+
+This inversion is the right call because the failure modes are opposite. A blog post that recalls a
+statistic from memory is wrong about the world, and a reader can check it. A docs page that recalls
+an API from memory is wrong about your code, and it looks authoritative while being wrong, because
+the reader has no reason to doubt the project's own documentation. So `scribekit-docs` refuses to
+recall: if a fact is not traced, it is not written. Two rules fall out of the same principle.
+`DocMeta` has no `author` field, so the skill will not add one even though the blog contract has one.
+And where a symbol's JSDoc disagrees with its executed behaviour, the behaviour wins, because
+comments drift and the code does not.
+
+## How the four relate
+
+The dependency picture is not symmetric, and it matters at install time.
+
+| Edge | Kind | What happens |
+| --- | --- | --- |
+| blog -> hero | automatic | `write` step 7 calls `blog-hero` on every new post |
+| docs -> hero | conditional | `write` step 7 calls `docs-hero` only if sibling pages already carry heroes, or you ask |
+| docs -> blog | **hard dependency** | docs reads blog's `house-style.md` and `research-protocol.md`, and **STOPs** without them |
+| hero -> nothing | none | self-contained; it carries its own design assets |
+
+Two of these deserve a note.
+
+**docs depends on blog, and stops without it.** `scribekit-docs` does not carry its own voice craft
+or anti-slop lists. It reuses `scribekit-blog`'s `house-style.md` and `research-protocol.md`,
+resolving them from the sibling skill directory, `.claude/skills/scribekit-blog/`, or `node_modules`.
+If none of those paths exists, the skill stops and tells you to install `scribekit-blog`. It does not
+proceed on half a spec. The practical consequence: **install `scribekit-blog` and `scribekit-docs`
+together**, even if you only want docs.
+
+**docs calls hero conditionally, blog does not.** A blog post without a hero looks broken, so blog
+always renders one. A docs corpus that never wired heroes should stay that way, so `scribekit-docs`
+checks whether sibling pages carry `image:` first, and skips the hero if none do. `DocMeta.image` is
+an optional social-card field the page never renders inline, and one hero no sibling has is worse
+than no hero at all.
+
+Both hero handoffs degrade rather than fail. If `/scribekit-hero` is not installed, the skill skips
+the image, leaves `image:` unset, and tells you to install it.
+
+## The guardrails they share
+
+Four rules hold across these skills, and they are the reason you can run them unattended. The
+dev-server and git-branch rules bind all four; the other two bind the three that write content,
+since `scribekit-docs-github-pages` edits deploy config rather than pages.
+
+- **Never fabricate.** Blog: never a statistic, quote, date, source, or a named customer, case, or
+  event. Docs: never an API detail. Unsupported means cut it or soften it to a claim you can defend.
+- **Never start a dev server.** The skill asks you to run it instead. It does not spawn processes it
+  cannot see the output of.
+- **Never create git branches.** Changes stay scoped to the page and its hero asset.
+- **Today's date comes from `date +%F`**, never a guess. This one exists because an agent's sense of
+  the current date is the single most reliably wrong thing about it, and `updated:` frontmatter is
+  load-bearing.
+
+## The four skills
+
+| Skill | Modes | Flags | Reference |
+| --- | --- | --- | --- |
+| `scribekit-blog` | `write`, `rewrite` | `--scan`, `--no-hero`, `--no-translations` | [scribekit-blog](/docs/scribekit-blog) |
+| `scribekit-docs` | `write`, `rewrite`, `reorganize`, `deep-verify` | `--scan`, `--no-hero` | [scribekit-docs](/docs/scribekit-docs) |
+| `scribekit-hero` | `blog-hero`, `regenerate-heroes`, `docs-hero`, `regenerate-docs-heroes`, `readme-hero`, `tune-gradients` | none | [scribekit-hero](/docs/scribekit-hero) |
+| `scribekit-docs-github-pages` | none (one linear job) | `--verify` | [scribekit-docs-github-pages](/docs/scribekit-docs-github-pages) |
+
+`scribekit-hero` is worth one line of rationale: it renders heroes deterministically from HTML and
+CSS via headless Chrome, and explicitly never uses an AI image generator or stock photo. The reason
+is reproducibility. A hero generated from a prompt cannot be regenerated identically after a brand
+change, so `regenerate-heroes` would be impossible. Rendering from saved parameters means every hero
+can be re-rendered from its `hero.js` at any time.
+
+## What is not shipping yet
+
+**`scribekit-docs-github-pages` is not in the published npm package.** As of the published version
+1.1.1 it is untracked in git and absent from the tarball. If you install Scribekit today, you will
+not have it, and the symlink command for it will fail.
+
+It will ship on the next publish, because `package.json`'s `files` field includes `skills/` by path
+and npm packs whatever is on disk. Until then, treat its reference page as a description of the
+skill, not as something you can invoke. The three that do ship today are `scribekit-blog`,
+`scribekit-docs`, and `scribekit-hero`.
+
+## Installing them
+
+The skills ship inside the npm package, so you already have the three published ones after
+`npm install`. Claude Code finds a skill by looking in `.claude/skills/`, so each one needs a symlink
+from there into `node_modules`. The exact commands are in
+[Installation](/docs/installation).

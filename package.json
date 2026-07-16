@@ -35,6 +35,8 @@
         "test:watch": "vitest",
         "typecheck": "tsc --noEmit",
         "demo": "npm run build && npm --prefix demo run dev",
+        "docs": "npm run build && npm --prefix site run dev",
+        "docs:build": "npm run build && npm --prefix site run build",
         "prepublishOnly": "npm run build",
         "push-and-publish": "git add -A && git commit -m 'Updates' && npm version patch && npm publish && git push -u origin main"
     },

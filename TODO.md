@@ -1,5 +1,38 @@
 # To Do list
-  
+
+- [ ] Commit and publish the `scribekit-docs-github-pages` skill, then drop the "not shipped yet"
+  caveats the docs now carry. The skill exists on disk (`skills/scribekit-docs-github-pages/SKILL.md`
+  + `assets/deploy.yml`) but is **untracked** (`git status --short skills/` -> `?? skills/scribekit-docs-github-pages/`)
+  and therefore absent from published npm 1.1.1 (`git ls-files skills/` covers only blog/docs/hero;
+  published version == HEAD). `package.json` `files: ["dist", "skills", "demo"]` packs `skills/` by
+  path, so the next `npm publish` ships it automatically - it only needs committing and releasing.
+  It is already symlinked into `.claude/skills/scribekit-docs-github-pages` (loadable in this repo),
+  matching the other three. **Once it is published, docs pages that state the caveat must be updated
+  together** (grep `site/docs` for "not in the published" / "1.1.1"):
+  `site/docs/installation/en.mdx` (the "Three skills are what published version 1.1.1 contains"
+  paragraph), `site/docs/skills/en.mdx`, and `site/docs/scribekit-docs-github-pages/en.mdx` (which leads
+  with the caveat), plus `site/docs/publish-to-github-pages/en.mdx`, written as a fully manual walkthrough
+  *because* the skill cannot be installed today and should then point at the skill as the automated
+  path. `README.md` already says "four" in the working tree but the committed version says "three".
+  Done when the skill is committed, published, and no docs page claims it is unavailable.
+
+- [ ] Make scribekit's absolute SEO URLs correct on a GitHub Pages **project site**
+  (`https://<owner>.github.io/<repo>/`). `absoluteUrl` (`src/shared/seo.ts:29`) does
+  `new URL(pathOrUrl, siteUrl)`, and a root-relative path (e.g. `/docs/x` from `localePath`)
+  **drops the subpath** of `siteUrl`, so with `siteUrl: "https://owner.github.io/repo"` the
+  canonical/sitemap/`hreflang`/OG URLs come out as `https://owner.github.io/docs/x` - missing
+  `/repo`. Navigation, assets, and heroes are already fine (the deploy workflow feeds the base path in
+  as `NEXT_PUBLIC_BASE_PATH` from `configure-pages`, so `next.config` sets `basePath`/`assetPrefix`,
+  scribekit chrome links go through `next/link`, and the app-template's `BaseImg`/`BodyLink` prefix the
+  hero `<img>` and in-body links); only the **absolute** SEO URLs are wrong. Decide the fix: e.g. teach
+  the SEO builders to prepend `siteUrl`'s path before the
+  root-relative `localePath` (join, don't `new URL`-resolve), or add a deployment `pathPrefix` to
+  `SiteConfig` that `absoluteUrl`/`buildSitemap` honour. Cover it with a test in
+  `src/shared/tests/sitemap.test.ts` / `src/shared/tests/locales.test.ts` using a `siteUrl` that has
+  a subpath. Until then, the `scribekit-docs-github-pages` skill and the README's "Deploy to GitHub
+  Pages" section tell users to prefer a custom domain / user-org site (empty base path), where this
+  does not arise.
+
 - [ ] Decide on a license for the package. `package.json` is `"UNLICENSED"` and v1.0.0 was **already
   published** to npm under that. Pick and add a real license, then publish a new version.
 
