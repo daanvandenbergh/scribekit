@@ -9,13 +9,11 @@ updated: "2026-07-16"
 image: "/assets/docs/scribekit-docs-github-pages/hero.en.jpg"
 ---
 
-`/scribekit-docs-github-pages` takes a project that already renders a Scribekit docs site with Next.js and makes it publish to **GitHub Pages** as a static export. It learns the project first, then patches the Next.js config, writes the deploy workflow, sets `siteUrl` to the Pages origin, and reports the one step it cannot do for you.
+`/scribekit-docs-github-pages` takes a project that already renders a Scribekit docs site with Next.js and makes it publish to **GitHub Pages** as a static export. It learns the project first, then patches the Next.js config, writes the deploy workflow, sets `siteUrl` to the Pages origin, and hands you back a push away from live.
 
-## This skill is not in the published package yet
+## Not using Claude Code?
 
-**A reader who installs Scribekit today will not have this skill.** It is untracked in git and absent from the published v1.1.1 tarball. `package.json` includes `skills/` in its `files` array by path, so the next `npm publish` will pack it, but that release has not happened. Do not expect `ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages .claude/skills/scribekit-docs-github-pages` to resolve against a current install.
-
-Once it ships, there is an escape hatch that needs no Claude Code at all: the deploy workflow is a plain file, copyable directly from `node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages/assets/deploy.yml` to `.github/workflows/deploy.yml`.
+There is an escape hatch that needs no agent at all: the deploy workflow is a plain file, copyable straight from `node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages/assets/deploy.yml` to `.github/workflows/deploy.yml`. [Publish your docs to GitHub Pages](/docs/publish-to-github-pages) walks the whole thing by hand.
 
 ## Invoke the skill
 
@@ -41,7 +39,7 @@ For the guided walkthrough, see [Publish to GitHub Pages](/docs/publish-to-githu
 | **Step 3** | Copy `assets/deploy.yml` to `.github/workflows/deploy.yml` at the **git repo root**, not the app subdir. Workflows only run from the repo root's `.github/`. |
 | **Step 4** | Set `siteUrl` in `_docs.ts` to the derived Pages origin, so canonical, sitemap, `hreflang`, and OG URLs point at the real site. The domain is confirmed with the user first. |
 | **Step 5** | Fix the blockers found in Step 0, and only those present. |
-| **Step 6** | Report the one manual step that cannot be scripted. |
+| **Step 6** | Enable Pages, then push. The workflow self-enables; report the manual fallback only if an org policy blocks it. |
 | **Step 7** | Verify. Config sanity always; the full build and browser check with `--verify`. |
 
 Step 0 derives the origin three ways: a repo named exactly `<owner>.github.io` is a user/org site served at the root with an empty base path; a `public/CNAME` file means a custom domain, also root-served with an empty base path; anything else is a project site under `https://<owner>.github.io/<repo>/` with a base path of `/<repo>`.
@@ -114,13 +112,15 @@ On a project site at `https://<owner>.github.io/<repo>/`, `configure-pages` inje
 
 Keeping the project subpath leaves a working site whose absolute SEO metadata omits `/<repo>`.
 
-## The one manual step
+## Enabling Pages
 
-The skill cannot script this, so Step 6 reports it. Without it the workflow's deploy fails with a Pages-not-enabled error:
+The workflow's `configure-pages` step sets `enablement: true`, so on its first run it turns Pages on itself (build type "GitHub Actions"). In the common case there is no manual step: commit, push to the default branch (or run the workflow from the Actions tab), and the site publishes at the Pages URL derived in Step 0.
+
+The exception is an org policy that blocks Actions from enabling Pages. That first run fails with *"Get Pages site failed / Not Found"*, and Step 6 tells you the one-time fix:
 
 > **GitHub -> repo Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".**
 
-Then commit, push to the default branch (or run the workflow from the Actions tab), and the site publishes at the Pages URL derived in Step 0.
+Re-run the workflow after that and it deploys. With Pages already enabled, `enablement: true` is a no-op.
 
 ## Anti-rules
 

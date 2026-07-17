@@ -1,20 +1,28 @@
 # To Do list
 
-- [ ] Commit and publish the `scribekit-docs-github-pages` skill, then drop the "not shipped yet"
-  caveats the docs now carry. The skill exists on disk (`skills/scribekit-docs-github-pages/SKILL.md`
-  + `assets/deploy.yml`) but is **untracked** (`git status --short skills/` -> `?? skills/scribekit-docs-github-pages/`)
-  and therefore absent from published npm 1.1.1 (`git ls-files skills/` covers only blog/docs/hero;
-  published version == HEAD). `package.json` `files: ["dist", "skills", "demo"]` packs `skills/` by
-  path, so the next `npm publish` ships it automatically - it only needs committing and releasing.
-  It is already symlinked into `.claude/skills/scribekit-docs-github-pages` (loadable in this repo),
-  matching the other three. **Once it is published, docs pages that state the caveat must be updated
-  together** (grep `site/docs` for "not in the published" / "1.1.1"):
-  `site/docs/installation/en.mdx` (the "Three skills are what published version 1.1.1 contains"
-  paragraph), `site/docs/skills/en.mdx`, and `site/docs/scribekit-docs-github-pages/en.mdx` (which leads
-  with the caveat), plus `site/docs/publish-to-github-pages/en.mdx`, written as a fully manual walkthrough
-  *because* the skill cannot be installed today and should then point at the skill as the automated
-  path. `README.md` already says "four" in the working tree but the committed version says "three".
-  Done when the skill is committed, published, and no docs page claims it is unavailable.
+- [ ] **Commit and publish the `scribekit-docs-github-pages` skill - the docs already claim it ships,
+  and that is currently false.** The caveat-removal half of this item is DONE: `site/docs` was rewritten
+  on 2026-07-16 to describe the skill as a shipped, installable, fourth skill
+  (`site/docs/installation/en.mdx` now prints the fourth `ln -s` line and says "Link only what you need";
+  `site/docs/skills/en.mdx` says "you already have all four after `npm install`";
+  `site/docs/getting-started/en.mdx` says "four portable Claude Code skills";
+  `site/docs/scribekit-docs-github-pages/en.mdx` leads with "Not using Claude Code?" instead of the caveat;
+  `site/docs/publish-to-github-pages/en.mdx` says the skill "ships in the package"). `README.md` says
+  "four" too. **None of that is true yet**: the skill is still untracked
+  (`git status --short skills/` -> `?? skills/scribekit-docs-github-pages/`), so it is absent from
+  published npm 1.1.1, and a reader following the docs today gets a dangling symlink. Publishing is
+  what makes the docs honest, so do it. Verified already: `npm pack --dry-run` packs all 12 skill files
+  (`package.json` `files: ["dist", "skills", "demo"]` picks up `skills/` by path), `npm run typecheck` is
+  clean, and `npm test` is 371/371 green. To finish: `git add` the skill
+  (`skills/scribekit-docs-github-pages/`), its symlink (`.claude/skills/scribekit-docs-github-pages`),
+  and `site/` (the whole docs site is untracked, so the docs edits above are NOT in git yet) plus
+  `README.md`, `CLAUDE.md`, `package.json`, `TODO.md`; then `npm version minor` (1.1.1 -> 1.2.0; a new
+  skill is a feature, matching 1.1.0's precedent - note `package.json`'s `push-and-publish` script
+  hardcodes `npm version patch`, so do not blindly run it) and `npm publish`. Decide separately whether
+  to commit `.github/workflows/deploy.yml` (also untracked): it deploys scribekit's own `site/` to
+  GitHub Pages on every push to `main` and only works once repo Settings -> Pages -> Source is set to
+  "GitHub Actions". Done when `npm view @daanvandenbergh/scribekit version` reports the new version and
+  `npm view @daanvandenbergh/scribekit files` (or a fresh install) shows `skills/scribekit-docs-github-pages`.
 
 - [ ] Make scribekit's absolute SEO URLs correct on a GitHub Pages **project site**
   (`https://<owner>.github.io/<repo>/`). `absoluteUrl` (`src/shared/seo.ts:29`) does
@@ -32,6 +40,31 @@
   a subpath. Until then, the `scribekit-docs-github-pages` skill and the README's "Deploy to GitHub
   Pages" section tell users to prefer a custom domain / user-org site (empty base path), where this
   does not arise.
+
+- [ ] Reconcile `site/docs/publish-to-github-pages/en.mdx` (the manual tutorial) with what the
+  `scribekit-docs-github-pages` skill actually ships - they now diverge, and the tutorial's path
+  **404s every hero image on a project site**. The docs present the two as equivalent ("The
+  `/scribekit-docs-github-pages` skill does every step below for you"), but the tutorial's workflow
+  snippet (`site/docs/publish-to-github-pages/en.mdx:71-147`) uses
+  `configure-pages@v5` `with: static_site_generator: next` and tells the reader that is what injects
+  `basePath`/`assetPrefix` (line 147). The shipped asset
+  (`skills/scribekit-docs-github-pages/assets/deploy.yml:55-65`) **deliberately does not** use
+  `static_site_generator`, and says why: it passes `configure-pages`' `base_path` output to the build as
+  `NEXT_PUBLIC_BASE_PATH`, which the app reads **twice** - in `next.config.mjs` for `basePath`/`assetPrefix`,
+  and in `_docs-image.tsx`'s `BaseImg` to prefix the hero's raw `<img src="/assets/...">`
+  (see `assets/app-template/next.config.mjs` and `assets/app-template/_docs-image.tsx`, both of which
+  document this). `static_site_generator: next` sets Next's basePath but **never sets
+  `NEXT_PUBLIC_BASE_PATH`**, so `BaseImg`'s `BASE` is empty and every hero 404s under `/<repo>/`. The
+  tutorial never mentions heroes or `BaseImg` at all; its only project-site caveat is the SEO-URL one
+  (line 178), and its 404 troubleshooting note (line 240) blames the wrong cause. Fix by rewriting the
+  tutorial's snippet to match the shipped `assets/deploy.yml` (drop `static_site_generator`, add the
+  `NEXT_PUBLIC_BASE_PATH` env + the `base`-aware `next.config.mjs` from the app template, and add the
+  `imgComponent={BaseImg}` step), or explicitly scope the tutorial to root-hosted sites only. Also note
+  the tutorial's snippet lacks `enablement: true` (the shipped asset has it), which is why its "## 6. Flip
+  the Pages source" step is still correct as written - keep the two consistent whichever way you go.
+  Done when a reader following the tutorial onto a `<owner>.github.io/<repo>/` project site gets working
+  hero images, verified by an actual Pages deploy or a local `NEXT_PUBLIC_BASE_PATH=/repo next build` whose
+  `out/` HTML shows hero `src` starting with `/repo/assets/`.
 
 - [ ] Decide on a license for the package. `package.json` is `"UNLICENSED"` and v1.0.0 was **already
   published** to npm under that. Pick and add a real license, then publish a new version.

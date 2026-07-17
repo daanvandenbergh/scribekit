@@ -71,6 +71,7 @@ mkdir -p .claude/skills
 ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-blog .claude/skills/scribekit-blog
 ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs .claude/skills/scribekit-docs
 ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-hero .claude/skills/scribekit-hero
+ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages .claude/skills/scribekit-docs-github-pages
 ```
 
 Check the links resolve:
@@ -81,7 +82,7 @@ ls -la .claude/skills/
 
 Each entry should point at its target under `node_modules/@daanvandenbergh/scribekit/skills/`. A broken arrow means the package is not installed, or the relative path does not climb far enough out of `.claude/skills/`.
 
-Three skills are what published version 1.1.1 contains. A fourth, `scribekit-docs-github-pages`, exists in the repository but is **not in the published 1.1.1 tarball**, so linking it today gives you a dangling symlink. It ships on a later release. See [Skills](/docs/skills) for what each skill does.
+Link only what you need. `scribekit-hero` and `scribekit-docs-github-pages` each stand alone, so you can skip either. The two content skills are the exception, and the next section says why. See [Skills](/docs/skills) for what each skill does.
 
 ### Install scribekit-docs and scribekit-blog together
 

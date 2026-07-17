@@ -2,9 +2,10 @@
 #
 # Prerequisites (the skill sets these up; verify they are present):
 #   - next.config.* reads NEXT_PUBLIC_BASE_PATH and sets output/basePath from it (see the app template).
-#   - Repo Settings -> Pages -> Source is set to "GitHub Actions" (one-time, un-scriptable).
+#   - Pages is enabled - the Configure Pages step sets `enablement: true` to do this automatically on the
+#     first run (fallback if an org blocks it: Settings -> Pages -> Source: "GitHub Actions").
 #
-# `actions/configure-pages@v5` outputs the correct `base_path` for your Pages URL (empty for a custom
+# `actions/configure-pages@v6` outputs the correct `base_path` for your Pages URL (empty for a custom
 # domain / user-org site, "/<repo>" for a project site). We pass it to the build as NEXT_PUBLIC_BASE_PATH
 # so the app owns the base path - both next.config (routes/assets/next.js links) AND the hero <img> read
 # the same value, which is what makes raw /assets hero paths resolve under a project subpath.
@@ -39,10 +40,10 @@ jobs:
         #         working-directory: web   # <- set if the Next app is in a subdirectory
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Set up Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
                   # Next.js 16 requires Node >= 20.9; 22 is the current LTS.
                   node-version: 22
@@ -54,9 +55,14 @@ jobs:
             # Outputs `base_path` (e.g. "/<repo>" for a project site, empty/"/" for root hosting).
             # We do NOT use `static_site_generator: next` here: the app sets its own basePath from
             # NEXT_PUBLIC_BASE_PATH below, so its hero <img> can read the same value.
+            # `enablement: true` turns Pages on (build type "GitHub Actions") on the first run, so a fresh
+            # repo doesn't fail with "Get Pages site failed / Not Found". If an org policy blocks it,
+            # enable Pages once by hand (Settings -> Pages -> Source: "GitHub Actions") and this is a no-op.
             - name: Configure Pages
               id: pages
-              uses: actions/configure-pages@v5
+              uses: actions/configure-pages@v6
+              with:
+                  enablement: true
 
             - name: Install dependencies
               run: npm ci
@@ -68,7 +74,7 @@ jobs:
               run: npx --no-install next build
 
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v5
               with:
                   path: ./out
 

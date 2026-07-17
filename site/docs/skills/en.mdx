@@ -127,20 +127,8 @@ is reproducibility. A hero generated from a prompt cannot be regenerated identic
 change, so `regenerate-heroes` would be impossible. Rendering from saved parameters means every hero
 can be re-rendered from its `hero.js` at any time.
 
-## What is not shipping yet
-
-**`scribekit-docs-github-pages` is not in the published npm package.** As of the published version
-1.1.1 it is untracked in git and absent from the tarball. If you install Scribekit today, you will
-not have it, and the symlink command for it will fail.
-
-It will ship on the next publish, because `package.json`'s `files` field includes `skills/` by path
-and npm packs whatever is on disk. Until then, treat its reference page as a description of the
-skill, not as something you can invoke. The three that do ship today are `scribekit-blog`,
-`scribekit-docs`, and `scribekit-hero`.
-
 ## Installing them
 
-The skills ship inside the npm package, so you already have the three published ones after
-`npm install`. Claude Code finds a skill by looking in `.claude/skills/`, so each one needs a symlink
-from there into `node_modules`. The exact commands are in
-[Installation](/docs/installation).
+The skills ship inside the npm package, so you already have all four after `npm install`. Claude
+Code finds a skill by looking in `.claude/skills/`, so each one needs a symlink from there into
+`node_modules`. The exact commands are in [Installation](/docs/installation).

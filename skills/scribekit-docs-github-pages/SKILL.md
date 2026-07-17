@@ -268,14 +268,17 @@ empty, everything correct. Recommend root hosting when SEO is a priority; otherw
 
 ---
 
-## Step 6 - The one manual step (report it, cannot be scripted)
+## Step 6 - Enable Pages, then push
 
-Tell the user to do this once, or the workflow's deploy will fail with a Pages-not-enabled error:
+The workflow's `configure-pages` step sets `enablement: true`, so on the first run it **turns Pages on
+itself** (build type "GitHub Actions") - no manual step needed in the common case. Commit the changes,
+push to the default branch (or run the workflow from the Actions tab), and the site publishes at the Pages
+URL from Step 0.3. Give them that URL.
+
+**Fallback:** if the first run fails with *"Get Pages site failed / Not Found"* (an org policy blocks
+Actions from enabling Pages), enable it once by hand and re-run:
 
 > **GitHub -> repo Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".**
-
-Then: commit the changes, push to the default branch (or run the workflow from the Actions tab), and the
-site publishes at the Pages URL from Step 0.3. Give them that URL.
 
 ---
 

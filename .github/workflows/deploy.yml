@@ -4,7 +4,8 @@
 # site/ imports the built package from ../dist, so this builds the package first, then the static
 # export. A consumer project (where @daanvandenbergh/scribekit is an npm dep) uses the plain template.
 #
-# One-time, un-scriptable: repo Settings -> Pages -> Source: "GitHub Actions".
+# The Configure Pages step below sets `enablement: true`, so Pages is turned on automatically on the
+# first run (fallback if an org blocks it: Settings -> Pages -> Source: "GitHub Actions").
 # The corpus (site/docs) and heroes (site/public/assets) must be committed.
 
 name: Deploy docs to GitHub Pages
@@ -28,10 +29,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Set up Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
                   node-version: 22
                   cache: npm
@@ -44,7 +45,13 @@ jobs:
 
             - name: Configure Pages
               id: pages
-              uses: actions/configure-pages@v5
+              uses: actions/configure-pages@v6
+              with:
+                  # Enable Pages (build type "GitHub Actions") on the first run, so a fresh repo doesn't
+                  # fail with "Get Pages site failed / Not Found". Needs the `pages: write` permission
+                  # above. If an org policy blocks it, enable Pages once by hand instead (Settings ->
+                  # Pages -> Source: "GitHub Actions") and this is a no-op.
+                  enablement: true
 
             - name: Build the docs site (static export)
               working-directory: site
@@ -56,7 +63,7 @@ jobs:
                   touch out/.nojekyll
 
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v5
               with:
                   path: site/out
 
