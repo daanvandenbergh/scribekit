@@ -1,7 +1,6 @@
 import "server-only";
-import fs from "node:fs";
 import path from "node:path";
-import matter from "gray-matter";
+import { ContentStore, type ContentEntry } from "../content-store/index.js";
 import { formatDate, isoDateString } from "../shared/format.js";
 import { localePath } from "../shared/locales.js";
 import { coerceText, readingMinutes, tableOfContents } from "../shared/content.js";
@@ -10,19 +9,6 @@ import { adjacentFor, breadcrumbFor, buildNavTree, flattenNav } from "./navigati
 import { DocNotFoundError, DuplicateDocError } from "./errors.js";
 import { buildDocMetadata, buildIndexMetadata, docJsonLd as buildDocJsonLd, indexJsonLd as buildIndexJsonLd } from "./seo.js";
 import type { Adjacent, Breadcrumb, Doc, DocMeta, DocsConfig, LocaleConfig, NavConfigEntry, NavTree, PageMetadata, SiteConfig, SitemapEntry, TocEntry } from "./types.js";
-
-/**
- * One page file discovered on disk: its slug, language, and path relative to the content
- * directory. Produced by {@link Docs.entries}, the single place the folder layout is walked.
- */
-interface DocEntry {
-    /** The page slug (the page's directory name). */
-    slug: string;
-    /** The language code (the default locale for `post<ext>`, else the file's `<code>` stem). */
-    lang: string;
-    /** The file path relative to the content directory (e.g. `x/post.mdx` or `x/fr.mdx`). */
-    file: string;
-}
 
 /**
  * Reads and normalises MDX documentation pages from a content directory, assembles their
@@ -40,10 +26,12 @@ interface DocEntry {
  * server components / route files and pass the resulting data to the React components as props.
  */
 export class Docs {
-    /** Absolute path to the directory holding page files. */
-    private readonly contentDir: string;
-    /** Page file extension, including the leading dot. */
-    private readonly extension: string;
+    /**
+     * The filesystem layer: the directory walk, the path-traversal guard, and the memoized read +
+     * front-matter parse. Per-instance (never shared between `Docs`), because what the walk
+     * discovers depends on this instance's `locales`/`extension`.
+     */
+    private readonly store: ContentStore<Doc>;
     /** The route the docs are mounted at (e.g. `/docs`), used to build every page URL. */
     private readonly basePath: string;
     /**
@@ -87,8 +75,6 @@ export class Docs {
      * @param config - directory paths and options; see {@link DocsConfig}.
      */
     constructor(config: DocsConfig) {
-        this.contentDir = path.resolve(config.contentDir);
-        this.extension = config.extension ?? ".mdx";
         this.basePath = config.basePath ?? "/docs";
         this.locale = config.locale ?? "en-GB";
         this.locales = (config.locales ?? []).map((l) => ({
@@ -101,6 +87,14 @@ export class Docs {
         this.tabs = config.tabs ?? [];
         this.groups = config.groups ?? [];
         this.redirects = new Map(Object.entries(config.redirects ?? {}));
+        this.store = new ContentStore({
+            contentDir: path.resolve(config.contentDir),
+            extension: config.extension ?? ".mdx",
+            defaultLocale: this.defaultLocale,
+            localeCodes: this.locales.map((l) => l.code),
+            parse: ({ content, data }, slug, lang) => this.toDoc(content, data, slug, lang),
+            onDuplicate: (slug, lang, a, b) => new DuplicateDocError(slug, lang, a, b),
+        });
         this.site =
             config.siteUrl !== undefined && config.brandName !== undefined
                 ? {
@@ -119,89 +113,44 @@ export class Docs {
     }
 
     /**
-     * Walks the content directory once: each immediate subdirectory is a page `<slug>/` folder.
-     * Inside it, the default-language page is `<defaultLocale><extension>` (recommended, e.g.
-     * `en.mdx`) or the language-neutral `post<extension>` fallback, and each non-default
-     * `<code><extension>` (for a configured locale) is that locale's entry. This is the only place
-     * the on-disk layout is read.
+     * Every page file discovered on disk. Delegates to the shared content store, which owns the
+     * folder-layout rules; see `ContentStore.entries`.
      *
      * @returns every discovered page entry; empty when the content directory does not exist.
      * @throws {@link DuplicateDocError} when two files resolve to the same `(slug, lang)`.
      */
-    private entries(): DocEntry[] {
-        if (!fs.existsSync(this.contentDir)) {
-            return [];
-        }
-        const seen = new Map<string, DocEntry>();
-        const add = (slug: string, lang: string, file: string): void => {
-            const key = `${slug}/${lang}`;
-            const prior = seen.get(key);
-            if (prior) {
-                throw new DuplicateDocError(slug, lang, prior.file, file);
-            }
-            seen.set(key, { slug, lang, file });
-        };
-        for (const dirent of fs.readdirSync(this.contentDir, { withFileTypes: true })) {
-            if (!dirent.isDirectory()) {
-                continue;
-            }
-            const slug = dirent.name;
-            const dir = path.join(this.contentDir, slug);
-            // Default-language page: the language-neutral `post<ext>` and/or the recommended
-            // `<defaultLocale><ext>` (e.g. `en.mdx`). Both resolve to the default page - and
-            // having both is a collision.
-            if (fs.existsSync(path.join(dir, `post${this.extension}`))) {
-                add(slug, this.defaultLocale, `${slug}/post${this.extension}`);
-            }
-            if (fs.existsSync(path.join(dir, `${this.defaultLocale}${this.extension}`))) {
-                add(slug, this.defaultLocale, `${slug}/${this.defaultLocale}${this.extension}`);
-            }
-            // Each configured non-default locale: `<code><ext>` (e.g. `fr.mdx`).
-            for (const { code } of this.locales) {
-                if (code === this.defaultLocale) {
-                    continue;
-                }
-                if (fs.existsSync(path.join(dir, `${code}${this.extension}`))) {
-                    add(slug, code, `${slug}/${code}${this.extension}`);
-                }
-            }
-        }
-        return [...seen.values()];
+    private entries(): ContentEntry[] {
+        return this.store.entries();
     }
 
     /**
-     * Resolves a content-relative file path to an absolute path confined to the content
-     * directory. The single path-traversal guard: a `slug`/`lang` containing `..` or a path
-     * separator would otherwise let `getDoc` read a file outside `contentDir`, so any path that
-     * escapes the directory is rejected here.
+     * Reads an entry from the walk and normalises it into a {@link Doc}.
      *
-     * @param file - the file path relative to the content directory.
-     * @returns the absolute path when it stays inside `contentDir`, else `undefined`.
+     * @param entry - the entry to read, from {@link Docs.entries}.
+     * @returns the page's normalised front-matter and MDX body.
+     * @throws {@link DocNotFoundError} when the entry's file has vanished or its path escapes the
+     *   content directory.
      */
-    private resolveWithin(file: string): string | undefined {
-        const abs = path.resolve(this.contentDir, file);
-        if (abs !== this.contentDir && !abs.startsWith(this.contentDir + path.sep)) {
-            return undefined;
+    private readEntry(entry: ContentEntry): Doc {
+        const doc = this.store.readEntry(entry);
+        if (!doc) {
+            throw new DocNotFoundError(entry.slug);
         }
-        return abs;
+        return doc;
     }
 
     /**
-     * Reads and normalises a single page file into a {@link Doc}.
+     * Normalises one parsed page file into a {@link Doc}: the domain mapping from raw front-matter
+     * to {@link DocMeta}. The store hands back uninterpreted `gray-matter` output; every default,
+     * coercion, and fallback below is the docs' own concern.
      *
-     * @param file - the file path relative to the content directory.
+     * @param content - the MDX body, front-matter stripped.
+     * @param data - the raw parsed front-matter.
      * @param slug - the page slug.
      * @param lang - the page's language code.
      * @returns the page's normalised front-matter and MDX body.
-     * @throws {@link DocNotFoundError} when the path escapes the content directory.
      */
-    private readDocFile(file: string, slug: string, lang: string): Doc {
-        const abs = this.resolveWithin(file);
-        if (!abs) {
-            throw new DocNotFoundError(slug);
-        }
-        const raw = fs.readFileSync(abs, "utf8");
-        const { content, data } = matter(raw);
+    private toDoc(content: string, data: Record<string, unknown>, slug: string, lang: string): Doc {
         return {
             content,
             meta: {
@@ -350,18 +299,11 @@ export class Docs {
      * @throws {@link DocNotFoundError} when no file exists for the slug in that language.
      */
     getDoc(slug: string, lang?: string): Doc {
-        const resolved = lang ?? this.defaultLocale;
-        const candidates =
-            resolved === this.defaultLocale
-                ? [`${slug}/${resolved}${this.extension}`, `${slug}/post${this.extension}`]
-                : [`${slug}/${resolved}${this.extension}`];
-        for (const file of candidates) {
-            const abs = this.resolveWithin(file);
-            if (abs && fs.existsSync(abs)) {
-                return this.readDocFile(file, slug, resolved);
-            }
+        const doc = this.store.read(slug, lang ?? this.defaultLocale);
+        if (!doc) {
+            throw new DocNotFoundError(slug);
         }
-        throw new DocNotFoundError(slug);
+        return doc;
     }
 
     /**
@@ -376,7 +318,7 @@ export class Docs {
         const resolved = lang ?? this.defaultLocale;
         return this.entries()
             .filter((e) => e.lang === resolved)
-            .map((e) => this.readDocFile(e.file, e.slug, e.lang).meta);
+            .map((e) => this.readEntry(e).meta);
     }
 
     /**
@@ -578,15 +520,7 @@ export class Docs {
         // `hidden` pages (and hidden translations) are dropped via visibleTranslations - the same
         // filter the hreflang/JSON-LD paths use - so a draft is never advertised to search engines.
         // They stay routable (getDocRefs / generateStaticParams) and carry robots:noindex.
-        const cache = new Map<string, string[]>();
-        const translationsOf = (slug: string): string[] => {
-            let langs = cache.get(slug);
-            if (!langs) {
-                langs = this.visibleTranslations(slug);
-                cache.set(slug, langs);
-            }
-            return langs;
-        };
+        const translationsOf = (slug: string): string[] => this.visibleTranslations(slug);
         const refs = this.getDocSlugs().flatMap((slug) => translationsOf(slug).map((lang) => ({ slug, lang })));
         return buildSitemap(refs, site, translationsOf);
     }

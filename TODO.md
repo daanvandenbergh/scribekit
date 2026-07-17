@@ -13,7 +13,8 @@
   published npm 1.1.1, and a reader following the docs today gets a dangling symlink. Publishing is
   what makes the docs honest, so do it. Verified already: `npm pack --dry-run` packs all 12 skill files
   (`package.json` `files: ["dist", "skills", "demo"]` picks up `skills/` by path), `npm run typecheck` is
-  clean, and `npm test` is 371/371 green. To finish: `git add` the skill
+  clean, and `npm test` is green (371/371 when this was written; 407/407 since the `content-store`
+  extraction added its suite). To finish: `git add` the skill
   (`skills/scribekit-docs-github-pages/`), its symlink (`.claude/skills/scribekit-docs-github-pages`),
   and `site/` (the whole docs site is untracked, so the docs edits above are NOT in git yet) plus
   `README.md`, `CLAUDE.md`, `package.json`, `TODO.md`; then `npm version minor` (1.1.1 -> 1.2.0; a new
@@ -105,6 +106,20 @@
   `src/docs/tests/navigation.test.ts` (it covers the tied-finite-order case at :125-134 but never two
   unordered pages, which is why this survived). Verify with `npm test`.
 
+- [ ] Correct the false rationale in the two `errors.ts` docstrings and in `site/docs/api-reference/en.mdx:332`.
+  `src/blog/errors.ts:2-4` and `src/docs/errors.ts:2-4` both say the file is kept fs-free "so the React
+  components can import `PostNotFoundError` for an `instanceof` check without pulling the Node-only backend
+  into the client import graph", and `api-reference:332` repeats it ("All four are declared in fs-free
+  modules, so client code can `instanceof` them"). **No React component imports any of these classes** -
+  verified with `grep -rn "NotFoundError\|DuplicatePostError\|DuplicateDocError" src/react/` (zero hits).
+  The only real consumers are the demo's **server** pages (`demo/app/[lang]/blog/[slug]/page.tsx:3`,
+  `demo/app/[lang]/docs/[slug]/page.tsx:3`), which import from the root barrel - a path that loads
+  `blog.ts`/`docs.ts` and therefore the filesystem layer regardless, so fs-freeness buys nothing for the
+  stated reason. The files *should* stay dependency-light for a real but different reason: `blog.ts` imports
+  `errors.ts`, so a dependency there risks an import cycle. Fix the three docstrings to state the real
+  reason. Do not "fix" this by making the errors fs-heavy - the rule is still right, the justification is
+  fiction. Verify with `npm run typecheck && npm test` (comment-only change).
+
 - [ ] Fix the wrong multilingual URL shape stated in the source JSDoc. `src/docs/types.ts:214` and
   `src/docs/docs.ts:37` both say a translation "is served under `<basePath>/<code>/`" (i.e. `/docs/fr/x`),
   and `src/blog/types.ts:82` + `src/blog/blog.ts:36` carry the same wrong wording. The **actual** behaviour
@@ -143,5 +158,23 @@
 - [ ] Fold `categories` into the similar-posts ranking (`src/blog/similar.ts` `vectorFor`, the
   documented extension point at the top of that file) so shared categories boost similarity.
   Deferred to keep the categories change minimal; only worth doing once real posts use categories.
+
+- [ ] Cut the remaining O(n^2) in a docs build by memoizing the nav tree per language. After the
+  `content-store` extraction each file is read and normalised exactly once (200-page build: 81,000 reads ->
+  200, 6.9s -> 1.67s), so the build's cost is now dominated by **how often the domain layer asks for the
+  whole corpus**, not by reading it. Measured at 200 pages: `existsSync` from the `entries()` walk is 47%
+  (563,202 calls) and the nav-tree rebuild JS is 44%. Root cause: `Docs.getBreadcrumb` (`src/docs/docs.ts`)
+  and `Docs.getAdjacent` each call `getNavTree` -> `getAllDocs` -> `entries()`, and `DocsPage` calls both on
+  every page, while `visibleTranslations` calls `getTranslations` -> `entries()` once per slug. So a
+  per-language `getNavTree` memo on the `Docs` instance would collapse both halves at once. **Do not fix
+  this by caching `ContentStore.entries()`** - its docstring records three reasons that is unsafe (a
+  `contentDir`-mtime key misses a translation added to an existing folder; callers require it to throw on
+  *every* call, see `blog.test.ts:413-431`; and memoizing the empty result for a missing directory breaks
+  the documented promise at `site/docs/installation/en.mdx:101` that pages appear once the folder exists).
+  The memo needs the same discipline as the store's: validate rather than trust, so `next dev` stays live.
+  Only worth doing past ~500 pages - at the 16-page scale of this repo's own site the whole build is ~150ms.
+  Verify by re-running the build simulation (generate corpora of 25/50/100/200 pages, drive
+  `getDocRefs` -> per page `docMetadata`/`getDoc`/`getBreadcrumb`/`getAdjacent`/`docJsonLd` -> `sitemapEntries`)
+  and asserting ms/page stops growing with corpus size.
 
 - [ ] Add an automated guard that `"use client"` stays the literal first line of every emitted client component in `dist/` (e.g. a post-build check or a test over the built files). It is only verified manually today; a future bundler/config change could silently regress it and Next would render the component on the server. Unblocked now - `dist/react/BlogSidebar.js` is the reference client component.

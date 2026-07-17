@@ -19,7 +19,9 @@ image: "/assets/docs/api-reference/hero.en.jpg"
 | `@daanvandenbergh/scribekit/react` | `dist/react/index.js` | Blog components, docs components, the i18n core |
 | `@daanvandenbergh/scribekit/styles.css` | `dist/react/styles.css` | The stylesheet. Import once in your app |
 
-The root entry re-exports `./shared`, `./blog`, and `./docs` in that order. Both the `Blog` and `Docs` class modules carry `import "server-only"` and read `node:fs`, so they resolve only in a server component, a route handler, or a build script. Importing either from a client component is a build error.
+The root entry re-exports `./shared`, `./blog`, and `./docs` in that order. Both the `Blog` and `Docs` class modules carry `import "server-only"` and read the filesystem, so they resolve only in a server component, a route handler, or a build script. Importing either from a client component is a build error.
+
+Both read it through one shared, package-internal module that owns every `node:fs` call, the path-traversal guard, and the read cache. It is not exported and you never construct it, but it is why a page renders the same content whether it is the first read or the fiftieth: each file is read and normalised once, then re-used until its `mtime` or size changes on disk. Editing a post in `next dev` shows up immediately, and there is no cache to warm, clear, or configure.
 
 ```ts
 import { Blog, Docs, slugify, formatDate, localePath } from "@daanvandenbergh/scribekit";

@@ -1,7 +1,6 @@
 import "server-only";
-import fs from "node:fs";
 import path from "node:path";
-import matter from "gray-matter";
+import { ContentStore, type ContentEntry } from "../content-store/index.js";
 import { formatDate, isoDateString } from "../shared/format.js";
 import { coerceText, readingMinutes, tableOfContents } from "../shared/content.js";
 import { buildSitemap, type JsonLd } from "../shared/seo.js";
@@ -10,19 +9,6 @@ import { similarPosts } from "./similar.js";
 import { DuplicatePostError, PostNotFoundError } from "./errors.js";
 import { buildOverviewMetadata, buildPostMetadata, overviewJsonLd, postJsonLd } from "./seo.js";
 import type { BlogConfig, LocaleConfig, PageMetadata, Post, PostMeta, SiteConfig, SitemapEntry, TocEntry } from "./types.js";
-
-/**
- * One post file discovered on disk: its slug, language, and path relative to the content
- * directory. Produced by {@link Blog.entries}, the single place the folder layout is walked.
- */
-interface PostEntry {
-    /** The post slug (the post's directory name). */
-    slug: string;
-    /** The language code (the default locale for `post<ext>`, else the file's `<code>` stem). */
-    lang: string;
-    /** The file path relative to the content directory (e.g. `x/post.mdx` or `x/fr.mdx`). */
-    file: string;
-}
 
 /**
  * Reads and normalises MDX blog posts from a content directory, and builds their SEO
@@ -41,10 +27,12 @@ interface PostEntry {
  * `BlogOverview` / `BlogPage` components as props.
  */
 export class Blog {
-    /** Absolute path to the directory holding post files. */
-    private readonly contentDir: string;
-    /** Post file extension, including the leading dot. */
-    private readonly extension: string;
+    /**
+     * The filesystem layer: the directory walk, the path-traversal guard, and the memoized read +
+     * front-matter parse. Per-instance (never shared between `Blog`s), because what the walk
+     * discovers depends on this instance's `locales`/`extension`.
+     */
+    private readonly store: ContentStore<Post>;
     /**
      * BCP 47 locale used by {@link Blog.formatDate} for the default language. Public so a client
      * child (e.g. `BlogOverviewGrid`) can format dates with the same locale via the pure
@@ -79,8 +67,6 @@ export class Blog {
      * @param config - directory paths and options; see {@link BlogConfig}.
      */
     constructor(config: BlogConfig) {
-        this.contentDir = path.resolve(config.contentDir);
-        this.extension = config.extension ?? ".mdx";
         this.locale = config.locale ?? "en-GB";
         this.locales = (config.locales ?? []).map((l) => ({
             code: l.code,
@@ -89,6 +75,14 @@ export class Blog {
         }));
         this.defaultLocale = config.defaultLocale ?? config.locales?.[0]?.code ?? this.locale.split("-")[0] ?? "en";
         this.prefixDefaultLocale = config.prefixDefaultLocale ?? false;
+        this.store = new ContentStore({
+            contentDir: path.resolve(config.contentDir),
+            extension: config.extension ?? ".mdx",
+            defaultLocale: this.defaultLocale,
+            localeCodes: this.locales.map((l) => l.code),
+            parse: ({ content, data }, slug, lang) => this.toPost(content, data, slug, lang),
+            onDuplicate: (slug, lang, a, b) => new DuplicatePostError(slug, lang, a, b),
+        });
         this.site =
             config.siteUrl !== undefined && config.brandName !== undefined
                 ? {
@@ -107,92 +101,45 @@ export class Blog {
     }
 
     /**
-     * Walks the content directory once: each immediate subdirectory is a post `<slug>/` folder.
-     * Inside it, the default-language post is `<defaultLocale><extension>` (recommended, e.g.
-     * `en.mdx`) or the language-neutral `post<extension>` fallback, and each non-default
-     * `<code><extension>` (for a configured locale) is that locale's entry. This is the only
-     * place the on-disk layout is read. Files whose stem is not `post`, the default locale, or a
-     * configured locale code, and any deeper nesting, are ignored.
+     * Every post file discovered on disk. Delegates to the shared content store, which owns the
+     * folder-layout rules; see `ContentStore.entries`.
      *
      * @returns every discovered post entry; empty when the content directory does not exist.
      * @throws {@link DuplicatePostError} when two files resolve to the same `(slug, lang)`
      *   (e.g. both `post<ext>` and `<defaultLocale><ext>` in one folder).
      */
-    private entries(): PostEntry[] {
-        if (!fs.existsSync(this.contentDir)) {
-            return [];
-        }
-        const seen = new Map<string, PostEntry>();
-        const add = (slug: string, lang: string, file: string): void => {
-            const key = `${slug}/${lang}`;
-            const prior = seen.get(key);
-            if (prior) {
-                throw new DuplicatePostError(slug, lang, prior.file, file);
-            }
-            seen.set(key, { slug, lang, file });
-        };
-        for (const dirent of fs.readdirSync(this.contentDir, { withFileTypes: true })) {
-            if (!dirent.isDirectory()) {
-                continue;
-            }
-            const slug = dirent.name;
-            const dir = path.join(this.contentDir, slug);
-            // Default-language post: the language-neutral `post<ext>` and/or the recommended
-            // `<defaultLocale><ext>` (e.g. `en.mdx`). Both resolve to the default post - checked
-            // regardless of whether the default locale is in `locales`, so a locale-named default
-            // works even for a single-language blog - and having both is a collision.
-            if (fs.existsSync(path.join(dir, `post${this.extension}`))) {
-                add(slug, this.defaultLocale, `${slug}/post${this.extension}`);
-            }
-            if (fs.existsSync(path.join(dir, `${this.defaultLocale}${this.extension}`))) {
-                add(slug, this.defaultLocale, `${slug}/${this.defaultLocale}${this.extension}`);
-            }
-            // Each configured non-default locale: `<code><ext>` (e.g. `fr.mdx`).
-            for (const { code } of this.locales) {
-                if (code === this.defaultLocale) {
-                    continue;
-                }
-                if (fs.existsSync(path.join(dir, `${code}${this.extension}`))) {
-                    add(slug, code, `${slug}/${code}${this.extension}`);
-                }
-            }
-        }
-        return [...seen.values()];
+    private entries(): ContentEntry[] {
+        return this.store.entries();
     }
 
     /**
-     * Resolves a content-relative file path to an absolute path confined to the content
-     * directory. The single path-traversal guard: a `slug`/`lang` containing `..` or a path
-     * separator (e.g. a crafted route param `../../etc/foo`) would otherwise let `getPost` read
-     * a file outside `contentDir`, so any path that escapes the directory is rejected here.
+     * Reads an entry from the walk and normalises it into a {@link Post}.
      *
-     * @param file - the file path relative to the content directory.
-     * @returns the absolute path when it stays inside `contentDir`, else `undefined`.
+     * @param entry - the entry to read, from {@link Blog.entries}.
+     * @returns the post's normalised front-matter and MDX body.
+     * @throws {@link PostNotFoundError} when the entry's file has vanished or its path escapes the
+     *   content directory.
      */
-    private resolveWithin(file: string): string | undefined {
-        const abs = path.resolve(this.contentDir, file);
-        if (abs !== this.contentDir && !abs.startsWith(this.contentDir + path.sep)) {
-            return undefined;
+    private readEntry(entry: ContentEntry): Post {
+        const post = this.store.readEntry(entry);
+        if (!post) {
+            throw new PostNotFoundError(entry.slug);
         }
-        return abs;
+        return post;
     }
 
     /**
-     * Reads and normalises a single post file into a {@link Post}.
+     * Normalises one parsed post file into a {@link Post}: the domain mapping from raw front-matter
+     * to {@link PostMeta}. The store hands back uninterpreted `gray-matter` output; every default,
+     * coercion, and fallback below is the blog's own concern.
      *
-     * @param file - the file path relative to the content directory.
+     * @param content - the MDX body, front-matter stripped.
+     * @param data - the raw parsed front-matter.
      * @param slug - the post slug.
      * @param lang - the post's language code.
      * @returns the post's normalised front-matter and MDX body.
-     * @throws {@link PostNotFoundError} when the path escapes the content directory.
      */
-    private readPostFile(file: string, slug: string, lang: string): Post {
-        const abs = this.resolveWithin(file);
-        if (!abs) {
-            throw new PostNotFoundError(slug);
-        }
-        const raw = fs.readFileSync(abs, "utf8");
-        const { content, data } = matter(raw);
+    private toPost(content: string, data: Record<string, unknown>, slug: string, lang: string): Post {
         return {
             content,
             meta: {
@@ -249,18 +196,11 @@ export class Blog {
      * @throws {@link PostNotFoundError} when no file exists for the slug in that language.
      */
     getPost(slug: string, lang?: string): Post {
-        const resolved = lang ?? this.defaultLocale;
-        const candidates =
-            resolved === this.defaultLocale
-                ? [`${slug}/${resolved}${this.extension}`, `${slug}/post${this.extension}`]
-                : [`${slug}/${resolved}${this.extension}`];
-        for (const file of candidates) {
-            const abs = this.resolveWithin(file);
-            if (abs && fs.existsSync(abs)) {
-                return this.readPostFile(file, slug, resolved);
-            }
+        const post = this.store.read(slug, lang ?? this.defaultLocale);
+        if (!post) {
+            throw new PostNotFoundError(slug);
         }
-        throw new PostNotFoundError(slug);
+        return post;
     }
 
     /**
@@ -274,7 +214,7 @@ export class Blog {
         const resolved = lang ?? this.defaultLocale;
         return this.entries()
             .filter((e) => e.lang === resolved)
-            .map((e) => this.readPostFile(e.file, e.slug, e.lang).meta)
+            .map((e) => this.readEntry(e).meta)
             .sort((a, b) => (a.date < b.date ? 1 : -1));
     }
 
@@ -435,16 +375,7 @@ export class Blog {
      * @throws when the instance was created without a `site` config.
      */
     sitemapEntries(): SitemapEntry[] {
-        const cache = new Map<string, string[]>();
-        const translationsOf = (slug: string): string[] => {
-            let langs = cache.get(slug);
-            if (!langs) {
-                langs = this.getTranslations(slug);
-                cache.set(slug, langs);
-            }
-            return langs;
-        };
-        return buildSitemap(this.getPostRefs(), this.requireSite(), translationsOf);
+        return buildSitemap(this.getPostRefs(), this.requireSite(), (slug) => this.getTranslations(slug));
     }
 
     /**
