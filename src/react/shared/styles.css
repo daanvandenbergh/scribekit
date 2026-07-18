@@ -51,6 +51,9 @@
 .scribekit-card-image {
     display: block;
     width: calc(100% + 52px);
+    /* Guard the full-bleed width against a host `img { max-width: 100% }` reset, which would
+       otherwise clamp it back to the card content width and leave a gap down the card's edge. */
+    max-width: none;
     height: auto;
     margin: -26px -26px 18px;
     border-radius: 16px 16px 0 0;
