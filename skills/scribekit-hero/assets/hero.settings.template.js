@@ -7,8 +7,14 @@
  * post's text lives in its own `<slug>/hero.js`. Edit freely, then run `regenerate-heroes` to
  * re-render every hero with your changes.
  *
+ * THIS FILE, not the component, is where a project's look belongs - including `brand.css`, a raw
+ * stylesheet appended after the component's own so it wins at equal specificity. Between the brand
+ * fields and that CSS, almost nothing justifies editing `hero.js`; and `hero.js` must never be edited
+ * through `node_modules`, where the next install reverts it. See the skill's "Customising the
+ * component" section.
+ *
  * Exports:
- *   - brand     - font, badge/logo, eyebrow, and default byline shared by every hero.
+ *   - brand     - font, badge/logo, eyebrow, texture, extra CSS, and default byline shared by every hero.
  *   - gradients - the named background options a post picks from (6 techniques over one palette).
  */
 
@@ -58,7 +64,21 @@ const fade = (t) => `rgba(${t}, 0)`;
  *     string, OR a `{ src }` image resolved relative to THIS file so it loads in the headless render,
  *     e.g. `{ src: new URL("../public/logo/logo-rounded.png", import.meta.url).href }`.
  * @prop brand.badge.src {string} Image URL, when `badge` is an object.
+ * @prop brand.badge.bare {boolean} Drop the badge's white tile so the mark sits straight on the gradient.
+ *     For a mark already coloured for the stage (a white symbol on a dark gradient), where the tile would
+ *     hide it or read as a second shape. The mark keeps its aspect ratio, so a non-square symbol is not
+ *     cropped. Applies to the badge only - the byline avatar keeps its round frame.
  * @prop brand.accent {string} `R, G, B` triplet for an inline-SVG badge glyph's colour (ignored for image logos).
+ * @prop brand.texture {object} Optional texture over every gradient - what stops a large flat gradient
+ *     reading as a printed sheet. Omit for none.
+ * @prop brand.texture.dots {number} Opacity of a 26px white dot grid, masked to gather top-right, away
+ *     from the copy (e.g. `0.13`). Omit or `0` for none.
+ * @prop brand.texture.grain {number} Opacity of a fractal-noise grain (e.g. `0.06`). Doubles as dither -
+ *     it hides the banding a multi-stop ramp shows across 1200px. Omit or `0` for none.
+ * @prop brand.css {string} Your own CSS, appended after the component's stylesheet so it wins at equal
+ *     specificity - the supported way to restyle a hero without forking the component. Selectors are the
+ *     component's own: `.stage`, `.content`, `.eyebrow`, `.badge`, `.title`, `.subtitle`, `.byline`.
+ *     Omit unless you need it.
  * @prop brand.eyebrow {string} The uppercase site/brand name shown above the title.
  * @prop brand.byline {object} Default byline fields. Optional. A hero shows a byline only when its post
  *     defines `byline`; this default then fills in any field the post omits (e.g. a shared avatar). A post

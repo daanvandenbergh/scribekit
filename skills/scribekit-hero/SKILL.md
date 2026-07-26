@@ -65,9 +65,10 @@ Design, brand, and content are separated so a design change never means re-editi
 - **Component (ships with this skill)**: `assets/hero.js` - the reusable hero design (structure, base
   styles, auto-fit, readiness). **Never copied into a project, never recoloured.** Update it once and
   re-run `regenerate-heroes` (and re-render the README hero) and every hero picks up the change.
+  **Editable only in a scribekit checkout** - see [Customising the component](#customising-the-component).
 - **Settings (one per surface)**: `hero.settings.js` - the brand: `gradients` (named background options
-  over one palette) and `brand` (font, badge/logo, eyebrow, default byline). The **only** place a
-  project customises how heroes look. Seeded from `assets/hero.settings.template.js`. Its location
+  over one palette) and `brand` (font, badge/logo, eyebrow, texture, `css`, default byline). The **only**
+  place a project customises how heroes look. Seeded from `assets/hero.settings.template.js`. Its location
   depends on the surface: blog = `<content-dir>/hero.settings.js`; docs =
   `<docs-content-dir>/hero.settings.js`; README = `claude/scribekit-hero/readme/hero.settings.js`.
 - **Params (one per hero)**: `hero.js` - pure data: `export default` the hero's params (gradient pick +
@@ -76,6 +77,40 @@ Design, brand, and content are separated so a design change never means re-editi
 The HTML that wires the three together lives once in `assets/hero.host.html` (with `{{HERO_COMPONENT}}`
 / `{{HERO_SETTINGS}}` / `{{HERO_PARAMS}}` tokens); the render step fills those with absolute `file://`
 paths into a throwaway scratchpad copy and screenshots it. **Committed files are never modified by a render.**
+
+### Customising the component
+
+**Never edit `assets/hero.js` from a consuming project.** This skill ships inside the
+`@daanvandenbergh/scribekit` npm package, and projects reach it through a symlink into `node_modules`
+(e.g. `.claude/skills/scribekit-hero`). So when the skill's path runs through `node_modules/`, "editing
+the skill's assets" means **editing an installed package**: the next `npm install` reverts it, nothing
+errors, and the next `regenerate-heroes` quietly renders heroes missing whatever the edit added. This
+has already cost a real project two features. **Check where the skill resolves before you touch
+`assets/`** - if the answer contains `node_modules`, it is read-only.
+
+Three seams, in order. Take the first that covers the need:
+
+1. **`brand.*` in `hero.settings.js`** - font, badge (incl. `badge.bare`), accent, eyebrow, byline,
+   `texture.dots` / `texture.grain`, and the gradient palette. Covers most "make it look like us" work.
+2. **`brand.css` in `hero.settings.js`** - a raw CSS string, appended after the component's own
+   stylesheet so it wins at equal specificity. Restyle any of the component's elements (`.stage`,
+   `.content`, `.eyebrow`, `.badge`, `.title`, `.subtitle`, `.byline`) and add layers with
+   `.stage::before` / `::after`, without forking anything. **This is the right seam for a project-specific
+   look**, and the project still inherits every upstream fix.
+3. **`hero.component.js`** beside the surface's `hero.settings.js` - a full copy of `assets/hero.js`,
+   edited freely; the render step uses it in place of the shipped component. **Last resort: it is a
+   FORK.** That surface stops receiving upstream fixes (auto-fit, readiness, capture timing) permanently
+   and silently - nothing warns, nothing diffs. Reach for it only for a structurally different hero (a
+   different layout or element set), and say so in the file's header comment.
+
+**A change that belongs in the component itself is an UPSTREAM change**: make it in a scribekit
+checkout, publish, reinstall. If you cannot find the checkout, stop and ask the user - do not work
+around it by editing `node_modules` or by forking with (3).
+
+**Editing `assets/hero.js` upstream:** the base styles live inside the `BASE_CSS` **template literal**,
+so **a backtick anywhere in it - including in a comment - terminates the string** and the module stops
+parsing. The failure is silent: the render produces a blank `#0e0e11` image. Run `node --check
+assets/hero.js` after any edit to it.
 
 ### Auto-create `hero.settings.js` if it's missing
 When a hero is needed and the surface's `hero.settings.js` doesn't exist (or the user asks):
@@ -89,8 +124,14 @@ When a hero is needed and the surface's `hero.settings.js` doesn't exist (or the
    relative to the settings file so it loads headless -
    `badge: { src: new URL("../public/logo/logo-rounded.png", import.meta.url).href }` (point at the real
    file under the discovered assets dir). Set `brand.eyebrow` to the uppercase site name and
-   `brand.byline` to the default author.
-5. Run **tune-gradients** (below) before first use.
+   `brand.byline` to the default author. **If the mark is already a single flat colour that reads on the
+   gradient** (a white symbol), set `badge.bare: true` - the tile would otherwise hide it or crop a
+   non-square mark.
+5. **Match the site's own surface treatment.** If the project's marketing pages carry a texture - a dot
+   grid, a noise/grain layer - mirror it with `brand.texture` (`dots` / `grain` opacities, e.g.
+   `{ dots: 0.13, grain: 0.06 }`) so heroes look cut from the same cloth as the site. Skip it for a flat
+   brand. Anything the `brand` fields can't express goes in `brand.css`, never in the component.
+6. Run **tune-gradients** (below) before first use.
 
 **Migrating a legacy project**: if an old `<content-dir>/hero.template.html` exists, seed the new
 settings from it - copy its `--c-*` slot colours into the palette, its `--font` into `brand.font`, and
@@ -133,7 +174,9 @@ the same.
 
 **1. Fill the host into the scratchpad.** Copy `assets/hero.host.html` to a scratchpad file, replacing
 the three tokens with absolute `file://` paths:
-- `{{HERO_COMPONENT}}` → `file://<skill>/assets/hero.js`
+- `{{HERO_COMPONENT}}` → `file://<skill>/assets/hero.js` - **unless** the surface's settings dir holds a
+  `hero.component.js`, in which case use that instead (see [Customising the component](#customising-the-component)).
+  Check for the file; do not assume either way.
 - `{{HERO_SETTINGS}}`  → `file://<the surface's hero.settings.js>`
 - `{{HERO_PARAMS}}`    → `file://<the hero's hero.js>`
 
@@ -166,8 +209,10 @@ the transparent rounded corners). See each mode file.
 
 ## Guardrails (all modes)
 - Design is **HTML/CSS**, rendered deterministically - never an AI image generator or stock photo.
-- **Only `hero.settings.js` carries brand/colour/size/radius.** Never hardcode a project's colours into
-  the shared `assets/hero.js`, and never copy the component into a project.
+- **Only `hero.settings.js` carries brand/colour/size/radius** - its `brand` fields, or `brand.css` for
+  anything they don't reach. Never hardcode a project's colours into the shared `assets/hero.js`, never
+  edit that file through `node_modules`, and copy the component into a project only as the documented
+  last-resort fork. See [Customising the component](#customising-the-component).
 - **Output shape per surface (never conflate them)**: a **blog** or **docs** hero is a full **opaque
   rectangle** JPEG - the site rounds/borders it in CSS, so never bake rounding into it. A **README**
   hero is a **PNG with rounding baked into transparent corners** (GitHub strips README CSS, so it can't

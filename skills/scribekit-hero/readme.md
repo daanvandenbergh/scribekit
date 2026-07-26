@@ -79,7 +79,8 @@ Use SKILL.md's **"Render pipeline (headless Chrome)"** with the readme-variant p
 render (no `?lang=` - this hero is single-language):
 
 1. **Fill the host** (SKILL.md render step 1) with:
-   - `{{HERO_COMPONENT}}` -> `file://<skill>/assets/hero.js`
+   - `{{HERO_COMPONENT}}` -> `file://<skill>/assets/hero.js`, or
+     `file://<project>/claude/scribekit-hero/readme/hero.component.js` when that file exists
    - `{{HERO_SETTINGS}}`  -> `file://<project>/claude/scribekit-hero/readme/hero.settings.js`
    - `{{HERO_PARAMS}}`    -> `file://<project>/claude/scribekit-hero/readme/hero.js`
 2. **Apply size + rounded corners.** Read `W,H` from settings `size` (default `1200,630` when absent) and

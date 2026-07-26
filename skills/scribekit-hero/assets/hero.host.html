@@ -7,7 +7,10 @@
   hero from this file in place; it is a template with unresolved imports.
 
   TOKENS the skill fills:
-    {{HERO_COMPONENT}} - file:// path to the skill's assets/hero.js (renderHero).
+    {{HERO_COMPONENT}} - file:// path to the skill's assets/hero.js (renderHero) - UNLESS the surface's
+                         settings dir holds a hero.component.js, which then takes its place (a full fork;
+                         see the skill's "Customising the component"). Most projects restyle through
+                         hero.settings.js's brand.css and never have that file.
     {{HERO_SETTINGS}}  - file:// path to the project's blog/hero.settings.js (brand + gradients).
     {{HERO_PARAMS}}    - file:// path to the post's blog/<slug>/hero.js (default export: a params
                          object, or a (locale) => params function for multi-language posts).
