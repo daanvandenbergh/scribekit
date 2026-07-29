@@ -7,6 +7,7 @@ import { buildSitemap, type JsonLd } from "../shared/seo.js";
 import { collectCategories } from "./categories.js";
 import { similarPosts } from "./similar.js";
 import { DuplicatePostError, PostNotFoundError } from "./errors.js";
+import { buildRssFeed } from "./rss.js";
 import { buildOverviewMetadata, buildPostMetadata, overviewJsonLd, postJsonLd } from "./seo.js";
 import type { BlogConfig, LocaleConfig, PageMetadata, Post, PostMeta, SiteConfig, SitemapEntry, TocEntry } from "./types.js";
 
@@ -376,6 +377,23 @@ export class Blog {
      */
     sitemapEntries(): SitemapEntry[] {
         return buildSitemap(this.getPostRefs(), this.requireSite(), (slug) => this.getTranslations(slug));
+    }
+
+    /**
+     * Builds one language's complete RSS 2.0 document, mounted by convention at
+     * `<locale index path>/rss.xml` (see {@link rssFeedPath}). Serve it from a route handler:
+     * `new Response(blog.rssFeed(lang), { headers: { "Content-Type":
+     * "application/rss+xml; charset=utf-8" } })` - `export const dynamic = "force-static"` makes
+     * this work in a static export too.
+     *
+     * @param lang - the language code. Defaults to the blog's default locale.
+     * @returns the XML document, newest post first.
+     * @throws {@link DuplicatePostError} when two files resolve to the same `(slug, lang)`.
+     * @throws when the instance was created without a `site` config.
+     */
+    rssFeed(lang?: string): string {
+        const resolved = lang ?? this.defaultLocale;
+        return buildRssFeed(this.getAllPosts(resolved), this.requireSite(), resolved);
     }
 
     /**

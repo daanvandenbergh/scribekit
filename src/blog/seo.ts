@@ -31,12 +31,13 @@ function authorOf(meta: PostMeta, site: SiteConfig): string {
 }
 
 /**
- * The blog index description, falling back to a generic brand string.
+ * The blog index description, falling back to a generic brand string. Exported so the RSS
+ * builder's channel description is the same string as the index metadata's.
  *
  * @param site - the site configuration.
- * @returns the description used for the index metadata and CollectionPage.
+ * @returns the description used for the index metadata, CollectionPage, and RSS channel.
  */
-function overviewDescription(site: SiteConfig): string {
+export function overviewDescription(site: SiteConfig): string {
     return site.description ?? `The ${site.brandName} blog.`;
 }
 

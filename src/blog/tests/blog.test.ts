@@ -503,5 +503,23 @@ describe("Blog multi-language", () => {
         it("throw a clear error from sitemapEntries when no site config was provided", () => {
             expect(() => makeI18nBlog().sitemapEntries()).toThrow(/site/);
         });
+
+        it("build a per-locale RSS feed whose item URLs match the locale's page URLs", () => {
+            const en = seoBlog().rssFeed();
+            expect(en).toContain("<language>en</language>");
+            expect(en).toContain("<link>https://example.com/blog/getting-started</link>");
+            expect(en).not.toContain("/fr/blog/");
+
+            const fr = seoBlog().rssFeed("fr");
+            expect(fr).toContain("<language>fr</language>");
+            expect(fr).toContain("<link>https://example.com/fr/blog/getting-started</link>");
+            expect(fr).toContain(
+                '<atom:link href="https://example.com/fr/blog/rss.xml" rel="self" type="application/rss+xml"/>',
+            );
+        });
+
+        it("throw a clear error from rssFeed when no site config was provided", () => {
+            expect(() => makeI18nBlog().rssFeed()).toThrow(/site/);
+        });
     });
 });

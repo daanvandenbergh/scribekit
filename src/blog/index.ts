@@ -11,4 +11,5 @@ export { DuplicatePostError, PostNotFoundError } from "./errors.js";
 export { collectCategories } from "./categories.js";
 export { similarPosts } from "./similar.js";
 export { buildOverviewMetadata, buildPostMetadata, overviewJsonLd, postJsonLd } from "./seo.js";
+export { buildRssFeed, rssFeedPath } from "./rss.js";
 export type { BlogConfig, Post, PostMeta } from "./types.js";
