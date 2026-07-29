@@ -133,7 +133,10 @@ export function BlogPage({
                 <span className="scribekit-post-metaitem">{readingText}</span>
             </div>
             {meta.image ? (
-                <Img className="scribekit-post-image" src={meta.image} alt={meta.title} width={1200} height={630} />
+                // The hero is the post's LCP element: without the priority hint the browser
+                // queues it behind scripts and the LCP waits on it (a Lighthouse LCP-discovery
+                // failure on every post page).
+                <Img className="scribekit-post-image" src={meta.image} alt={meta.title} width={1200} height={630} fetchPriority="high" />
             ) : null}
             <div className="scribekit-prose">
                 <MDXRemote source={content} components={mergedComponents} options={withGfm(mdxOptions)} />

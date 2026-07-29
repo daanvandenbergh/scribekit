@@ -161,20 +161,25 @@ export function BlogOverviewGrid({
                 <p className="scribekit-empty">{emptyText}</p>
             ) : (
                 <div className="scribekit-grid">
-                    {visible.map((post) => (
+                    {visible.map((post, index) => (
                         <Link
                             key={post.slug}
                             href={localePath({ basePath, defaultLocale, prefixDefaultLocale, lang: post.lang, slug: post.slug })}
                             className="scribekit-card"
                         >
                             {post.image ? (
+                                // The first row of cards is above the fold and its first image is
+                                // the overview's LCP element - lazy-loading it (as every card once
+                                // did) delays the LCP by the whole scroll-observation round trip.
+                                // Only below-the-fold cards defer.
                                 <Img
                                     className="scribekit-card-image"
                                     src={post.image}
                                     alt=""
                                     width={1200}
                                     height={630}
-                                    loading="lazy"
+                                    loading={index < 3 ? "eager" : "lazy"}
+                                    fetchPriority={index === 0 ? "high" : undefined}
                                 />
                             ) : null}
                             {post.date || post.readingTime ? (
