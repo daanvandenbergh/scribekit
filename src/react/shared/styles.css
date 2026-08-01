@@ -1883,6 +1883,58 @@
     }
 }
 
+/*
+ * PHONE. The top bar is one flex row of three groups, and the brand and the actions were both
+ * `flex: 0 0 auto` - so on a 390px screen their ~530px did not shrink the bar, it widened the
+ * DOCUMENT. Every docs page scrolled sideways, and the right-hand actions sat past the edge of the
+ * screen where they could not be reached at all.
+ *
+ * Everything below is that budget being paid down, least-valuable first: the decorative "Docs" pill
+ * and the wordmark go (the logo still identifies the site and still links home), the search
+ * collapses to its icon, and the gaps tighten. That leaves ~300px for the consumer's own actions on
+ * a 390px phone - enough for a picker and a CTA, not for a full desktop action set. An `actions`
+ * list longer than that should hide its own extras here; `DocsNavbarButton` takes a `className` for
+ * exactly this.
+ */
+@media (max-width: 640px) {
+    .scribekit-docs-navbar {
+        gap: 10px;
+        padding: 0 14px;
+    }
+
+    .scribekit-docs-navbar-name,
+    .scribekit-docs-navbar-pill {
+        display: none;
+    }
+
+    /*
+     * Icon-only, and a FIXED square. As a `flex: 1` field it was handed whatever the overflowing row
+     * had left over, which was exactly ZERO pixels: the search button was in the DOM, correct and
+     * labelled, and no phone could see or tap it. It loses only the placeholder and a ⌘K hint for a
+     * key combination no phone keyboard has; `aria-label` already carries the accessible name.
+     */
+    .scribekit-docs-navbar-search {
+        flex: none;
+        /* The row has no flexible item left, so this is what still pins search + actions right. */
+        margin-left: auto;
+    }
+
+    .scribekit-docs-navbar-search .scribekit-docs-search-trigger {
+        width: 40px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .scribekit-docs-navbar-search .scribekit-docs-search-trigger-text,
+    .scribekit-docs-navbar-search .scribekit-docs-kbd-group {
+        display: none;
+    }
+
+    .scribekit-docs-navbar-right {
+        gap: 10px;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .scribekit-docs-palette {
         animation: none;
