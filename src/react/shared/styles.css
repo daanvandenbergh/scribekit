@@ -1066,9 +1066,16 @@
     }
 }
 
-/* Drawer header: the nav's title and its close button, shown in place of the inline toggle. */
+/*
+ * Drawer header: the nav's title and its close button, shown in place of the inline toggle.
+ *
+ * HIDDEN BY DEFAULT and switched on only inside the drawer breakpoint below. The markup renders at
+ * every width (whether the sidebar is a drawer is a JS decision, not a media query), so without this
+ * a desktop reader got a "Documentation ✕" header above a permanent sidebar column - a close button
+ * for something that cannot be closed.
+ */
 .scribekit-docs-nav-head {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -1104,14 +1111,27 @@
     color: var(--scribekit-ink, #0b1b36);
 }
 
-/* The `footer` slot, pinned below the nav groups. See `DocsSidebarProps.footer`. */
+/*
+ * The `footer` slot, pinned below the nav groups. PHONE ONLY - it exists for the chrome the top bar
+ * cannot fit at that width, and above 640px the top bar has the room back.
+ *
+ * Hidden by default rather than by the consumer, because a consumer hiding their own content here
+ * leaves this wrapper's border and margin behind: an empty ruled box under the nav. See
+ * `DocsSidebarProps.footer`.
+ */
 .scribekit-docs-nav-foot {
-    display: flex;
+    display: none;
     align-items: center;
     gap: 10px;
     margin-top: 18px;
     padding-top: 14px;
     border-top: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+@media (max-width: 640px) {
+    .scribekit-docs-nav-foot {
+        display: flex;
+    }
 }
 
 .scribekit-docs-navbar-logo {
@@ -2051,6 +2071,11 @@
     .scribekit-docs-nav.is-drawer .scribekit-docs-groups {
         display: block;
         margin-top: 12px;
+    }
+
+    /* The drawer's own header - a title and a close button - replaces the inline toggle here. */
+    .scribekit-docs-nav.is-drawer .scribekit-docs-nav-head {
+        display: flex;
     }
 
     .scribekit-docs-page {
