@@ -474,6 +474,22 @@ export const CATALOG = ui.defineTextCatalog({
         bg: "Документация", hr: "Dokumentacija", sl: "Dokumentacija", et: "Dokumentatsioon",
         lv: "Dokumentācija", lt: "Dokumentacija", ga: "Doiciméadú", mt: "Dokumentazzjoni",
     },
+    docsOpenNav: {
+        en: "Open navigation", fr: "Ouvrir la navigation", de: "Navigation öffnen", es: "Abrir navegación",
+        it: "Apri navigazione", pt: "Abrir navegação", nl: "Navigatie openen", pl: "Otwórz nawigację",
+        ro: "Deschide navigarea", el: "Άνοιγμα πλοήγησης", sv: "Öppna navigering", da: "Åbn navigation",
+        fi: "Avaa navigointi", cs: "Otevřít navigaci", sk: "Otvoriť navigáciu", hu: "Navigáció megnyitása",
+        bg: "Отваряне на навигацията", hr: "Otvori navigaciju", sl: "Odpri navigacijo", et: "Ava navigeerimine",
+        lv: "Atvērt navigāciju", lt: "Atidaryti naršymą", ga: "Oscail an nascleanúint", mt: "Iftaħ in-navigazzjoni",
+    },
+    docsCloseNav: {
+        en: "Close navigation", fr: "Fermer la navigation", de: "Navigation schließen", es: "Cerrar navegación",
+        it: "Chiudi navigazione", pt: "Fechar navegação", nl: "Navigatie sluiten", pl: "Zamknij nawigację",
+        ro: "Închide navigarea", el: "Κλείσιμο πλοήγησης", sv: "Stäng navigering", da: "Luk navigation",
+        fi: "Sulje navigointi", cs: "Zavřít navigaci", sk: "Zavrieť navigáciu", hu: "Navigáció bezárása",
+        bg: "Затваряне на навигацията", hr: "Zatvori navigaciju", sl: "Zapri navigacijo", et: "Sulge navigeerimine",
+        lv: "Aizvērt navigāciju", lt: "Uždaryti naršymą", ga: "Dún an nascleanúint", mt: "Agħlaq in-navigazzjoni",
+    },
     docsLanguage: {
         en: "Language", fr: "Langue", de: "Sprache", es: "Idioma", it: "Lingua", pt: "Idioma",
         nl: "Taal", pl: "Język", ro: "Limbă", el: "Γλώσσα", sv: "Språk", da: "Sprog", fi: "Kieli",
@@ -573,6 +589,10 @@ export interface DocsLabels {
     searchPlaceholder: string;
     /** Message shown in the command palette when a query matches no page. */
     searchEmpty: string;
+    /** Accessible name for the navbar's nav-drawer button while the drawer is CLOSED. */
+    openNav: string;
+    /** Accessible name for the navbar's nav-drawer button while the drawer is OPEN. */
+    closeNav: string;
     /** Heading above the language list in the language picker. */
     language: string;
     /** Accessible name for the language picker's trigger button. */
@@ -604,6 +624,8 @@ export function docsLabels(lang: string): DocsLabels {
         feedbackThanks: t(CATALOG.docsFeedbackThanks),
         searchPlaceholder: t(CATALOG.docsSearchPlaceholder),
         searchEmpty: t(CATALOG.docsSearchEmpty),
+        openNav: t(CATALOG.docsOpenNav),
+        closeNav: t(CATALOG.docsCloseNav),
         language: t(CATALOG.docsLanguage),
         changeLanguage: t(CATALOG.docsChangeLanguage),
         updatedLabel: (date: string) => t(CATALOG.docsUpdatedOn, date),

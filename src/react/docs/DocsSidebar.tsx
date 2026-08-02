@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type ElementType, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type ElementType, type ReactElement, type ReactNode } from "react";
 import type { NavTree } from "../../docs/types.js";
 import { docsLabels } from "../shared/i18n.js";
 import { DocsIcon } from "./internal/icons.js";
 import { tabIdForPath } from "./internal/nav.js";
+import { useDocsNavState } from "./internal/nav-state.js";
 
 /**
  * Props for {@link DocsSidebar}.
@@ -29,6 +30,16 @@ export interface DocsSidebarProps {
      * value (or `undefined`) and returns the icon node. Defaults to the built-in icon set.
      */
     renderIcon?: ((name: string | undefined) => ReactNode) | undefined;
+    /**
+     * Extra content pinned below the nav groups - the drawer's footer. Meant for the chrome that
+     * does not fit the top bar on a phone: a language picker, a theme toggle, a secondary link.
+     *
+     * It renders at EVERY width, so pass something that belongs in the sidebar on a desktop too, or
+     * hide it there with your own class. The navbar is the tighter surface of the two: on a 390px
+     * screen it carries a hamburger, a brand, a search and one CTA and little else, so a picker
+     * given to `DocsNavbar.languagePicker` is usually the thing that has to move here.
+     */
+    footer?: ReactNode;
 }
 
 /**
@@ -38,9 +49,14 @@ export interface DocsSidebarProps {
  * {@link import("./DocsSearchProvider.js").DocsSearchProvider}; navigating to a page in another tab
  * swaps these groups automatically.
  *
- * A client component (the mobile collapse needs state). It receives the already-computed, serialisable
- * `NavTree` from a server component; links use your `linkComponent` for client-side navigation. On
- * viewports at/under the layout breakpoint the groups collapse behind a toggle.
+ * A client component (the drawer needs state). It receives the already-computed, serialisable
+ * `NavTree` from a server component; links use your `linkComponent` for client-side navigation.
+ *
+ * BELOW THE LAYOUT BREAKPOINT it becomes an off-canvas DRAWER opened by the hamburger in
+ * {@link import("./DocsNavbar.js").DocsNavbar} - which is why it must sit under the same
+ * {@link import("./DocsSearchProvider.js").DocsSearchProvider} as the navbar (it already wraps the
+ * whole docs app, so this needs no wiring). Rendered WITHOUT that provider it falls back to its
+ * original self-contained inline toggle, so a standalone consumer still has a way to reach the nav.
  *
  * @param props - see {@link DocsSidebarProps}.
  * @returns the sidebar `<aside>`.
@@ -52,6 +68,7 @@ export function DocsSidebar({
     linkComponent: Link = "a",
     label,
     renderIcon,
+    footer,
 }: DocsSidebarProps): ReactElement {
     const navLabel = label ?? docsLabels(lang ?? "en").title;
     const icon = (name: string | undefined): ReactNode => (renderIcon ? renderIcon(name) : <DocsIcon name={name} />);
@@ -61,50 +78,115 @@ export function DocsSidebar({
     const activeTabId = tabIdForPath(nav, activePath) ?? nav.tabs[0]?.id ?? "";
     const activeTab = nav.tabs.find((tab) => tab.id === activeTabId) ?? nav.tabs[0];
 
-    const [navOpen, setNavOpen] = useState(false);
+    // DRAWER vs INLINE. With a provider above (i.e. inside a `DocsSearchProvider`) the open state is
+    // shared, the hamburger lives in the navbar, and this becomes an overlay drawer - one bar of
+    // chrome on a phone instead of two, and the article is never pushed down the page. Standing
+    // alone there is no provider and no hamburger anywhere, so it keeps its original self-contained
+    // toggle: removing that would leave such a consumer with no way to reach the nav on a phone.
+    const shared = useDocsNavState();
+    const drawer = shared !== null;
+    const [localOpen, setLocalOpen] = useState(false);
+    const navOpen = shared ? shared.open : localOpen;
+    const setNavOpen = (open: boolean): void => (shared ? shared.setOpen(open) : setLocalOpen(open));
+
+    // Escape closes the drawer, as it must for anything overlaying the page. Inline mode is not an
+    // overlay and nothing is covered, so it is left alone.
+    useEffect(() => {
+        if (!drawer || !navOpen) return;
+        const onKey = (event: KeyboardEvent): void => {
+            if (event.key === "Escape") setNavOpen(false);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    });
+
+    // The page behind an open drawer must not scroll under the reader's thumb.
+    useEffect(() => {
+        if (!drawer || !navOpen) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = previous;
+        };
+    }, [drawer, navOpen]);
 
     return (
-        <aside className="scribekit-docs-nav">
-            <div className="scribekit-docs-nav-inner">
-                <button
-                    type="button"
-                    className="scribekit-docs-nav-toggle"
-                    aria-expanded={navOpen}
-                    aria-controls="scribekit-docs-nav-body"
-                    onClick={() => setNavOpen((open) => !open)}
-                >
-                    {navLabel}
-                </button>
-                <nav
-                    id="scribekit-docs-nav-body"
-                    aria-label={navLabel}
-                    className={navOpen ? "scribekit-docs-groups is-open" : "scribekit-docs-groups"}
-                >
-                    {activeTab?.groups.map((group) => (
-                        <div key={group.id || "__ungrouped"} className="scribekit-docs-group">
-                            {group.label ? <div className="scribekit-docs-group-label">{group.label}</div> : null}
-                            <ul className="scribekit-docs-group-items">
-                                {group.items.map((item) => {
-                                    const active = item.href === activePath;
-                                    return (
-                                        <li key={item.slug}>
-                                            <Link
-                                                href={item.href}
-                                                className={active ? "scribekit-docs-navitem is-active" : "scribekit-docs-navitem"}
-                                                aria-current={active ? "page" : undefined}
-                                                onClick={() => setNavOpen(false)}
-                                            >
-                                                <span className="scribekit-docs-navitem-icon">{icon(item.icon)}</span>
-                                                {item.label}
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
+        <>
+            {/* Dims the page and gives a tap-anywhere-to-dismiss target. Drawer mode only. */}
+            {drawer && navOpen ? (
+                <div
+                    className="scribekit-docs-nav-backdrop"
+                    aria-hidden="true"
+                    onClick={() => setNavOpen(false)}
+                />
+            ) : null}
+            <aside
+                className={[
+                    "scribekit-docs-nav",
+                    drawer ? "is-drawer" : "",
+                    navOpen ? "is-open" : "",
+                ]
+                    .filter(Boolean)
+                    .join(" ")}
+            >
+                <div className="scribekit-docs-nav-inner">
+                    {drawer ? (
+                        <div className="scribekit-docs-nav-head">
+                            <span className="scribekit-docs-nav-head-title">{navLabel}</span>
+                            <button
+                                type="button"
+                                className="scribekit-docs-nav-close"
+                                aria-label={docsLabels(lang ?? "en").closeNav}
+                                onClick={() => setNavOpen(false)}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                                    <path d="M4 4l8 8M12 4l-8 8" />
+                                </svg>
+                            </button>
                         </div>
-                    ))}
-                </nav>
-            </div>
-        </aside>
+                    ) : (
+                        <button
+                            type="button"
+                            className="scribekit-docs-nav-toggle"
+                            aria-expanded={navOpen}
+                            aria-controls="scribekit-docs-nav-body"
+                            onClick={() => setNavOpen(!navOpen)}
+                        >
+                            {navLabel}
+                        </button>
+                    )}
+                    <nav
+                        id="scribekit-docs-nav-body"
+                        aria-label={navLabel}
+                        className={navOpen ? "scribekit-docs-groups is-open" : "scribekit-docs-groups"}
+                    >
+                        {activeTab?.groups.map((group) => (
+                            <div key={group.id || "__ungrouped"} className="scribekit-docs-group">
+                                {group.label ? <div className="scribekit-docs-group-label">{group.label}</div> : null}
+                                <ul className="scribekit-docs-group-items">
+                                    {group.items.map((item) => {
+                                        const active = item.href === activePath;
+                                        return (
+                                            <li key={item.slug}>
+                                                <Link
+                                                    href={item.href}
+                                                    className={active ? "scribekit-docs-navitem is-active" : "scribekit-docs-navitem"}
+                                                    aria-current={active ? "page" : undefined}
+                                                    onClick={() => setNavOpen(false)}
+                                                >
+                                                    <span className="scribekit-docs-navitem-icon">{icon(item.icon)}</span>
+                                                    {item.label}
+                                                </Link>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        ))}
+                    </nav>
+                    {footer ? <div className="scribekit-docs-nav-foot">{footer}</div> : null}
+                </div>
+            </aside>
+        </>
     );
 }

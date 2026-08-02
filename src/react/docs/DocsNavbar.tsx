@@ -1,7 +1,9 @@
 "use client";
 
 import { Fragment, type CSSProperties, type ElementType, type ReactElement, type ReactNode } from "react";
+import { docsLabels } from "../shared/i18n.js";
 import { DocsSearchButton } from "./DocsSearchButton.js";
+import { useDocsNavState } from "./internal/nav-state.js";
 
 /**
  * Props for {@link DocsNavbar}.
@@ -42,6 +44,15 @@ export interface DocsNavbarProps {
      * docs) or your own component to override it entirely.
      */
     languagePicker?: ReactNode;
+    /**
+     * Whether to show the hamburger that opens the {@link import("./DocsSidebar.js").DocsSidebar}
+     * drawer below the layout breakpoint. Defaults to `true`, and only ever renders inside a
+     * {@link import("./DocsSearchProvider.js").DocsSearchProvider} (the drawer state lives there).
+     *
+     * Pass `false` for the rare docs site that renders this navbar with NO sidebar, where the button
+     * would open nothing.
+     */
+    showNavToggle?: boolean | undefined;
 }
 
 /**
@@ -69,10 +80,33 @@ export function DocsNavbar({
     searchPlaceholder,
     actions,
     languagePicker,
+    showNavToggle = true,
 }: DocsNavbarProps): ReactElement {
     const logoStyle: CSSProperties = { height: `${logoSize}px` };
+    // The nav drawer's button lives HERE, not in the sidebar, so a phone spends one bar on chrome
+    // instead of two. The drawer state comes from the provider, so no provider means no button. CSS
+    // hides it above the layout breakpoint, where the sidebar is a permanent column.
+    const navState = useDocsNavState();
+    const withNavToggle = navState !== null && showNavToggle;
+    const labels = docsLabels(lang ?? "en");
     return (
         <header className="scribekit-docs-navbar">
+            {withNavToggle ? (
+                <button
+                    type="button"
+                    className="scribekit-docs-navbar-burger"
+                    aria-label={navState.open ? labels.closeNav : labels.openNav}
+                    aria-expanded={navState.open}
+                    aria-controls="scribekit-docs-nav-body"
+                    onClick={() => navState.setOpen(!navState.open)}
+                >
+                    <span className="scribekit-docs-burger" aria-hidden="true">
+                        <span className="scribekit-docs-burger-bar" />
+                        <span className="scribekit-docs-burger-bar" />
+                        <span className="scribekit-docs-burger-bar" />
+                    </span>
+                </button>
+            ) : null}
             <Link href={homeHref} className="scribekit-docs-navbar-brand">
                 {logo ? (
                     <span className="scribekit-docs-navbar-logo" style={logoStyle}>

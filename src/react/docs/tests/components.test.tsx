@@ -324,9 +324,96 @@ describe("DocsSidebar", () => {
         const html = renderToStaticMarkup(<DocsSidebar nav={NAV} activePath="/docs/quickstart" linkComponent={Link} />);
         expect(html).toContain("data-custom-link");
     });
+
+    // Standalone: no provider, so no hamburger exists anywhere to open it. It MUST keep its own
+    // inline toggle, or such a consumer has no way to reach the nav on a phone at all.
+    it("keeps its self-contained inline toggle when rendered without a provider", () => {
+        const html = renderToStaticMarkup(<DocsSidebar nav={NAV} />);
+        expect(html).toContain("scribekit-docs-nav-toggle");
+        expect(html).not.toContain("is-drawer");
+        expect(html).not.toContain("scribekit-docs-nav-head");
+        expect(html).not.toContain("scribekit-docs-nav-backdrop");
+    });
+
+    it("becomes a drawer under a provider: header + close button instead of the inline toggle", () => {
+        const html = renderToStaticMarkup(
+            <DocsSearchProvider nav={NAV}>
+                <DocsSidebar nav={NAV} />
+            </DocsSearchProvider>,
+        );
+        expect(html).toContain("is-drawer");
+        expect(html).toContain("scribekit-docs-nav-head");
+        expect(html).toContain('aria-label="Close navigation"');
+        expect(html).not.toContain("scribekit-docs-nav-toggle");
+        // Closed on first paint: no backdrop, and the panel is not marked open.
+        expect(html).not.toContain("scribekit-docs-nav-backdrop");
+        expect(html).not.toContain("scribekit-docs-nav is-drawer is-open");
+    });
+
+    it("localizes the drawer's close button", () => {
+        const html = renderToStaticMarkup(
+            <DocsSearchProvider nav={NAV} lang="nl">
+                <DocsSidebar nav={NAV} lang="nl" />
+            </DocsSearchProvider>,
+        );
+        expect(html).toContain('aria-label="Navigatie sluiten"');
+    });
+
+    it("renders the footer slot below the groups, and nothing when it is omitted", () => {
+        const withFooter = renderToStaticMarkup(
+            <DocsSidebar nav={NAV} footer={<span data-foot="">Language</span>} />,
+        );
+        expect(withFooter).toContain("scribekit-docs-nav-foot");
+        expect(withFooter).toContain("data-foot");
+        // The footer follows the groups - it is the drawer's foot, not a second header.
+        expect(withFooter.indexOf("scribekit-docs-group-items")).toBeLessThan(
+            withFooter.indexOf("scribekit-docs-nav-foot"),
+        );
+        expect(renderToStaticMarkup(<DocsSidebar nav={NAV} />)).not.toContain("scribekit-docs-nav-foot");
+    });
 });
 
 describe("DocsNavbar", () => {
+    // The hamburger must be in the SERVED HTML, not added by an effect after hydration - otherwise
+    // it pops into the bar on every docs page load, and is missing entirely if hydration fails.
+    it("renders the nav-drawer hamburger inside a provider, on the server", () => {
+        const html = renderToStaticMarkup(
+            <DocsSearchProvider nav={NAV}>
+                <DocsNavbar brandName="Scribekit" />
+            </DocsSearchProvider>,
+        );
+        expect(html).toContain("scribekit-docs-navbar-burger");
+        expect(html).toContain('aria-controls="scribekit-docs-nav-body"');
+        expect(html).toContain('aria-label="Open navigation"');
+        expect(html).toContain('aria-expanded="false"');
+        // The bars are decoration; the button carries the accessible name.
+        expect(html).toContain("scribekit-docs-burger-bar");
+    });
+
+    it("omits the hamburger without a provider (nothing owns the drawer state)", () => {
+        const html = renderToStaticMarkup(<DocsNavbar brandName="Scribekit" />);
+        expect(html).not.toContain("scribekit-docs-navbar-burger");
+    });
+
+    it("omits the hamburger when showNavToggle is false (navbar used without a sidebar)", () => {
+        const html = renderToStaticMarkup(
+            <DocsSearchProvider nav={NAV}>
+                <DocsNavbar brandName="Scribekit" showNavToggle={false} />
+            </DocsSearchProvider>,
+        );
+        expect(html).not.toContain("scribekit-docs-navbar-burger");
+    });
+
+    it("localizes the hamburger's accessible name", () => {
+        const html = renderToStaticMarkup(
+            <DocsSearchProvider nav={NAV} lang="nl">
+                <DocsNavbar brandName="Scribekit" lang="nl" />
+            </DocsSearchProvider>,
+        );
+        expect(html).toContain('aria-label="Navigatie openen"');
+    });
+
+
     it("renders the logo (sized), brand name, Docs pill, centered search and the actions list", () => {
         const html = renderToStaticMarkup(
             <DocsNavbar

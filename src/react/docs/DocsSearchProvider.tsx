@@ -16,6 +16,7 @@ import { flattenNav } from "../../docs/navigation.js";
 import type { NavItem, NavTree } from "../../docs/types.js";
 import { docsLabels } from "../shared/i18n.js";
 import { DocsIcon } from "./internal/icons.js";
+import { DocsNavStateProvider } from "./internal/nav-state.js";
 import { searchNav } from "./internal/search.js";
 
 /** Id wiring the combobox input to its result listbox. */
@@ -200,7 +201,13 @@ export function DocsSearchProvider({
 
     return (
         <DocsSearchContext.Provider value={value}>
-            {children}
+            {/*
+              * The nav-drawer state rides along in here rather than asking consumers to add a second
+              * provider. This one already wraps the whole docs app (the navbar's search button
+              * requires it), so folding the drawer state in is what lets `DocsNavbar` host the
+              * hamburger and `DocsSidebar` become a drawer with NO change to any existing consumer.
+              */}
+            <DocsNavStateProvider>{children}</DocsNavStateProvider>
             {open ? (
                 <div className="scribekit-docs-palette-backdrop" onClick={() => setOpen(false)}>
                     <div

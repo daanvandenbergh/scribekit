@@ -981,6 +981,139 @@
     text-decoration: none;
 }
 
+/*
+ * The nav-drawer button. It sits in the TOP BAR rather than in the sidebar so a phone spends one
+ * bar of chrome instead of two - the sidebar's own "Documentation" toggle used to occupy a second
+ * 72px strip above every page, and expanding it pushed the article down instead of overlaying it.
+ * Hidden above the layout breakpoint, where the sidebar is a permanent column and there is nothing
+ * to open. `DocsNavbar` renders it only when a `DocsSidebar` is actually mounted.
+ */
+.scribekit-docs-navbar-burger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 38px;
+    height: 38px;
+    margin-left: -6px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--scribekit-ink, #0b1b36);
+    cursor: pointer;
+}
+
+.scribekit-docs-navbar-burger:hover {
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+}
+
+.scribekit-docs-navbar-burger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.scribekit-docs-burger {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 17px;
+    height: 12px;
+}
+
+.scribekit-docs-burger-bar {
+    display: block;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    /* Animated so the bars morph into the cross instead of the icon popping between two shapes. */
+    transition:
+        transform 0.24s cubic-bezier(0.165, 0.84, 0.44, 1),
+        opacity 0.16s ease;
+}
+
+/* Open: the outer bars converge and cross, the middle one fades out beneath them. */
+.scribekit-docs-navbar-burger[aria-expanded="true"] .scribekit-docs-burger-bar:nth-child(1) {
+    transform: translateY(5px) rotate(45deg);
+}
+
+.scribekit-docs-navbar-burger[aria-expanded="true"] .scribekit-docs-burger-bar:nth-child(2) {
+    opacity: 0;
+}
+
+.scribekit-docs-navbar-burger[aria-expanded="true"] .scribekit-docs-burger-bar:nth-child(3) {
+    transform: translateY(-5px) rotate(-45deg);
+}
+
+/*
+ * The drawer's dimmed backdrop. Rendered only while the drawer is open, and only in drawer mode.
+ * The `min-width` reset below is the safety net for a reader who opens the drawer on a phone and
+ * then rotates to a tablet: the state survives the resize, and without this the backdrop would sit
+ * over a desktop layout whose sidebar is a permanent column with no way to dismiss it.
+ */
+.scribekit-docs-nav-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    background: rgba(11, 27, 54, 0.42);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+
+@media (min-width: 1081px) {
+    .scribekit-docs-nav-backdrop {
+        display: none;
+    }
+}
+
+/* Drawer header: the nav's title and its close button, shown in place of the inline toggle. */
+.scribekit-docs-nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+.scribekit-docs-nav-head-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-nav-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    margin-right: -6px;
+    padding: 0;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--scribekit-ink-muted, #4a5568);
+    cursor: pointer;
+}
+
+.scribekit-docs-nav-close:hover {
+    background: var(--scribekit-bg-subtle, #f7f9fc);
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+/* The `footer` slot, pinned below the nav groups. See `DocsSidebarProps.footer`. */
+.scribekit-docs-nav-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
 .scribekit-docs-navbar-logo {
     display: inline-flex;
     align-items: center;
@@ -1861,6 +1994,10 @@
         padding: clamp(14px, 4vw, 20px);
     }
 
+    .scribekit-docs-navbar-burger {
+        display: inline-flex;
+    }
+
     .scribekit-docs-nav-toggle {
         display: inline-flex;
     }
@@ -1872,6 +2009,48 @@
 
     .scribekit-docs-groups.is-open {
         display: block;
+    }
+
+    /*
+     * DRAWER MODE - an off-canvas panel, used whenever the sidebar sits under a provider (i.e. inside
+     * a `DocsSearchProvider`), which is every real docs app. The rules above stay for the standalone
+     * case, where the sidebar owns its own toggle and has no hamburger to be opened from.
+     *
+     * The difference is not decoration. The inline version was a full-width bar that pushed the
+     * ARTICLE down the page when it expanded, so on a phone opening the nav moved the thing you were
+     * reading; a drawer overlays instead, and the page is exactly where you left it when it closes.
+     */
+    .scribekit-docs-nav.is-drawer {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 70;
+        width: min(320px, 84vw);
+        border-bottom: 0;
+        border-right: 1px solid var(--scribekit-border-strong, #eaeef4);
+        background: var(--scribekit-surface, #ffffff);
+        transform: translateX(-100%);
+        transition: transform 0.26s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    .scribekit-docs-nav.is-drawer.is-open {
+        transform: none;
+        box-shadow: 0 18px 50px rgba(11, 27, 54, 0.24);
+    }
+
+    /* The drawer scrolls itself - a long nav must not be cut off at the bottom of the screen. */
+    .scribekit-docs-nav.is-drawer .scribekit-docs-nav-inner {
+        height: 100%;
+        max-height: none;
+        overflow-y: auto;
+        padding: 16px 16px 32px;
+    }
+
+    /* Inside the drawer the groups are always laid out; the PANEL is what slides. */
+    .scribekit-docs-nav.is-drawer .scribekit-docs-groups {
+        display: block;
+        margin-top: 12px;
     }
 
     .scribekit-docs-page {
@@ -1904,21 +2083,38 @@
  * screen where they could not be reached at all.
  *
  * Everything below is that budget being paid down, least-valuable first: the decorative "Docs" pill
- * and the wordmark go (the logo still identifies the site and still links home), the search
- * collapses to its icon, and the gaps tighten. That leaves ~300px for the consumer's own actions on
- * a 390px phone - enough for a picker and a CTA, not for a full desktop action set. An `actions`
- * list longer than that should hide its own extras here; `DocsNavbarButton` takes a `className` for
- * exactly this.
+ * goes, the wordmark shrinks, the search collapses to its icon, and the gaps tighten. The brand also
+ * becomes SHRINKABLE (`flex: 0 1 auto` + `min-width: 0` + ellipsis), which is the actual guarantee -
+ * whatever a consumer puts in `actions`, the row can no longer widen the document; the wordmark
+ * truncates instead. That leaves roughly 250px for the consumer's own actions on a 390px phone -
+ * enough for a search, a picker and a CTA, not for a full desktop action set. `DocsNavbarButton`
+ * takes a `className` so an `actions` list longer than that can hide its own extras here.
  */
 @media (max-width: 640px) {
     .scribekit-docs-navbar {
-        gap: 10px;
+        gap: 8px;
         padding: 0 14px;
     }
 
-    .scribekit-docs-navbar-name,
     .scribekit-docs-navbar-pill {
         display: none;
+    }
+
+    /*
+     * The wordmark STAYS (smaller). A lone mark reads as an anonymous icon - nothing on the page
+     * then says whose documentation this is - and the hamburger freed the room to keep it.
+     */
+    .scribekit-docs-navbar-brand {
+        flex: 0 1 auto;
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .scribekit-docs-navbar-name {
+        font-size: 15px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     /*
@@ -1963,7 +2159,9 @@
     .scribekit-docs-feedback-btn,
     .scribekit-docs-prevnext-card,
     .scribekit-docs-section-card,
-    .scribekit-docs-section-arrow {
+    .scribekit-docs-section-arrow,
+    .scribekit-docs-burger-bar,
+    .scribekit-docs-nav.is-drawer {
         transition: none;
     }
 }
