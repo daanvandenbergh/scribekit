@@ -128,6 +128,9 @@ export function DocsIndex({
                 href: pages[0]?.href ?? "",
                 icon: icon(pages[0]?.icon),
                 pages: pages.map((item) => ({ title: item.label, href: item.href, description: item.description })),
+                // Resolved here, on the server, rather than templated in the client grid: the count
+                // is known before render, so it can use the catalog's real plural forms.
+                countLabel: labels.pageCountLabel(pages.length),
             } satisfies DocsTopic;
         }),
     );
@@ -179,9 +182,9 @@ export function DocsIndex({
                     heading: labels.browseByTopic,
                     filterPlaceholder: labels.filterPages,
                     clearFilter: labels.clearFilter,
-                    pageCount: labels.pageCountLabel,
-                    resultCount: labels.resultCountLabel,
-                    noMatches: labels.noMatchesLabel,
+                    resultCount: labels.resultCountTemplate,
+                    resultCountOne: labels.resultCountOneTemplate,
+                    noMatches: labels.noMatchesTemplate,
                 }}
                 pagesPerTopic={pagesPerTopic}
                 filter={filter}

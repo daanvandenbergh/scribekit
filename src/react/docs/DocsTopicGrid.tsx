@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ElementType, type ReactElement, type ReactNode } from "react";
-import { normalizeQuery, pageMatchesQuery } from "./internal/topic-filter.js";
+import { fillTemplate, normalizeQuery, pageMatchesQuery } from "./internal/topic-filter.js";
 
 /**
  * One page listed inside a {@link DocsTopic}.
@@ -41,11 +41,23 @@ export interface DocsTopic {
      * findable.
      */
     pages: DocsTopicPage[];
+    /**
+     * The footer link's text, e.g. `"6 pages"`. Already localized and already pluralized - the
+     * count is known before render, so it is resolved by the caller (who has the language and the
+     * plural rules) rather than templated here. Defaults to `"<n> pages"`.
+     */
+    countLabel?: string | undefined;
 }
 
 /**
- * Copy overrides for {@link DocsTopicGrid}. Every entry is optional; anything omitted falls back
- * to the packaged translation for the grid's language.
+ * Copy overrides for {@link DocsTopicGrid}. Every entry is optional; anything omitted falls back to
+ * the packaged English default (or, via {@link DocsIndex}, to the packaged translation).
+ *
+ * EVERY ENTRY IS A PLAIN STRING, and that is a hard constraint rather than a style choice: this is
+ * a client component, so a label built as a `(count) => string` callback cannot reach it from a
+ * server page at all - React refuses to serialize a function across the boundary and the render
+ * throws. The two labels that need runtime values therefore use `{count}` / `{query}` placeholders,
+ * substituted here.
  */
 export interface DocsTopicGridLabels {
     /** The section heading. */
@@ -54,12 +66,12 @@ export interface DocsTopicGridLabels {
     filterPlaceholder?: string | undefined;
     /** Label for the button that empties the filter. */
     clearFilter?: string | undefined;
-    /** Builds a card's footer link, e.g. `6 pages`. */
-    pageCount?: ((count: number) => string) | undefined;
-    /** Builds the results heading, e.g. `3 pages match "calendar"`. */
-    resultCount?: ((count: number, query: string) => string) | undefined;
-    /** Builds the empty-results heading, e.g. `Nothing matches "xyzzy"`. */
-    noMatches?: ((query: string) => string) | undefined;
+    /** Results heading; `{count}` and `{query}` are substituted. Used when the count is not 1. */
+    resultCount?: string | undefined;
+    /** Results heading for exactly one match. Falls back to {@link DocsTopicGridLabels.resultCount}. */
+    resultCountOne?: string | undefined;
+    /** Empty-results heading; `{query}` is substituted. */
+    noMatches?: string | undefined;
     /**
      * A line under the empty-results heading suggesting what to try instead. Deliberately has NO
      * packaged default: a useful hint names terms from YOUR corpus, and a generic one is noise.
@@ -224,7 +236,12 @@ export function DocsTopicGrid({
             {showResults ? (
                 <div className="scribekit-docs-results">
                     <div className="scribekit-docs-results-head">
-                        {labels?.resultCount?.(matches.length, trimmed) ?? `${matches.length} pages match “${trimmed}”`}
+                        {fillTemplate(
+                            (matches.length === 1 ? labels?.resultCountOne : undefined) ??
+                                labels?.resultCount ??
+                                "{count} pages match “{query}”",
+                            { count: matches.length, query: trimmed },
+                        )}
                     </div>
                     {matches.map(({ page, topic, accent }) => (
                         <Link
@@ -243,7 +260,7 @@ export function DocsTopicGrid({
                     {matches.length === 0 ? (
                         <div className="scribekit-docs-results-empty">
                             <div className="scribekit-docs-results-empty-title">
-                                {labels?.noMatches?.(trimmed) ?? `Nothing matches “${trimmed}”`}
+                                {fillTemplate(labels?.noMatches ?? "Nothing matches “{query}”", { query: trimmed })}
                             </div>
                             {labels?.noMatchesHint ? <p className="scribekit-docs-results-empty-hint">{labels.noMatchesHint}</p> : null}
                             <button type="button" onClick={() => setQuery("")} className="scribekit-docs-results-empty-btn">
@@ -278,7 +295,7 @@ export function DocsTopicGrid({
                                 </div>
                             ) : null}
                             <Link href={topic.href} className="scribekit-docs-topic-count">
-                                {labels?.pageCount?.(topic.pages.length) ?? `${topic.pages.length} pages`}
+                                {topic.countLabel ?? `${topic.pages.length} pages`}
                                 <Arrow size={13} />
                             </Link>
                         </div>

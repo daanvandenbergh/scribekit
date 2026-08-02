@@ -18,7 +18,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { DocsHero } from "../DocsHero.js";
 import { DocsRecentlyUpdated } from "../DocsRecentlyUpdated.js";
 import { DocsTopicGrid, type DocsTopic } from "../DocsTopicGrid.js";
-import { normalizeQuery, pageMatchesQuery } from "../internal/topic-filter.js";
+import { fillTemplate, normalizeQuery, pageMatchesQuery } from "../internal/topic-filter.js";
 
 /** Two topics whose pages differ enough for the filter to discriminate between them. */
 const TOPICS: DocsTopic[] = [
@@ -134,9 +134,35 @@ describe("DocsTopicGrid", () => {
     });
 
     it("counts EVERY page in the footer link, not just the visible ones", () => {
-        const html = renderToStaticMarkup(<DocsTopicGrid topics={TOPICS} labels={{ pageCount: (n) => `${n} pages` }} />);
+        const html = renderToStaticMarkup(<DocsTopicGrid topics={TOPICS} />);
         // 4, not the 3 shown: the count promises what is behind the link.
         expect(html).toContain("4 pages");
+    });
+
+    it("prefers a topic's own countLabel over the built-in fallback", () => {
+        const html = renderToStaticMarkup(<DocsTopicGrid topics={[{ ...TOPICS[0]!, countLabel: "4 pagina’s" }]} />);
+        expect(html).toContain("4 pagina’s");
+        expect(html).not.toContain("4 pages");
+    });
+
+    it("keeps every label serializable, so a SERVER page can render this client component", () => {
+        // The whole label surface must survive the server/client boundary: a `(count) => string`
+        // here threw "Functions cannot be passed directly to Client Components" at render time,
+        // which no type check and no static-markup test catches.
+        const labels = {
+            heading: "Browse",
+            filterPlaceholder: "Filter",
+            clearFilter: "Clear",
+            resultCount: "{count} match “{query}”",
+            resultCountOne: "1 matches “{query}”",
+            noMatches: "Nothing matches “{query}”",
+            noMatchesHint: "Try something else.",
+        };
+        for (const value of Object.values(labels)) {
+            expect(typeof value).toBe("string");
+        }
+        expect(() => JSON.stringify(labels)).not.toThrow();
+        expect(renderToStaticMarkup(<DocsTopicGrid topics={TOPICS} labels={labels} />)).toContain("Browse");
     });
 
     it("honours pagesPerTopic", () => {
@@ -232,5 +258,33 @@ describe("the topic filter's matching rule", () => {
 
     it("does not match an unrelated query", () => {
         expect(pageMatchesQuery(page, "Get started", "xyzzy")).toBe(false);
+    });
+});
+
+describe("the label templates", () => {
+    it("substitutes every placeholder", () => {
+        expect(fillTemplate("{count} pages match “{query}”", { count: 3, query: "vat" })).toBe("3 pages match “vat”");
+    });
+
+    it("substitutes the same placeholder more than once", () => {
+        expect(fillTemplate("{q} and {q}", { q: "x" })).toBe("x and x");
+    });
+
+    it("leaves an unknown placeholder verbatim rather than blanking it", () => {
+        // A typo should be visible on the page, not silently swallow the number.
+        expect(fillTemplate("{cont} pages", { count: 3 })).toBe("{cont} pages");
+    });
+
+    it("leaves a template with no placeholders untouched", () => {
+        expect(fillTemplate("Nothing matches", { query: "x" })).toBe("Nothing matches");
+    });
+
+    it("does not treat a value's own braces as a further placeholder", () => {
+        // The query is reader-supplied; a `{count}` typed into the filter box must stay literal.
+        expect(fillTemplate("Nothing matches “{query}”", { query: "{count}", count: 9 })).toBe("Nothing matches “{count}”");
+    });
+
+    it("renders a zero count rather than dropping it as falsy", () => {
+        expect(fillTemplate("{count} pages match “{query}”", { count: 0, query: "x" })).toBe("0 pages match “x”");
     });
 });

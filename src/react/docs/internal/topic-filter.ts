@@ -42,3 +42,24 @@ export function pageMatchesQuery(page: DocsTopicPage, topicTitle: string, needle
     }
     return `${page.title} ${page.description ?? ""} ${topicTitle}`.toLowerCase().includes(needle);
 }
+
+/**
+ * Substitutes `{name}` placeholders in a label template.
+ *
+ * Templates rather than `(count) => string` callbacks because `DocsTopicGrid` is a CLIENT
+ * component: React refuses to serialize a function across the server/client boundary, so a
+ * callback label makes the grid unrenderable from a server page. An unknown placeholder is left
+ * verbatim rather than blanked, so a typo shows up as `{cont}` on the page instead of vanishing.
+ *
+ * Values are returned as a plain string and rendered by React as TEXT, never as markup, so a query
+ * containing `<script>` is inert.
+ *
+ * @param template - the label, containing zero or more `{name}` placeholders.
+ * @param values - the substitutions, keyed by placeholder name.
+ * @returns the filled string.
+ */
+export function fillTemplate(template: string, values: Record<string, string | number>): string {
+    return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+        Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : match,
+    );
+}

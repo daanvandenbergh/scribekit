@@ -550,57 +550,54 @@ export const CATALOG = ui.defineTextCatalog({
         ga: (n: number) => `${n} ${n === 1 ? "topaic" : "topaic"}`,
         mt: (n: number) => `${n} suġġett${n === 1 ? "" : "i"}`,
     },
+    /*
+     * The three filter labels below are TEMPLATE STRINGS with `{count}`/`{query}` placeholders,
+     * not the `(n) => string` functions the rest of this catalog uses. `DocsTopicGrid` is a CLIENT
+     * component, and a function cannot be passed to one from a server page - React refuses to
+     * serialize it and the render throws. Their values are only known while the reader is typing,
+     * so unlike every other count in this file they cannot be resolved ahead of render either.
+     */
     docsResultCount: {
-        en: (n: number, q: string) => `${n} ${n === 1 ? "page matches" : "pages match"} “${q}”`,
-        fr: (n: number, q: string) => `${n} page${n === 1 ? "" : "s"} correspond${n === 1 ? "" : "ent"} à « ${q} »`,
-        de: (n: number, q: string) => `${n} ${n === 1 ? "Seite passt" : "Seiten passen"} zu „${q}“`,
-        es: (n: number, q: string) => `${n} página${n === 1 ? "" : "s"} coincide${n === 1 ? "" : "n"} con «${q}»`,
-        it: (n: number, q: string) => `${n} pagin${n === 1 ? "a corrisponde" : "e corrispondono"} a “${q}”`,
-        pt: (n: number, q: string) => `${n} página${n === 1 ? "" : "s"} corresponde${n === 1 ? "" : "m"} a “${q}”`,
-        nl: (n: number, q: string) => `${n} pagina${n === 1 ? "" : "'s"} ${n === 1 ? "komt" : "komen"} overeen met “${q}”`,
-        pl: (n: number, q: string) => `Pasujące strony: ${n} – „${q}”`,
-        ro: (n: number, q: string) => `${n} ${n === 1 ? "pagină corespunde" : "pagini corespund"} cu „${q}”`,
-        el: (n: number, q: string) => `${n} ${n === 1 ? "σελίδα ταιριάζει" : "σελίδες ταιριάζουν"} με «${q}»`,
-        sv: (n: number, q: string) => `${n} ${n === 1 ? "sida matchar" : "sidor matchar"} ”${q}”`,
-        da: (n: number, q: string) => `${n} ${n === 1 ? "side matcher" : "sider matcher"} “${q}”`,
-        fi: (n: number, q: string) => `${n} ${n === 1 ? "sivu vastaa" : "sivua vastaa"} hakua ”${q}”`,
-        cs: (n: number, q: string) => `Odpovídající stránky: ${n} – „${q}“`,
-        sk: (n: number, q: string) => `Zodpovedajúce stránky: ${n} – „${q}“`,
-        hu: (n: number, q: string) => `${n} oldal egyezik: „${q}”`,
-        bg: (n: number, q: string) => `Съвпадащи страници: ${n} – „${q}“`,
-        hr: (n: number, q: string) => `Podudarne stranice: ${n} – „${q}“`,
-        sl: (n: number, q: string) => `Ujemajoče se strani: ${n} – „${q}“`,
-        et: (n: number, q: string) => `Vastavaid lehti: ${n} – „${q}”`,
-        lv: (n: number, q: string) => `Atbilstošās lapas: ${n} – „${q}“`,
-        lt: (n: number, q: string) => `Atitinkantys puslapiai: ${n} – „${q}“`,
-        ga: (n: number, q: string) => `${n} leathanach ag teacht le “${q}”`,
-        mt: (n: number, q: string) => `${n} paġn${n === 1 ? "a taqbel" : "i jaqblu"} ma’ “${q}”`,
+        en: "{count} pages match “{query}”", fr: "{count} pages correspondent à « {query} »",
+        de: "{count} Seiten passen zu „{query}“", es: "{count} páginas coinciden con «{query}»",
+        it: "{count} pagine corrispondono a “{query}”", pt: "{count} páginas correspondem a “{query}”",
+        nl: "{count} pagina’s komen overeen met “{query}”", pl: "Pasujące strony: {count} – „{query}”",
+        ro: "{count} pagini corespund cu „{query}”", el: "{count} σελίδες ταιριάζουν με «{query}»",
+        sv: "{count} sidor matchar ”{query}”", da: "{count} sider matcher “{query}”",
+        fi: "{count} sivua vastaa hakua ”{query}”", cs: "Odpovídající stránky: {count} – „{query}“",
+        sk: "Zodpovedajúce stránky: {count} – „{query}“", hu: "{count} oldal egyezik: „{query}”",
+        bg: "Съвпадащи страници: {count} – „{query}“", hr: "Podudarne stranice: {count} – „{query}“",
+        sl: "Ujemajoče se strani: {count} – „{query}“", et: "Vastavaid lehti: {count} – „{query}”",
+        lv: "Atbilstošās lapas: {count} – „{query}“", lt: "Atitinkantys puslapiai: {count} – „{query}“",
+        ga: "{count} leathanach ag teacht le “{query}”", mt: "{count} paġni jaqblu ma’ “{query}”",
+    },
+    docsResultCountOne: {
+        en: "1 page matches “{query}”", fr: "1 page correspond à « {query} »",
+        de: "1 Seite passt zu „{query}“", es: "1 página coincide con «{query}»",
+        it: "1 pagina corrisponde a “{query}”", pt: "1 página corresponde a “{query}”",
+        nl: "1 pagina komt overeen met “{query}”", pl: "Pasująca strona: 1 – „{query}”",
+        ro: "1 pagină corespunde cu „{query}”", el: "1 σελίδα ταιριάζει με «{query}»",
+        sv: "1 sida matchar ”{query}”", da: "1 side matcher “{query}”",
+        fi: "1 sivu vastaa hakua ”{query}”", cs: "Odpovídající stránka: 1 – „{query}“",
+        sk: "Zodpovedajúca stránka: 1 – „{query}“", hu: "1 oldal egyezik: „{query}”",
+        bg: "Съвпадаща страница: 1 – „{query}“", hr: "Podudarna stranica: 1 – „{query}“",
+        sl: "Ujemajoča se stran: 1 – „{query}“", et: "Vastavaid lehti: 1 – „{query}”",
+        lv: "Atbilstošā lapa: 1 – „{query}“", lt: "Atitinkantis puslapis: 1 – „{query}“",
+        ga: "1 leathanach ag teacht le “{query}”", mt: "1 paġna taqbel ma’ “{query}”",
     },
     docsNoMatches: {
-        en: (q: string) => `Nothing matches “${q}”`,
-        fr: (q: string) => `Aucun résultat pour « ${q} »`,
-        de: (q: string) => `Nichts passt zu „${q}“`,
-        es: (q: string) => `Nada coincide con «${q}»`,
-        it: (q: string) => `Nessun risultato per “${q}”`,
-        pt: (q: string) => `Nada corresponde a “${q}”`,
-        nl: (q: string) => `Niets komt overeen met “${q}”`,
-        pl: (q: string) => `Nic nie pasuje do „${q}”`,
-        ro: (q: string) => `Nimic nu corespunde cu „${q}”`,
-        el: (q: string) => `Τίποτα δεν ταιριάζει με «${q}»`,
-        sv: (q: string) => `Inget matchar ”${q}”`,
-        da: (q: string) => `Intet matcher “${q}”`,
-        fi: (q: string) => `Mikään ei vastaa hakua ”${q}”`,
-        cs: (q: string) => `Nic neodpovídá „${q}“`,
-        sk: (q: string) => `Nič nezodpovedá „${q}“`,
-        hu: (q: string) => `Semmi sem egyezik ezzel: „${q}”`,
-        bg: (q: string) => `Няма съвпадения с „${q}“`,
-        hr: (q: string) => `Ništa ne odgovara „${q}“`,
-        sl: (q: string) => `Nič se ne ujema z „${q}“`,
-        et: (q: string) => `Mitte miski ei vasta otsingule „${q}”`,
-        lv: (q: string) => `Nekas neatbilst „${q}“`,
-        lt: (q: string) => `Niekas neatitinka „${q}“`,
-        ga: (q: string) => `Níl aon rud ag teacht le “${q}”`,
-        mt: (q: string) => `Xejn ma jaqbel ma’ “${q}”`,
+        en: "Nothing matches “{query}”", fr: "Aucun résultat pour « {query} »",
+        de: "Nichts passt zu „{query}“", es: "Nada coincide con «{query}»",
+        it: "Nessun risultato per “{query}”", pt: "Nada corresponde a “{query}”",
+        nl: "Niets komt overeen met “{query}”", pl: "Nic nie pasuje do „{query}”",
+        ro: "Nimic nu corespunde cu „{query}”", el: "Τίποτα δεν ταιριάζει με «{query}»",
+        sv: "Inget matchar ”{query}”", da: "Intet matcher “{query}”",
+        fi: "Mikään ei vastaa hakua ”{query}”", cs: "Nic neodpovídá „{query}“",
+        sk: "Nič nezodpovedá „{query}“", hu: "Semmi sem egyezik ezzel: „{query}”",
+        bg: "Няма съвпадения с „{query}“", hr: "Ništa ne odgovara „{query}“",
+        sl: "Nič se ne ujema z „{query}“", et: "Mitte miski ei vasta otsingule „{query}”",
+        lv: "Nekas neatbilst „{query}“", lt: "Niekas neatitinka „{query}“",
+        ga: "Níl aon rud ag teacht le “{query}”", mt: "Xejn ma jaqbel ma’ “{query}”",
     },
     docsUpdatedOn: {
         en: (d: string) => `Updated ${d}`,
@@ -777,10 +774,15 @@ export interface DocsLabels {
     articleCountLabel: (count: number) => string;
     /** Builds the hero's "<n> topics" statistic. */
     topicCountLabel: (count: number) => string;
-    /** Builds the filter result heading, e.g. `3 pages match "calendar"`. */
-    resultCountLabel: (count: number, query: string) => string;
-    /** Builds the empty-filter heading, e.g. `Nothing matches "xyzzy"`. */
-    noMatchesLabel: (query: string) => string;
+    /**
+     * The filter result heading as a TEMPLATE with `{count}` and `{query}` placeholders, not a
+     * function - it is consumed by the client-side `DocsTopicGrid`, which a callback cannot reach.
+     */
+    resultCountTemplate: string;
+    /** The same heading for exactly one match. */
+    resultCountOneTemplate: string;
+    /** The empty-filter heading as a template with a `{query}` placeholder. */
+    noMatchesTemplate: string;
 }
 
 /**
@@ -817,7 +819,8 @@ export function docsLabels(lang: string): DocsLabels {
         pageCountLabel: (count: number) => t(CATALOG.docsPageCount, count),
         articleCountLabel: (count: number) => t(CATALOG.docsArticleCount, count),
         topicCountLabel: (count: number) => t(CATALOG.docsTopicCount, count),
-        resultCountLabel: (count: number, query: string) => t(CATALOG.docsResultCount, count, query),
-        noMatchesLabel: (query: string) => t(CATALOG.docsNoMatches, query),
+        resultCountTemplate: t(CATALOG.docsResultCount),
+        resultCountOneTemplate: t(CATALOG.docsResultCountOne),
+        noMatchesTemplate: t(CATALOG.docsNoMatches),
     };
 }
