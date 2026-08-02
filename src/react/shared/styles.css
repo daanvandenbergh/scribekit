@@ -2211,9 +2211,13 @@
 
 .scribekit-docs-topic-grid {
     display: grid;
-    /* auto-FIT, so a corpus with one topic gets one full-width card instead of a 288px orphan
-       beside two empty tracks. */
-    grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+    /* auto-FIT so a corpus with one topic does not leave its card as a 288px orphan beside two
+       empty tracks - and capped at 420px rather than `1fr` so that card does not swing the other
+       way and span the full column. A card is a list of page rows with the chevron pinned to the
+       trailing edge, so a full-width one puts hundreds of pixels of dead space between each label
+       and its arrow. The cap is inert once there are enough topics to fill a row: three across a
+       1080px column already computes to ~350px each. */
+    grid-template-columns: repeat(auto-fit, minmax(288px, 420px));
     gap: 14px;
     margin-top: 18px;
 }

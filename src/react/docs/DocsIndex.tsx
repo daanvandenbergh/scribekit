@@ -54,7 +54,9 @@ export interface DocsIndexProps {
  * Greenwich - a date that is wrong by a day, silently, and only for some people.
  *
  * @param iso - the date string, or undefined.
- * @param lang - the BCP 47 language to format in.
+ * @param lang - the BCP 47 locale to format in. Pass the locale's configured `dateLocale` where
+ *   there is one: a bare `"en"` orders the parts the American way ("Jul 28"), which is not what a
+ *   reader of an `en-GB` site expects.
  * @returns the short date, or an empty string when the input is missing or unparseable.
  */
 function shortDate(iso: string | undefined, lang: string): string {
@@ -102,6 +104,9 @@ export function DocsIndex({
     renderIcon,
 }: DocsIndexProps): ReactElement {
     const resolvedLang = lang ?? docs.defaultLocale;
+    // The locale's own `dateLocale` when it declares one, so an `en-GB` site reads "28 Jul" rather
+    // than the American "Jul 28" a bare `"en"` produces.
+    const dateLocale = docs.locales.find((entry) => entry.code === resolvedLang)?.dateLocale ?? resolvedLang;
     const labels = docsLabels(resolvedLang);
     const site = docs.site;
     const nav = docs.getNavTree(resolvedLang);
@@ -147,7 +152,7 @@ export function DocsIndex({
         .map((item) => ({
             title: item.label,
             href: item.href,
-            updatedLabel: shortDate(item.updated, resolvedLang),
+            updatedLabel: shortDate(item.updated, dateLocale),
             category: topicOf.get(item.href),
         }));
 
@@ -157,7 +162,7 @@ export function DocsIndex({
               { label: labels.articleCountLabel(everyPage.length) },
               { label: labels.topicCountLabel(topics.length) },
               // Only claim an update date when a page actually declares one.
-              ...(newest ? [{ label: labels.updatedLabel(shortDate(newest.updated, resolvedLang)), live: true }] : []),
+              ...(newest ? [{ label: labels.updatedLabel(shortDate(newest.updated, dateLocale)), live: true }] : []),
           ]
         : undefined;
 
