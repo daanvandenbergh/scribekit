@@ -59,37 +59,44 @@ function configIndex(entries: NavConfigEntry[] | undefined, id: string): number 
 }
 
 /**
- * The display label a config array assigns to `id`, resolved for one language - or `undefined`
- * when the id is absent or the entry is a bare string (in which case the caller falls back to the
- * id itself).
+ * One of a config entry's texts (`label` or `description`), resolved for a single language - or
+ * `undefined` when the id is absent, the entry is a bare string, or that text is unset (in which
+ * case the caller falls back to the id, or to rendering nothing).
  *
  * A {@link NavLabel} map is read at `lang`, then at `defaultLocale`, then treated as absent. The
- * per-locale form exists because this label reaches the sidebar, the breadcrumb AND the index card
- * heading: a bare string prints one language on every localized page, which is why a docs site
- * with a translated corpus must not use one for a translatable word.
+ * per-locale form exists because these texts reach the sidebar, the breadcrumb AND the index topic
+ * card: a bare string prints one language on every localized page, which is why a docs site with a
+ * translated corpus must not use one for a translatable word.
  *
  * @param entries - the config array, or `undefined`.
  * @param id - the tab/group id.
+ * @param field - which of the entry's texts to resolve.
  * @param lang - the language being built.
  * @param defaultLocale - the fallback locale for a map missing `lang`.
- * @returns the configured label for this language, or `undefined`.
+ * @returns the configured text for this language, or `undefined`.
  */
-function configLabel(entries: NavConfigEntry[] | undefined, id: string, lang: string, defaultLocale: string): string | undefined {
+function configText(
+    entries: NavConfigEntry[] | undefined,
+    id: string,
+    field: "label" | "description",
+    lang: string,
+    defaultLocale: string,
+): string | undefined {
     const entry = entries?.find((e) => entryId(e) === id);
-    if (!entry || typeof entry === "string" || entry.label === undefined) {
+    if (!entry || typeof entry === "string") {
         return undefined;
     }
-    const { label } = entry;
-    if (typeof label === "string") {
-        return label;
+    const value = entry[field];
+    if (value === undefined || typeof value === "string") {
+        return value;
     }
     // Own-property lookups only: a locale code like `constructor` must not resolve to an inherited
     // `Object.prototype` member and be rendered as a heading.
-    const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(label, key);
+    const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(value, key);
     if (has(lang)) {
-        return label[lang];
+        return value[lang];
     }
-    return has(defaultLocale) ? label[defaultLocale] : undefined;
+    return has(defaultLocale) ? value[defaultLocale] : undefined;
 }
 
 /** A tab/group during assembly, tracking the tie-break keys stripped from the returned node. */
@@ -123,7 +130,8 @@ function compareOrdered(a: Ordered, b: Ordered): number {
 }
 
 /**
- * Builds a page's {@link NavItem} (title/label/icon/href), the leaf of the nav tree.
+ * Builds a page's {@link NavItem} (title/label/description/icon/dates/href), the leaf of the nav
+ * tree.
  *
  * @param meta - the page's front-matter.
  * @param opts - the URL-building options.
@@ -134,7 +142,10 @@ function toNavItem(meta: DocMeta, opts: NavBuildOptions): NavItem {
         slug: meta.slug,
         title: meta.title,
         label: meta.label ?? meta.title,
+        description: meta.description,
         icon: meta.icon,
+        updated: meta.updated,
+        readingTime: meta.readingTime,
         href: localePath({
             basePath: opts.basePath,
             defaultLocale: opts.defaultLocale,
@@ -200,7 +211,8 @@ export function buildNavTree(metas: DocMeta[], opts: NavBuildOptions): NavTree {
                 const items = group.items.slice().sort(compareItems);
                 return {
                     id: groupId,
-                    label: configLabel(opts.groups, groupId, lang, opts.defaultLocale) ?? groupId,
+                    label: configText(opts.groups, groupId, "label", lang, opts.defaultLocale) ?? groupId,
+                    description: configText(opts.groups, groupId, "description", lang, opts.defaultLocale),
                     items,
                     configIndex: configIndex(opts.groups, groupId),
                     minOrder: Math.min(...items.map((i) => orderValue(i.order))),
@@ -210,15 +222,16 @@ export function buildNavTree(metas: DocMeta[], opts: NavBuildOptions): NavTree {
             navGroups.sort(compareOrdered);
             return {
                 id: tabId,
-                label: configLabel(opts.tabs, tabId, lang, opts.defaultLocale) ?? tabId,
-                groups: navGroups.map(({ id, label, items }) => ({ id, label, items })),
+                label: configText(opts.tabs, tabId, "label", lang, opts.defaultLocale) ?? tabId,
+                description: configText(opts.tabs, tabId, "description", lang, opts.defaultLocale),
+                groups: navGroups.map(({ id, label, description, items }) => ({ id, label, description, items })),
                 configIndex: configIndex(opts.tabs, tabId),
                 minOrder: Math.min(...navGroups.map((g) => g.minOrder)),
                 firstSeen: tab.firstSeen,
             } satisfies NavTab & Ordered;
         })
         .sort(compareOrdered)
-        .map(({ id, label, groups }) => ({ id, label, groups }));
+        .map(({ id, label, description, groups }) => ({ id, label, description, groups }));
 
     return { tabs: navTabs, multiTab: navTabs.length > 1 };
 }

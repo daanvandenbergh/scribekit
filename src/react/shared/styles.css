@@ -1930,162 +1930,609 @@
     padding-left: 28px;
 }
 
-/* --- Docs index / landing --- */
+/* --- Docs index / landing --------------------------------------------------------------------
+ * Three independent sections (`.scribekit-docs-hero-panel`, `.scribekit-docs-topics`,
+ * `.scribekit-docs-recent`) plus the wrapper `DocsIndex` stacks them in. Each section is styled
+ * standalone - none reaches into a parent for width, spacing or colour - because a consumer is
+ * expected to drop one into a page of their own, in any order, between bands the kit never sees.
+ * That is also why vertical rhythm is `margin-top` on the sections rather than a `gap` on a
+ * container that may not exist.
+ */
 .scribekit-docs-index {
     /* Fill the flex `.scribekit-docs-main` (like `.scribekit-doc` does), then cap + centre. Without
-       `flex: 1` the index shrinks to its content's min width - a single section-card column - and the
-       `margin: 0 auto` centres that narrow block, leaving the grid stuck at one column. */
+       `flex: 1` the index shrinks to its content's min width and the `margin: 0 auto` centres that
+       narrow block, leaving every grid inside it stuck at one column. */
     flex: 1;
     min-width: 0;
-    max-width: var(--scribekit-docs-index-width, 1040px);
+    max-width: var(--scribekit-docs-index-width, 1080px);
     margin: 0 auto;
-    padding: clamp(28px, 5vw, 56px) clamp(16px, 5vw, 40px);
+    padding: clamp(20px, 3vw, 40px) clamp(18px, 3vw, 32px) 96px;
 }
 
-.scribekit-docs-hero {
-    margin-bottom: clamp(28px, 4vw, 44px);
+/* --- Index hero --- */
+.scribekit-docs-hero-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 26px;
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    background: var(--scribekit-hero-bg, linear-gradient(160deg, #f7f8fe 0%, #f4f1fd 46%, #fbf3f8 100%));
+    box-shadow: var(--scribekit-hero-shadow, 0 20px 48px rgba(40, 30, 120, 0.06));
+}
+
+/* Two off-centre colour washes. Separate from the base gradient so a consumer can restyle the
+   panel's fill without losing the depth, or blank these out with `--scribekit-hero-glow: none`. */
+.scribekit-docs-hero-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(
+        --scribekit-hero-glow,
+        radial-gradient(46% 60% at 8% 0%, rgba(37, 99, 235, 0.11) 0%, transparent 70%),
+        radial-gradient(40% 56% at 96% 12%, rgba(196, 105, 158, 0.12) 0%, transparent 72%)
+    );
+}
+
+/* The graph-paper wash, faded out downwards so it never reaches the text baseline. */
+.scribekit-docs-hero-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: linear-gradient(rgba(20, 24, 58, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(20, 24, 58, 0.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 70%);
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 70%);
+}
+
+.scribekit-docs-hero-rule {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--scribekit-hero-rule, linear-gradient(90deg, #2563eb, #6d5df6 38%, #9a55d0 68%, #c4699e 100%));
+}
+
+.scribekit-docs-hero-body {
+    position: relative;
+    padding: clamp(28px, 4vw, 52px) clamp(22px, 3.4vw, 48px) clamp(26px, 3.4vw, 44px);
+    max-width: 780px;
 }
 
 .scribekit-docs-hero-eyebrow {
     display: inline-flex;
     align-items: center;
-    margin-bottom: 18px;
-    padding: 5px 12px;
+    gap: 8px;
+    padding: 6px 13px;
     border: 1px solid var(--scribekit-primary-soft, #c7d2fe);
     border-radius: 999px;
-    background: var(--scribekit-primary-subtle, #edf2fe);
+    /* Solid-ish white rather than a brand tint: the pill sits ON the panel's gradient, and a
+       translucent tint over it turns a different colour at each end of the hero. */
+    background: rgba(255, 255, 255, 0.8);
     font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.13em;
     text-transform: uppercase;
     color: var(--scribekit-primary, #2563eb);
 }
 
 .scribekit-docs-hero-title {
-    margin: 0;
-    font-size: clamp(2.1rem, 3vw + 1rem, 3rem);
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
+    margin: 20px 0 0;
+    font-family: var(--scribekit-font-display, inherit);
+    font-size: clamp(2.15rem, 4.4vw, 3.15rem);
+    font-weight: 500;
+    letter-spacing: -0.038em;
+    line-height: 1.03;
     color: var(--scribekit-ink, #0b1b36);
+    text-wrap: pretty;
 }
 
 .scribekit-docs-hero-desc {
     margin: 16px 0 0;
     max-width: 60ch;
-    font-size: clamp(1.05rem, 0.6vw + 0.9rem, 1.2rem);
+    font-size: clamp(16px, 1.2vw, 18px);
     line-height: 1.6;
     color: var(--scribekit-ink-soft, #5a6b82);
+    text-wrap: pretty;
 }
 
-.scribekit-docs-sections {
-    display: grid;
-    /* `auto-FIT`, not `auto-fill`: auto-fill keeps the empty tracks it laid out, so a corpus with a
-       single nav group left its one card stranded at the 280px minimum, hard against the left of a
-       1040px column. auto-fit collapses the unused tracks so that card grows instead.
-       Grows to 420px, NOT to `1fr`: a card is a list of page rows with the arrow pinned to the
-       trailing edge, so a full-column card puts ~850px of dead space between each label and its
-       arrow, and overhangs the 60ch hero copy above it. The cap keeps every card near the reading
-       measure however few there are. */
-    grid-template-columns: repeat(auto-fit, minmax(280px, 420px));
-    gap: 16px;
-}
-
-.scribekit-docs-section-card {
-    /* No padding: the page rows are full-bleed, so their hover fill runs to the card's edges.
-       `overflow: hidden` is what clips that fill to the corner radius. */
-    overflow: hidden;
-    background: var(--scribekit-surface, #ffffff);
-    border: 1px solid var(--scribekit-border, #e5eaf0);
-    border-radius: 20px;
-    box-shadow: var(--scribekit-card-shadow, 0 14px 34px rgba(40, 30, 120, 0.06));
-}
-
-/* The card has no hover of its own - the rows inside it are the hover targets, and a card that
-   also lifted would move the row out from under the pointer. */
-.scribekit-docs-section-head {
+.scribekit-docs-hero-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 13px;
-    padding: 20px 20px 16px;
+    gap: 11px;
+    margin-top: 28px;
 }
 
-.scribekit-docs-section-icon {
+.scribekit-docs-hero-action {
     display: inline-flex;
-    flex: none;
     align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    color: var(--scribekit-primary, #2563eb);
-    background: var(--scribekit-primary-subtle, #edf2fe);
+    gap: 9px;
+    height: 50px;
+    padding: 0 24px;
+    border-radius: 14px;
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
 
-.scribekit-docs-section-title {
-    margin: 0;
-    font-size: 17px;
+.scribekit-docs-hero-action.is-primary {
+    background: var(--scribekit-hero-cta, linear-gradient(120deg, #2563eb, #6d5df6 62%, #8a54d8));
+    color: var(--scribekit-on-primary, #ffffff);
+    box-shadow: 0 12px 28px rgba(74, 79, 225, 0.3);
+}
+
+.scribekit-docs-hero-action.is-primary:hover {
+    color: var(--scribekit-on-primary, #ffffff);
+    box-shadow: 0 16px 36px rgba(74, 79, 225, 0.4);
+}
+
+.scribekit-docs-hero-action.is-secondary {
+    padding: 0 22px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--scribekit-border-strong, rgba(20, 24, 58, 0.11));
+    color: var(--scribekit-nav-ink, #475569);
     font-weight: 600;
-    letter-spacing: -0.015em;
+}
+
+.scribekit-docs-hero-action.is-secondary:hover {
+    background: var(--scribekit-surface, #ffffff);
+    border-color: var(--scribekit-primary-soft, #c7d2fe);
     color: var(--scribekit-ink, #0b1b36);
 }
 
-.scribekit-docs-section-list {
+.scribekit-docs-hero-action-icon {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.7;
+}
+
+.scribekit-docs-hero-stats {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+    margin-top: 22px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--scribekit-ink-faint, #8189a8);
+}
+
+.scribekit-docs-hero-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.scribekit-docs-hero-stat-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--scribekit-ink-subtle, #cbd5e1);
+}
+
+.scribekit-docs-hero-stat-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--scribekit-success, #15a34a);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--scribekit-success, #15a34a) 14%, transparent);
+}
+
+/* --- Browse by topic --- */
+.scribekit-docs-topics {
+    margin-top: clamp(36px, 4.4vw, 56px);
+}
+
+.scribekit-docs-topics-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+}
+
+.scribekit-docs-topics-heading,
+.scribekit-docs-recent-heading {
     margin: 0;
-    padding: 0;
-    list-style: none;
-    border-top: 1px solid var(--scribekit-border, #e5eaf0);
+    font-family: var(--scribekit-font-display, inherit);
+    font-size: clamp(1.35rem, 2vw, 1.7rem);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    color: var(--scribekit-ink, #0b1b36);
 }
 
-/* Hairline BETWEEN rows only - a trailing border under the last row would double up with the
-   card's own bottom edge. */
-.scribekit-docs-section-list li + li {
-    border-top: 1px solid var(--scribekit-border, #e5eaf0);
-}
-
-.scribekit-docs-section-link {
+.scribekit-docs-topics-filter {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 20px;
-    font-size: 15.5px;
-    font-weight: 600;
-    color: var(--scribekit-nav-ink, #475569);
-    text-decoration: none;
+    gap: 9px;
+    /* `margin-left: auto` pushes it to the trailing edge on one line; once the row wraps it is the
+       only item on its line and the auto margin is inert, so it simply sits left. */
+    margin-left: auto;
+    height: 42px;
+    padding: 0 14px;
+    min-width: min(260px, 100%);
+    border-radius: 12px;
+    background: var(--scribekit-surface, #ffffff);
+    border: 1.5px solid var(--scribekit-border, #e5eaf0);
+    box-shadow: 0 6px 16px rgba(40, 30, 120, 0.05);
+    color: var(--scribekit-ink-faint, #8189a8);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.scribekit-docs-topics-filter.is-focused {
+    border-color: var(--scribekit-primary, #2563eb);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--scribekit-primary, #2563eb) 12%, transparent);
+}
+
+.scribekit-docs-topics-filter-icon {
+    flex: none;
+}
+
+.scribekit-docs-topics-filter-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+/* Safari draws its own clear button on `type=search`; ours is the one that resets React state. */
+.scribekit-docs-topics-filter-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.scribekit-docs-topics-filter-clear {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: var(--scribekit-bg-subtle, #f1f2fa);
+    color: var(--scribekit-ink-faint, #8189a8);
+    cursor: pointer;
     transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.scribekit-docs-section-link:hover {
-    background: var(--scribekit-bg-subtle, #f7f8fe);
+.scribekit-docs-topics-filter-clear:hover {
     color: var(--scribekit-ink, #0b1b36);
 }
 
-.scribekit-docs-section-link-icon {
-    display: inline-flex;
+.scribekit-docs-topic-grid {
+    display: grid;
+    /* auto-FIT, so a corpus with one topic gets one full-width card instead of a 288px orphan
+       beside two empty tracks. */
+    grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+/* Every tinted surface on a card derives from ONE custom property, set inline per topic, so a
+   consumer recolours a whole card by changing a single value (or restyles every card at once by
+   setting `--scribekit-topic-accent` on an ancestor). */
+.scribekit-docs-topic-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 20px 16px;
+    border-radius: 20px;
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    box-shadow: 0 12px 30px rgba(40, 30, 120, 0.05);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.scribekit-docs-topic-card:hover {
+    box-shadow: 0 20px 40px rgba(40, 30, 120, 0.1);
+    border-color: color-mix(in srgb, var(--scribekit-topic-accent, #5b57f2) 30%, transparent);
+}
+
+.scribekit-docs-topic-wash {
+    position: absolute;
+    top: -46px;
+    right: -34px;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--scribekit-topic-accent, #5b57f2) 10%, transparent) 0%, transparent 70%);
+}
+
+.scribekit-docs-topic-icon {
+    position: relative;
+    display: flex;
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 8px;
-    color: var(--scribekit-primary, #2563eb);
-    background: var(--scribekit-primary-subtle, #edf2fe);
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    line-height: 1;
+    color: var(--scribekit-topic-accent, #5b57f2);
+    background: color-mix(in srgb, var(--scribekit-topic-accent, #5b57f2) 10%, transparent);
 }
 
-.scribekit-docs-section-arrow {
+.scribekit-docs-topic-title {
+    position: relative;
+    display: block;
+    margin-top: 14px;
+    font-family: var(--scribekit-font-display, inherit);
+    font-size: 16.5px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--scribekit-ink, #0b1b36);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.scribekit-docs-topic-title:hover {
+    color: var(--scribekit-topic-accent, #5b57f2);
+}
+
+.scribekit-docs-topic-blurb {
+    position: relative;
+    display: block;
+    margin-top: 6px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--scribekit-ink-faint, #8189a8);
+}
+
+.scribekit-docs-topic-pages {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin-top: 14px;
+    border-top: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+.scribekit-docs-topic-page {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--scribekit-nav-ink, #475569);
+    text-decoration: none;
+    border-bottom: 1px solid var(--scribekit-border, #e5eaf0);
+    transition: color 0.15s ease, padding-left 0.15s ease;
+}
+
+.scribekit-docs-topic-page:hover {
+    color: var(--scribekit-topic-accent, #5b57f2);
+    padding-left: 4px;
+}
+
+.scribekit-docs-topic-bullet {
+    width: 5px;
+    height: 5px;
     flex: none;
-    /* Pushed to the trailing edge, so the label sits next to its icon rather than being stretched
-       across the row by a `space-between`. */
+    border-radius: 50%;
+    background: var(--scribekit-topic-accent, #5b57f2);
+    opacity: 0.5;
+}
+
+/* The label is the only flexible cell, so a long title ellipsizes instead of shoving the chevron
+   out of the card. `min-width: 0` is what lets a flex child shrink below its content width. */
+.scribekit-docs-topic-page-label {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scribekit-docs-topic-page svg,
+.scribekit-docs-topic-count svg {
+    flex: none;
+}
+
+.scribekit-docs-topic-page svg {
     margin-left: auto;
     color: var(--scribekit-ink-subtle, #cbd5e1);
-    transition: transform 0.18s ease, color 0.18s ease;
 }
 
-.scribekit-docs-section-link:hover .scribekit-docs-section-arrow {
+.scribekit-docs-topic-count {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 7px;
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--scribekit-topic-accent, #5b57f2);
+}
+
+.scribekit-docs-topic-count:hover svg {
     transform: translateX(3px);
-    color: var(--scribekit-primary, #2563eb);
+}
+
+.scribekit-docs-topic-count svg {
+    transition: transform 0.18s ease;
+}
+
+/* --- Filter results (replaces the grid while a query is typed) --- */
+.scribekit-docs-results {
+    margin-top: 18px;
+    border-radius: 20px;
+    background: var(--scribekit-surface, #ffffff);
+    border: 1px solid var(--scribekit-border, #e5eaf0);
+    box-shadow: 0 12px 30px rgba(40, 30, 120, 0.05);
+    overflow: hidden;
+}
+
+.scribekit-docs-results-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--scribekit-border, #e5eaf0);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-faint, #8189a8);
+}
+
+.scribekit-docs-result {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 15px 20px;
+    text-decoration: none;
+    border-bottom: 1px solid var(--scribekit-border, #e5eaf0);
+    transition: background-color 0.15s ease;
+}
+
+.scribekit-docs-result:last-child {
+    border-bottom: 0;
+}
+
+.scribekit-docs-result:hover {
+    background: var(--scribekit-bg-subtle, #f7f8fe);
+}
+
+.scribekit-docs-result-text {
+    min-width: 0;
+    flex: 1;
+}
+
+.scribekit-docs-result-title {
+    display: block;
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-result-desc {
+    display: block;
+    margin-top: 4px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--scribekit-ink-faint, #8189a8);
+}
+
+.scribekit-docs-result-tag {
+    flex: none;
+    margin-top: 2px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--scribekit-topic-accent, #5b57f2);
+    background: color-mix(in srgb, var(--scribekit-topic-accent, #5b57f2) 10%, transparent);
+}
+
+.scribekit-docs-results-empty {
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.scribekit-docs-results-empty-title {
+    font-family: var(--scribekit-font-display, inherit);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-results-empty-hint {
+    margin: 8px 0 0;
+    font-size: 14px;
+    color: var(--scribekit-ink-faint, #8189a8);
+}
+
+.scribekit-docs-results-empty-btn {
+    margin-top: 16px;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 11px;
+    border: 1px solid var(--scribekit-border-strong, rgba(20, 24, 58, 0.11));
+    background: var(--scribekit-surface, #ffffff);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--scribekit-nav-ink, #475569);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.scribekit-docs-results-empty-btn:hover {
+    border-color: var(--scribekit-primary, #2563eb);
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+/* --- Recently updated --- */
+.scribekit-docs-recent {
+    margin-top: clamp(36px, 4.4vw, 56px);
+}
+
+.scribekit-docs-recent-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 14px;
+}
+
+.scribekit-docs-recent-row {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 13px 12px;
+    border-radius: 13px;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.scribekit-docs-recent-row:hover {
+    background: var(--scribekit-bg-subtle, #f7f8fe);
+}
+
+.scribekit-docs-recent-date {
+    flex: none;
+    width: 56px;
+    font-family: var(--scribekit-font-display, inherit);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-faint, #8189a8);
+}
+
+.scribekit-docs-recent-title {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-recent-tag {
+    flex: none;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--scribekit-ink-faint, #8189a8);
 }
 
 /* --- Docs: mobile (stack the app; collapse the left nav; hide the right minimap) --- */
@@ -2393,8 +2840,14 @@
     .scribekit-docs-toc-link,
     .scribekit-docs-feedback-btn,
     .scribekit-docs-prevnext-card,
-    .scribekit-docs-section-link,
-    .scribekit-docs-section-arrow,
+    .scribekit-docs-hero-action,
+    .scribekit-docs-topics-filter,
+    .scribekit-docs-topic-card,
+    .scribekit-docs-topic-title,
+    .scribekit-docs-topic-page,
+    .scribekit-docs-topic-count svg,
+    .scribekit-docs-result,
+    .scribekit-docs-recent-row,
     .scribekit-docs-burger-bar,
     .scribekit-docs-nav.is-drawer {
         transition: none;

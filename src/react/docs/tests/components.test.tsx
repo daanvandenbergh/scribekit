@@ -684,23 +684,52 @@ describe("DocsIndex", () => {
         expect(html).toContain(">Documentation</span>");
     });
 
-    it("gives every page row its own icon chip, not just the card", () => {
+    it("composes all three sections", () => {
         const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} />);
-        const rowIcons = html.match(/scribekit-docs-section-link-icon/g) ?? [];
-        // One chip per page in the fixture's nav tree, so a regression to a single card-level icon
-        // (what this replaced) fails here rather than only in a browser.
-        expect(rowIcons.length).toBeGreaterThan(1);
+        expect(html).toContain("scribekit-docs-hero-panel");
+        expect(html).toContain("scribekit-docs-topic-card");
+        expect(html).toContain("Browse by topic");
+    });
+
+    it("renders `children` between the hero and the topic grid", () => {
+        const html = renderToStaticMarkup(
+            <DocsIndex docs={fakeDocs()}>
+                <div data-own-band="">Start here</div>
+            </DocsIndex>,
+        );
+        // The whole point of the slot: a hand-built band sits AFTER the hero and BEFORE the topics,
+        // which is the one arrangement a consumer cannot achieve by wrapping the component.
+        expect(html.indexOf("scribekit-docs-hero-panel")).toBeLessThan(html.indexOf("data-own-band"));
+        expect(html.indexOf("data-own-band")).toBeLessThan(html.indexOf("scribekit-docs-topics"));
     });
 
     it("replaces the hero with a custom header", () => {
         const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} header={<div data-custom-hero="">Hi</div>} />);
         expect(html).toContain("data-custom-hero");
-        expect(html).not.toContain("SwiftGuard docs");
+        expect(html).not.toContain("scribekit-docs-hero-panel");
     });
 
     it("omits the JSON-LD script when the docs have no site config", () => {
         const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs({ site: undefined })} />);
         expect(html).not.toContain("application/ld+json");
         expect(html).toContain("Documentation"); // falls back to a generic hero title
+    });
+
+    it("derives the hero stats from the corpus, and drops them on request", () => {
+        const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} title="Handbook" />);
+        expect(html).toContain("scribekit-docs-hero-stats");
+        expect(html).toMatch(/\d+ articles/);
+        expect(html).toMatch(/\d+ topics/);
+
+        const bare = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} title="Handbook" showStats={false} />);
+        expect(bare).not.toContain("scribekit-docs-hero-stats");
+    });
+
+    it("claims no update date when no page declares one", () => {
+        // The fixture's pages carry no `updated`, so an "Updated <date>" stat would be an invented
+        // fact - and `shortDate` would render it as the empty string, i.e. a bare "Updated ".
+        const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} title="Handbook" />);
+        expect(html).not.toContain("Updated ");
+        expect(html).not.toContain("scribekit-docs-recent");
     });
 });

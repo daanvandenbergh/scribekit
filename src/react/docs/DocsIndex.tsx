@@ -1,119 +1,197 @@
 import { type ElementType, type ReactElement, type ReactNode } from "react";
 import type { Docs } from "../../docs/docs.js";
+import type { NavItem } from "../../docs/types.js";
 import { docsLabels } from "../shared/i18n.js";
 import { JsonLd } from "../shared/JsonLd.js";
+import { DocsHero, type DocsHeroAction } from "./DocsHero.js";
+import { DocsRecentlyUpdated, type DocsRecentItem } from "./DocsRecentlyUpdated.js";
+import { DocsTopicGrid, type DocsTopic } from "./DocsTopicGrid.js";
 import { DocsIcon } from "./internal/icons.js";
 
 /**
  * Props for {@link DocsIndex}.
  */
 export interface DocsIndexProps {
-    /** The configured `Docs` instance. The nav tree, site config, and SEO are derived from it. */
+    /** The configured `Docs` instance. The topics, the dates and the SEO are derived from it. */
     docs: Docs;
     /** Which language's docs to list. Defaults to the docs' default locale. */
     lang?: string;
-    /** Element used for the card links. Defaults to `"a"`; pass `next/link` for client-side nav. */
+    /** Element used for every link. Defaults to `"a"`; pass `next/link` for client-side nav. */
     linkComponent?: ElementType;
     /** Hero heading. Defaults to `"<brand> docs"` (or `"Documentation"` when no brand is set). */
     title?: string;
     /** Hero subtitle. Defaults to the site `description`. */
     description?: string;
+    /** Hero call-to-action buttons. None by default - the index does not invent a destination. */
+    actions?: DocsHeroAction[];
     /** Replaces the built-in hero entirely (e.g. your own heading + search box). */
     header?: ReactNode;
+    /** Rendered between the hero and the topic grid - the slot for your own "start here" band. */
+    children?: ReactNode;
+    /** Set `false` to drop the hero's article/topic/updated fact row. */
+    showStats?: boolean;
+    /** Set `false` to drop the topic grid's filter box. */
+    filter?: boolean;
+    /** How many pages each topic card lists. Defaults to `3`. */
+    pagesPerTopic?: number;
+    /** How many rows the recently-updated list shows. Defaults to `5`; `0` drops the section. */
+    recentCount?: number;
+    /** Accent cycle for the topic cards. */
+    accents?: string[];
     /**
-     * Optional override for how a page's `icon` name is rendered - used both for a section card's
-     * own glyph and for the chip on each of its page rows. Receives the front-matter `icon` value
-     * (or `undefined`) and returns the icon node. Defaults to the built-in icon set, which sizes
-     * the card glyph at 18px and the row chips at 14px; an override renders at whatever size it
-     * chooses, so size it from the CSS box (`.scribekit-docs-section-icon` / `-link-icon`).
+     * Optional override for how a page's `icon` name is rendered on a topic card. Receives the
+     * front-matter `icon` value (or `undefined`) and returns the icon node. Defaults to the
+     * built-in icon set. Resolved to an ELEMENT here, before it reaches the client-side grid.
      */
     renderIcon?: (name: string | undefined) => ReactNode;
 }
 
 /**
- * The docs landing page: a hero (an eyebrow, the title and the site description) followed by a grid
- * of section cards, one per navigation group - an icon and heading above a list of full-bleed rows,
- * one per page, each with its own icon chip - assembled from `docs.getNavTree(lang)`.
- * A server component: pass your configured `Docs` instance and it derives the sections and the SEO
- * JSON-LD (a `CollectionPage` + `BreadcrumbList` + `ItemList`) from `docs.site`. Wrap it with your
- * own navbar/footer; the left `DocsSidebar` from your route layout renders alongside it.
+ * Formats an ISO `YYYY-MM-DD` as a short "28 Jul" in the reader's language, in UTC.
+ *
+ * UTC deliberately: the value is a bare calendar date with no time in it, so letting the runtime's
+ * zone interpret it would shift a page dated the 1st back to the 31st for every reader west of
+ * Greenwich - a date that is wrong by a day, silently, and only for some people.
+ *
+ * @param iso - the date string, or undefined.
+ * @param lang - the BCP 47 language to format in.
+ * @returns the short date, or an empty string when the input is missing or unparseable.
+ */
+function shortDate(iso: string | undefined, lang: string): string {
+    if (!iso) {
+        return "";
+    }
+    const parsed = new Date(`${iso}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) {
+        return "";
+    }
+    return new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", timeZone: "UTC" }).format(parsed);
+}
+
+/**
+ * The packaged docs landing page: {@link DocsHero}, then anything you pass as `children`, then
+ * {@link DocsTopicGrid} and {@link DocsRecentlyUpdated} - every section wired from one `Docs`
+ * instance, in the arrangement the components were designed for.
+ *
+ * This is the CONVENIENCE path, not the only one. Each section is exported on its own and takes
+ * plain data, so a consumer who wants their own order, their own extra bands, or only one of the
+ * three composes them directly and never renders this. Use `children` for the common case of one
+ * hand-built band (a "start here" row) between the hero and the topics.
+ *
+ * Topics come from the nav tree: one card per GROUP, or per TAB when its groups are unlabelled
+ * (the shape a small corpus with no `group:` front-matter has). The card's icon is its first
+ * page's, and its blurb is the tab/group config `description`.
  *
  * @param props - see {@link DocsIndexProps}.
- * @returns the docs index section.
+ * @returns the docs index page.
  */
 export function DocsIndex({
     docs,
     lang,
-    linkComponent: Link = "a",
+    linkComponent = "a",
     title,
     description,
+    actions,
     header,
+    children,
+    showStats = true,
+    filter = true,
+    pagesPerTopic = 3,
+    recentCount = 5,
+    accents,
     renderIcon,
 }: DocsIndexProps): ReactElement {
     const resolvedLang = lang ?? docs.defaultLocale;
     const labels = docsLabels(resolvedLang);
     const site = docs.site;
     const nav = docs.getNavTree(resolvedLang);
-    const sections = nav.tabs.flatMap((tab) => tab.groups.map((group) => ({ tab, group })));
-    // Default to the localized "Documentation" word so a non-English index never shows an English
-    // H1; pass `title` (e.g. "<Brand> docs") to override.
     const heroTitle = title ?? labels.title;
     const heroDesc = description ?? site?.description;
-    // The eyebrow is the localized "Documentation" word, which is also what `heroTitle` falls back
-    // to - so it renders only when the consumer overrode the title (e.g. "<Brand> docs"), never as
-    // a label sitting directly above the identical H1.
+    // The eyebrow is the localized "Documentation" word, which `heroTitle` also falls back to - so
+    // it renders only when the consumer overrode the title, never above an identical H1.
     const eyebrow = heroTitle === labels.title ? undefined : labels.title;
-    const icon = (name: string | undefined, size = 18): ReactNode => (renderIcon ? renderIcon(name) : <DocsIcon name={name} size={size} />);
+    const icon = (name: string | undefined): ReactNode => (renderIcon ? renderIcon(name) : <DocsIcon name={name} size={19} />);
+
+    /**
+     * One topic per group, falling back to the tab when its groups carry no label of their own -
+     * without that fallback a corpus with no `group:` front-matter (every page in the unlabelled
+     * bucket) would render a single nameless card.
+     */
+    const topics: DocsTopic[] = nav.tabs.flatMap((tab) =>
+        tab.groups.map((group) => {
+            const labelled = group.label !== "";
+            const pages = group.items;
+            return {
+                id: `${tab.id}-${group.id}`,
+                title: labelled ? group.label : tab.label,
+                description: (labelled ? group.description : tab.description) ?? undefined,
+                href: pages[0]?.href ?? "",
+                icon: icon(pages[0]?.icon),
+                pages: pages.map((item) => ({ title: item.label, href: item.href, description: item.description })),
+            } satisfies DocsTopic;
+        }),
+    );
+
+    const everyPage: NavItem[] = nav.tabs.flatMap((tab) => tab.groups.flatMap((group) => group.items));
+    /** Topic title per page href, so a recent row can be tagged without a second pass over the tree. */
+    const topicOf = new Map<string, string>();
+    topics.forEach((topic) => topic.pages.forEach((page) => topicOf.set(page.href, topic.title)));
+
+    const recent: DocsRecentItem[] = everyPage
+        .filter((item) => item.updated)
+        .sort((a, b) => (a.updated! < b.updated! ? 1 : -1))
+        .slice(0, recentCount)
+        .map((item) => ({
+            title: item.label,
+            href: item.href,
+            updatedLabel: shortDate(item.updated, resolvedLang),
+            category: topicOf.get(item.href),
+        }));
+
+    const newest = everyPage.filter((item) => item.updated).sort((a, b) => (a.updated! < b.updated! ? 1 : -1))[0];
+    const stats = showStats
+        ? [
+              { label: labels.articleCountLabel(everyPage.length) },
+              { label: labels.topicCountLabel(topics.length) },
+              // Only claim an update date when a page actually declares one.
+              ...(newest ? [{ label: labels.updatedLabel(shortDate(newest.updated, resolvedLang)), live: true }] : []),
+          ]
+        : undefined;
 
     return (
-        <section className="scribekit-docs-index">
+        <div className="scribekit-docs-index">
             {header ?? (
-                <header className="scribekit-docs-hero">
-                    {eyebrow ? <span className="scribekit-docs-hero-eyebrow">{eyebrow}</span> : null}
-                    <h1 className="scribekit-docs-hero-title">{heroTitle}</h1>
-                    {heroDesc ? <p className="scribekit-docs-hero-desc">{heroDesc}</p> : null}
-                </header>
+                <DocsHero
+                    title={heroTitle}
+                    description={heroDesc}
+                    eyebrow={eyebrow}
+                    actions={actions}
+                    stats={stats}
+                    linkComponent={linkComponent}
+                />
             )}
 
-            <div className="scribekit-docs-sections">
-                {sections.map(({ tab, group }, index) => {
-                    const heading = group.label || tab.label;
-                    return (
-                        <div key={`${tab.id}-${group.id}-${index}`} className="scribekit-docs-section-card">
-                            <div className="scribekit-docs-section-head">
-                                <span className="scribekit-docs-section-icon">{icon(group.items[0]?.icon)}</span>
-                                {heading ? <h2 className="scribekit-docs-section-title">{heading}</h2> : null}
-                            </div>
-                            <ul className="scribekit-docs-section-list">
-                                {group.items.map((item) => (
-                                    <li key={item.slug}>
-                                        <Link href={item.href} className="scribekit-docs-section-link">
-                                            <span className="scribekit-docs-section-link-icon">{icon(item.icon, 14)}</span>
-                                            <span className="scribekit-docs-section-link-label">{item.label}</span>
-                                            <svg
-                                                className="scribekit-docs-section-arrow"
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 16 16"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth={1.7}
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                aria-hidden="true"
-                                            >
-                                                <path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5" />
-                                            </svg>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    );
-                })}
-            </div>
+            {children}
+
+            <DocsTopicGrid
+                topics={topics}
+                labels={{
+                    heading: labels.browseByTopic,
+                    filterPlaceholder: labels.filterPages,
+                    clearFilter: labels.clearFilter,
+                    pageCount: labels.pageCountLabel,
+                    resultCount: labels.resultCountLabel,
+                    noMatches: labels.noMatchesLabel,
+                }}
+                pagesPerTopic={pagesPerTopic}
+                filter={filter}
+                accents={accents}
+                linkComponent={linkComponent}
+            />
+
+            <DocsRecentlyUpdated items={recent} heading={labels.recentlyUpdated} linkComponent={linkComponent} />
 
             {site ? <JsonLd data={docs.indexJsonLd(resolvedLang)} /> : null}
-        </section>
+        </div>
     );
 }

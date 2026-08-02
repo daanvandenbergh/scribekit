@@ -102,9 +102,21 @@ export type NavLabel = string | Record<string, string>;
 
 /**
  * One entry in a `tabs`/`groups` ordering config: either a bare id (matching a page's `tab`/
- * `group` value) or an `{ id, label }` pair when the display label should differ from the id.
+ * `group` value) or an object when the display label, or the one-line blurb the docs index prints
+ * under a topic heading, should differ from the id.
  */
-export type NavConfigEntry = string | { id: string; label?: NavLabel | undefined };
+export type NavConfigEntry =
+    | string
+    | {
+          id: string;
+          label?: NavLabel | undefined;
+          /**
+           * One sentence describing what this tab/group covers, shown under its heading on the
+           * docs index topic card. Same per-locale rules as {@link NavLabel}. Omit it and the card
+           * simply renders no blurb.
+           */
+          description?: NavLabel | undefined;
+      };
 
 /**
  * A resolved sidebar navigation item - one documentation page as it appears in the nav tree,
@@ -118,8 +130,19 @@ export interface NavItem {
     title: string;
     /** The sidebar label ({@link DocMeta.label} when set, else the title). */
     label: string;
+    /**
+     * The page's one-sentence summary ({@link DocMeta.description}). Carried here so the docs
+     * index can print and FILTER on it without a second read of every page. Optional on the TYPE
+     * only so a hand-built `NavItem` (a fixture, a consumer's synthetic entry) stays valid -
+     * `buildNavTree` always sets it, since `DocMeta.description` is required.
+     */
+    description?: string | undefined;
     /** Icon identifier passed through from front-matter, if any. */
     icon?: string | undefined;
+    /** Last-updated date as an ISO `YYYY-MM-DD` string, when the page declares one. */
+    updated?: string | undefined;
+    /** Estimated whole-minute reading time, when known. */
+    readingTime?: number | undefined;
     /** Root-relative URL for the page, built via the shared `localePath`. */
     href: string;
     /** The page's language code. */
@@ -140,6 +163,8 @@ export interface NavGroup {
     id: string;
     /** The display label (the config label when provided, else the id). */
     label: string;
+    /** The configured blurb for this language, when the config entry declares one. */
+    description?: string | undefined;
     /** The group's pages, in resolved sidebar order. */
     items: NavItem[];
 }
@@ -152,6 +177,8 @@ export interface NavTab {
     id: string;
     /** The display label (the config label when provided, else the id). */
     label: string;
+    /** The configured blurb for this language, when the config entry declares one. */
+    description?: string | undefined;
     /** The tab's groups, in resolved order. */
     groups: NavGroup[];
 }
