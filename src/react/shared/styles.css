@@ -1878,6 +1878,20 @@
         flex-direction: column;
     }
 
+    /*
+     * `width: 100%` is what makes the article fill this column, and it is NOT redundant with
+     * `align-items: stretch` above. Turning the row into a column turns `.scribekit-doc`'s
+     * `margin: 0 auto` into AUTO CROSS-AXIS MARGINS, and per flexbox a item with an auto margin on
+     * the cross axis is never stretched - so the article silently fell back to shrink-to-fit and
+     * came out 2px wider than its container, which is enough to make every docs page on a 360px
+     * phone scroll sideways. (`align-self: stretch` does not fix it, for the same reason; only
+     * giving the cross size an explicit value does.) In the row layout above, `width` is the MAIN
+     * size and `flex-basis: 0%` outranks it, so this line changes nothing there.
+     */
+    .scribekit-doc {
+        width: 100%;
+    }
+
     .scribekit-docs-toc {
         display: none;
     }
