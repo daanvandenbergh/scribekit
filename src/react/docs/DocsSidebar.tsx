@@ -35,13 +35,13 @@ export interface DocsSidebarProps {
      * Extra content pinned below the nav groups - the drawer's footer. Meant for the chrome the top
      * bar cannot fit on a phone: a language picker, a theme toggle, a secondary link.
      *
-     * SHOWN BELOW 640px ONLY, by the kit's own stylesheet. Above that the top bar has the room back,
-     * so put the control there and leave this hidden - which also means you should NOT hide your
-     * content here behind your own class: hiding the CHILD leaves this slot's border and margin
-     * behind as an empty ruled box under the nav. Pass it unconditionally; the breakpoint decides.
+     * SHOWN BY THE KIT'S OWN STYLESHEET, and only when the top bar has given up on the controls: on
+     * a phone, or at any width where `DocsNavbar` measures itself too narrow to hold its `actions`
+     * (it sets `data-cramped`, and the same rule that hides them there reveals this). So pass the
+     * SAME nodes to both slots and let the stylesheet pick - exactly one copy is ever displayed.
      *
-     * On a 390px screen the navbar carries a brand, a search icon and a hamburger and nothing else,
-     * so whatever you give `DocsNavbar.languagePicker` and `DocsNavbar.actions` moves here.
+     * Which also means you should NOT hide your content here behind your own class: hiding the CHILD
+     * leaves this slot's border and margin behind as an empty ruled box under the nav.
      */
     footer?: ReactNode;
     /**

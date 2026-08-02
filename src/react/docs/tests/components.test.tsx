@@ -494,6 +494,29 @@ describe("DocsNavbar", () => {
         const html = renderToStaticMarkup(<DocsNavbar brandName="Scribekit" lang="fr" />);
         expect(html).toContain("Rechercher dans la doc…");
     });
+
+    /*
+     * The auto-hide starts OFF, so the served HTML always carries the actions and the first paint on
+     * a wide screen is already correct. Flipping the initial state to `true` would look harmless -
+     * the effect corrects it a frame later - but it would blank the CTA out of every crawler's copy
+     * of the page and flash it in on every desktop load. The effect itself needs layout to test, so
+     * it is verified in a real browser; this pins the half that server-renders.
+     */
+    it("server-renders the actions unhidden - the cramped measurement is a client decision", () => {
+        const html = renderToStaticMarkup(
+            <DocsNavbar
+                brandName="Scribekit"
+                actions={[
+                    <DocsNavbarButton key="d" href="/dashboard" variant="primary">
+                        Dashboard
+                    </DocsNavbarButton>,
+                ]}
+            />,
+        );
+        expect(html).not.toContain("data-cramped");
+        expect(html).toContain("scribekit-docs-navbar-right");
+        expect(html).toContain("Dashboard");
+    });
 });
 
 describe("DocsNavbarButton", () => {

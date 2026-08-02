@@ -993,12 +993,11 @@
     align-items: center;
     justify-content: center;
     flex: none;
-    width: 38px;
-    height: 38px;
-    margin-left: -6px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     background: transparent;
     color: var(--scribekit-ink, #0b1b36);
     cursor: pointer;
@@ -1016,9 +1015,8 @@
 .scribekit-docs-burger {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    width: 17px;
-    height: 12px;
+    gap: 5px;
+    width: 19px;
 }
 
 .scribekit-docs-burger-bar {
@@ -1034,7 +1032,7 @@
 
 /* Open: the outer bars converge and cross, the middle one fades out beneath them. */
 .scribekit-docs-navbar-burger[aria-expanded="true"] .scribekit-docs-burger-bar:nth-child(1) {
-    transform: translateY(5px) rotate(45deg);
+    transform: translateY(7px) rotate(45deg);
 }
 
 .scribekit-docs-navbar-burger[aria-expanded="true"] .scribekit-docs-burger-bar:nth-child(2) {
@@ -1042,7 +1040,7 @@
 }
 
 .scribekit-docs-navbar-burger[aria-expanded="true"] .scribekit-docs-burger-bar:nth-child(3) {
-    transform: translateY(-5px) rotate(-45deg);
+    transform: translateY(-7px) rotate(-45deg);
 }
 
 /*
@@ -1055,9 +1053,10 @@
     position: fixed;
     inset: 0;
     z-index: 65;
-    background: rgba(11, 27, 54, 0.42);
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
+    background: rgba(16, 18, 48, 0.42);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    animation: scribekit-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (min-width: 1081px) {
@@ -1127,8 +1126,10 @@
 }
 
 /*
- * The `footer` slot, pinned below the nav groups. PHONE ONLY - it exists for the chrome the top bar
- * cannot fit at that width, and above 640px the top bar has the room back.
+ * The `footer` slot, pinned below the nav groups. It exists for the chrome the top bar cannot fit,
+ * so it is shown exactly when the bar has given up on it: on a phone (below) or whenever the bar
+ * measures itself cramped (see the `data-cramped` rules above). Above that, the bar has the room
+ * back and shows the controls itself.
  *
  * Hidden by default rather than by the consumer, because a consumer hiding their own content here
  * leaves this wrapper's border and margin behind: an empty ruled box under the nav. See
@@ -1205,6 +1206,23 @@
     gap: 18px;
     flex: 0 0 auto;
     font-size: 14px;
+}
+
+/*
+ * TOO NARROW FOR THE ACTIONS. `DocsNavbar` measures the row and sets `data-cramped` when the brand,
+ * the search and the menu button no longer leave room for them - see the effect in that file for why
+ * this is measured rather than a breakpoint.
+ *
+ * The two rules are ONE decision and must stay together: the actions leave the bar, and the drawer's
+ * `footer` slot - where the consumer renders the same controls - is what shows them instead. Ship the
+ * first without the second and a narrow window simply loses the CTA.
+ */
+.scribekit-docs-navbar[data-cramped] .scribekit-docs-navbar-right {
+    display: none;
+}
+
+.scribekit-docs-navbar[data-cramped] ~ * .scribekit-docs-nav-foot {
+    display: flex;
 }
 
 /* Fallback styling for RAW top-level <a> actions - a bare, unstyled link a consumer dropped into
@@ -2064,40 +2082,128 @@
         bottom: 0;
         left: 0;
         z-index: 70;
-        width: min(320px, 84vw);
+        width: min(378px, 90vw);
         border-bottom: 0;
         border-right: 1px solid var(--scribekit-border-strong, #eaeef4);
-        background: var(--scribekit-surface, #ffffff);
-        transform: translateX(-100%);
-        transition: transform 0.26s cubic-bezier(0.165, 0.84, 0.44, 1);
+        /* A brand-tinted wash down the first 150px, so the panel opens as a surface of its own
+           rather than a white rectangle laid over a white page. */
+        background:
+            linear-gradient(180deg, rgba(109, 93, 246, 0.07), rgba(109, 93, 246, 0) 150px),
+            var(--scribekit-surface, #ffffff);
+        /* -104%, not -100%: the extra 4% carries the open panel's shadow off-screen with it. */
+        transform: translateX(-104%);
+        transition: transform 0.44s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .scribekit-docs-nav.is-drawer.is-open {
         transform: none;
-        box-shadow: 0 18px 50px rgba(11, 27, 54, 0.24);
+        box-shadow: 30px 0 70px rgba(20, 24, 58, 0.18);
     }
 
-    /* The drawer scrolls itself - a long nav must not be cut off at the bottom of the screen. */
+    /*
+     * A COLUMN whose middle section scrolls. The panel used to scroll as one piece, which took the
+     * search field and the CTA off-screen the moment a reader scrolled the nav - the two controls
+     * they are most likely to want after looking through it. Now only the groups move.
+     */
     .scribekit-docs-nav.is-drawer .scribekit-docs-nav-inner {
+        display: flex;
+        flex-direction: column;
         height: 100%;
         max-height: none;
-        overflow-y: auto;
-        padding: 16px 16px 32px;
+        overflow: hidden;
+        padding: 0;
     }
 
     /* Inside the drawer the groups are always laid out; the PANEL is what slides. */
     .scribekit-docs-nav.is-drawer .scribekit-docs-groups {
         display: block;
-        margin-top: 12px;
+        flex: 1;
+        /* Without this a flex child refuses to shrink below its content, so the panel grows past the
+           screen and the footer is pushed off the bottom instead of the list scrolling. */
+        min-height: 0;
+        overflow-y: auto;
+        margin: 0;
+        padding: 2px 12px 20px;
     }
 
     /* The drawer's own header - a brand and a close button - replaces the inline toggle here. */
     .scribekit-docs-nav.is-drawer .scribekit-docs-nav-head {
         display: flex;
+        flex: none;
+        margin: 0;
+        padding: 16px 16px 14px 20px;
+        border-bottom: 0;
+    }
+
+    .scribekit-docs-nav.is-drawer .scribekit-docs-nav-close {
+        width: 36px;
+        height: 36px;
+        margin-right: 0;
+        border-radius: 11px;
     }
 
     .scribekit-docs-nav.is-drawer .scribekit-docs-nav-search {
         display: block;
+        flex: none;
+        margin: 0;
+        padding: 2px 18px 16px;
+    }
+
+    .scribekit-docs-nav.is-drawer .scribekit-docs-nav-search .scribekit-docs-search-trigger {
+        height: 44px;
+        padding: 0 13px;
+        border-width: 1.5px;
+        border-radius: 13px;
+        font-size: 15px;
+    }
+
+    /* Roomier rows than the desktop column: this is a thumb target, not a pointer target. */
+    .scribekit-docs-nav.is-drawer .scribekit-docs-navitem {
+        padding: 11px 10px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .scribekit-docs-nav.is-drawer .scribekit-docs-navitem.is-active {
+        position: relative;
+        font-weight: 700;
+        background: linear-gradient(120deg, rgba(37, 99, 235, 0.09), rgba(109, 93, 246, 0.09));
+        box-shadow: inset 0 0 0 1px rgba(91, 87, 242, 0.16);
+    }
+
+    /* The spine down the active row - what makes "you are here" readable at a glance in a list
+       that is otherwise all the same shape. */
+    .scribekit-docs-nav.is-drawer .scribekit-docs-navitem.is-active::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 11px;
+        bottom: 11px;
+        width: 3px;
+        border-radius: 3px;
+        background: linear-gradient(180deg, var(--scribekit-primary, #2563eb), var(--scribekit-violet, #6d5df6));
+    }
+
+    .scribekit-docs-nav.is-drawer .scribekit-docs-group-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+    }
+
+    .scribekit-docs-nav.is-drawer .scribekit-docs-group + .scribekit-docs-group {
+        margin-top: 22px;
+    }
+
+    /*
+     * Pinned to the bottom of the panel, and paying out `env(safe-area-inset-bottom)` so the CTA
+     * clears the home indicator instead of sitting under it.
+     */
+    .scribekit-docs-nav.is-drawer .scribekit-docs-nav-foot {
+        flex: none;
+        margin: 0;
+        padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
+        background: linear-gradient(180deg, var(--scribekit-surface, #ffffff), var(--scribekit-bg-subtle, #f7f9fc));
     }
 
     .scribekit-docs-page {
@@ -2139,8 +2245,10 @@
  */
 @media (max-width: 640px) {
     .scribekit-docs-navbar {
-        gap: 8px;
-        padding: 0 14px;
+        gap: 6px;
+        /* Asymmetric: the brand is text and wants the inset, the trailing icon buttons carry their
+           own padding and would look exiled at the same distance from the edge. */
+        padding: 0 14px 0 18px;
     }
 
     .scribekit-docs-navbar-pill {
@@ -2179,13 +2287,16 @@
     }
 
     .scribekit-docs-navbar-search .scribekit-docs-search-trigger {
-        width: 38px;
-        height: 38px;
+        width: 40px;
+        height: 40px;
         padding: 0;
         justify-content: center;
         border-color: transparent;
+        border-radius: 12px;
         background: transparent;
-        color: var(--scribekit-ink, #0b1b36);
+        /* Muted, not ink: it is the quieter of the two glyphs beside it, and the menu button is the
+           one a reader should find first. */
+        color: var(--scribekit-ink-muted, #4a5568);
     }
 
     .scribekit-docs-navbar-search .scribekit-docs-search-trigger:hover {
@@ -2227,6 +2338,20 @@
     .scribekit-docs-burger-bar,
     .scribekit-docs-nav.is-drawer {
         transition: none;
+    }
+
+    .scribekit-docs-nav-backdrop {
+        animation: none;
+    }
+}
+
+/* The drawer's backdrop fading up, so the page dims into place instead of snapping dark. */
+@keyframes scribekit-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
     }
 }
 
