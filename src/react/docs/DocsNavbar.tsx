@@ -139,11 +139,16 @@ export function DocsNavbar({
                 needed += brand.getBoundingClientRect().width + Math.max(0, clipped);
                 slots += 1;
             }
-            // The search SLOT grows to fill whatever slack the bar has, so its box is never a width
-            // it needs; the trigger inside it is (capped on a desktop, a bare icon on a phone).
+            // The search SLOT flexes - it grows into slack and gives width back under pressure - so
+            // neither its box nor the trigger's current size is a width it NEEDS. Its stylesheet
+            // floor is: the point below which the field stops being usable and the actions are what
+            // should go instead. Reading the floor is also what keeps this symmetric, so the actions
+            // come back at the same width they left at rather than at the field's full 440px.
             const trigger = pick(".scribekit-docs-navbar-search .scribekit-docs-search-trigger");
             if (trigger) {
-                needed += trigger.getBoundingClientRect().width;
+                const floor = parseFloat(getComputedStyle(trigger).minWidth);
+                const live = trigger.getBoundingClientRect().width;
+                needed += floor > 0 ? Math.min(live, floor) : live;
                 slots += 1;
             }
             const burger = pick(".scribekit-docs-navbar-burger");

@@ -1194,6 +1194,14 @@
 
 .scribekit-docs-navbar-search .scribekit-docs-search-trigger {
     max-width: var(--scribekit-docs-navbar-search-width, 440px);
+    /*
+     * A FLOOR, and it is what makes the auto-hide fire at all. The slot is `flex: 1`, so without one
+     * the field just keeps giving up width to whatever the actions need - measured at 71px on a
+     * 660px window, a search box narrower than its own placeholder, while the CTA beside it sat at
+     * full size. Below this width the row is genuinely out of room and the ACTIONS are what should
+     * go, which is the decision `DocsNavbar` makes (it reads this value; see that effect).
+     */
+    min-width: 200px;
 }
 
 .scribekit-docs-navbar-spacer {
@@ -2289,6 +2297,8 @@
     .scribekit-docs-navbar-search .scribekit-docs-search-trigger {
         width: 40px;
         height: 40px;
+        /* Drops the desktop floor - here the control IS the icon, and 200px of it is the whole bar. */
+        min-width: 0;
         padding: 0;
         justify-content: center;
         border-color: transparent;
