@@ -15,7 +15,7 @@
 
 export { DocsPage, type DocsPageProps } from "./DocsPage.js";
 export { DocsIndex, type DocsIndexProps } from "./DocsIndex.js";
-export { DocsHero, type DocsHeroProps, type DocsHeroAction, type DocsHeroStat } from "./DocsHero.js";
+export { DocsHero, type DocsHeroProps, type DocsHeroAction, type DocsHeroStat, type DocsHeroVariant } from "./DocsHero.js";
 export {
     DocsTopicGrid,
     type DocsTopicGridProps,

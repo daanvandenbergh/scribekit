@@ -3,7 +3,7 @@ import type { Docs } from "../../docs/docs.js";
 import type { NavItem } from "../../docs/types.js";
 import { docsLabels } from "../shared/i18n.js";
 import { JsonLd } from "../shared/JsonLd.js";
-import { DocsHero, type DocsHeroAction } from "./DocsHero.js";
+import { DocsHero, type DocsHeroAction, type DocsHeroVariant } from "./DocsHero.js";
 import { DocsRecentlyUpdated, type DocsRecentItem } from "./DocsRecentlyUpdated.js";
 import { DocsTopicGrid, type DocsTopic } from "./DocsTopicGrid.js";
 import { DocsIcon } from "./internal/icons.js";
@@ -24,6 +24,8 @@ export interface DocsIndexProps {
     description?: string;
     /** Hero call-to-action buttons. None by default - the index does not invent a destination. */
     actions?: DocsHeroAction[];
+    /** How the hero is framed - `"plain"` (the default) or the gradient `"card"`. */
+    heroVariant?: DocsHeroVariant;
     /** Replaces the built-in hero entirely (e.g. your own heading + search box). */
     header?: ReactNode;
     /** Rendered between the hero and the topic grid - the slot for your own "start here" band. */
@@ -94,6 +96,7 @@ export function DocsIndex({
     title,
     description,
     actions,
+    heroVariant,
     header,
     children,
     showStats = true,
@@ -175,6 +178,7 @@ export function DocsIndex({
                     eyebrow={eyebrow}
                     actions={actions}
                     stats={stats}
+                    variant={heroVariant}
                     linkComponent={linkComponent}
                 />
             )}

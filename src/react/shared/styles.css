@@ -1931,7 +1931,7 @@
 }
 
 /* --- Docs index / landing --------------------------------------------------------------------
- * Three independent sections (`.scribekit-docs-hero-panel`, `.scribekit-docs-topics`,
+ * Three independent sections (`.scribekit-docs-hero`, `.scribekit-docs-topics`,
  * `.scribekit-docs-recent`) plus the wrapper `DocsIndex` stacks them in. Each section is styled
  * standalone - none reaches into a parent for width, spacing or colour - because a consumer is
  * expected to drop one into a page of their own, in any order, between bands the kit never sees.
@@ -1949,9 +1949,16 @@
     padding: clamp(20px, 3vw, 40px) clamp(18px, 3vw, 32px) 96px;
 }
 
-/* --- Index hero --- */
-.scribekit-docs-hero-panel {
+/* --- Index hero ---
+ * PLAIN IS THE BASE, `.is-card` is the addition. Written that way round because the plain hero is
+ * the default and the common case: a consumer who wants bare content on the page should not have
+ * to un-set a border, a fill, a shadow and a radius to get it.
+ */
+.scribekit-docs-hero {
     position: relative;
+}
+
+.scribekit-docs-hero.is-card {
     overflow: hidden;
     border-radius: 26px;
     border: 1px solid var(--scribekit-border, #e5eaf0);
@@ -1994,10 +2001,19 @@
     background: var(--scribekit-hero-rule, linear-gradient(90deg, #2563eb, #6d5df6 38%, #9a55d0 68%, #c4699e 100%));
 }
 
+/*
+ * Plain: no inset at all, so the title starts on the same left edge as the sections below it -
+ * a padded plain hero is the tell-tale sign of a card whose background was merely removed.
+ * The bottom padding is the gap to the next section, and is the one part both variants share.
+ */
 .scribekit-docs-hero-body {
     position: relative;
-    padding: clamp(28px, 4vw, 52px) clamp(22px, 3.4vw, 48px) clamp(26px, 3.4vw, 44px);
     max-width: 780px;
+    padding-bottom: clamp(26px, 3.4vw, 44px);
+}
+
+.is-card > .scribekit-docs-hero-body {
+    padding: clamp(28px, 4vw, 52px) clamp(22px, 3.4vw, 48px) clamp(26px, 3.4vw, 44px);
 }
 
 .scribekit-docs-hero-eyebrow {
@@ -2007,14 +2023,21 @@
     padding: 6px 13px;
     border: 1px solid var(--scribekit-primary-soft, #c7d2fe);
     border-radius: 999px;
-    /* Solid-ish white rather than a brand tint: the pill sits ON the panel's gradient, and a
-       translucent tint over it turns a different colour at each end of the hero. */
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--scribekit-primary-subtle, #edf2fe);
     font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.13em;
     text-transform: uppercase;
     color: var(--scribekit-primary, #2563eb);
+}
+
+/*
+ * On the card the pill sits ON a gradient, and the brand tint is translucent - so it would read as
+ * a different colour at each end of the hero. Near-solid white instead, which is stable across the
+ * whole width.
+ */
+.is-card .scribekit-docs-hero-eyebrow {
+    background: rgba(255, 255, 255, 0.8);
 }
 
 .scribekit-docs-hero-title {

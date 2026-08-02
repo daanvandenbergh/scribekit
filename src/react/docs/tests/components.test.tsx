@@ -686,7 +686,7 @@ describe("DocsIndex", () => {
 
     it("composes all three sections", () => {
         const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} />);
-        expect(html).toContain("scribekit-docs-hero-panel");
+        expect(html).toContain("scribekit-docs-hero");
         expect(html).toContain("scribekit-docs-topic-card");
         expect(html).toContain("Browse by topic");
     });
@@ -699,14 +699,14 @@ describe("DocsIndex", () => {
         );
         // The whole point of the slot: a hand-built band sits AFTER the hero and BEFORE the topics,
         // which is the one arrangement a consumer cannot achieve by wrapping the component.
-        expect(html.indexOf("scribekit-docs-hero-panel")).toBeLessThan(html.indexOf("data-own-band"));
+        expect(html.indexOf("scribekit-docs-hero")).toBeLessThan(html.indexOf("data-own-band"));
         expect(html.indexOf("data-own-band")).toBeLessThan(html.indexOf("scribekit-docs-topics"));
     });
 
     it("replaces the hero with a custom header", () => {
         const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} header={<div data-custom-hero="">Hi</div>} />);
         expect(html).toContain("data-custom-hero");
-        expect(html).not.toContain("scribekit-docs-hero-panel");
+        expect(html).not.toContain("scribekit-docs-hero-title");
     });
 
     it("omits the JSON-LD script when the docs have no site config", () => {

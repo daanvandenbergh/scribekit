@@ -51,6 +51,30 @@ describe("DocsHero", () => {
         expect(html).not.toContain("scribekit-docs-hero-stats");
     });
 
+    it("is plain by default, with no card chrome in the tree at all", () => {
+        const html = renderToStaticMarkup(<DocsHero title="Docs" />);
+        expect(html).not.toContain("is-card");
+        // The decorative layers are absolutely-positioned inside a bounded surface. Left in the
+        // tree for a plain hero they paint a stray gradient bar across the top of the page, so
+        // they must be ABSENT, not merely unstyled.
+        expect(html).not.toContain("scribekit-docs-hero-glow");
+        expect(html).not.toContain("scribekit-docs-hero-grid");
+        expect(html).not.toContain("scribekit-docs-hero-rule");
+    });
+
+    it("adds the card chrome only when asked", () => {
+        const html = renderToStaticMarkup(<DocsHero title="Docs" variant="card" />);
+        expect(html).toContain("is-card");
+        expect(html).toContain("scribekit-docs-hero-glow");
+        expect(html).toContain("scribekit-docs-hero-grid");
+        expect(html).toContain("scribekit-docs-hero-rule");
+    });
+
+    it("keeps a consumer className alongside the variant class", () => {
+        const html = renderToStaticMarkup(<DocsHero title="Docs" variant="card" className="my-hero" />);
+        expect(html).toContain("scribekit-docs-hero is-card my-hero");
+    });
+
     it("makes the first action primary and the rest secondary, without being told", () => {
         const html = renderToStaticMarkup(
             <DocsHero

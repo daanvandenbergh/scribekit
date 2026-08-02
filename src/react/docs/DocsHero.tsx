@@ -33,6 +33,18 @@ export interface DocsHeroStat {
 }
 
 /**
+ * How the {@link DocsHero} is framed.
+ *
+ * `"plain"` is bare content on the page background - no border, no fill, no decoration - which is
+ * what most docs sites want and is therefore the default. `"card"` wraps the same content in the
+ * tinted gradient panel: a rounded, bordered surface with two colour washes, a graph-paper grid
+ * fading downwards, and a spectrum rule along the top edge.
+ *
+ * The choice is purely presentational; the markup inside is identical either way.
+ */
+export type DocsHeroVariant = "plain" | "card";
+
+/**
  * Props for {@link DocsHero}.
  */
 export interface DocsHeroProps {
@@ -46,6 +58,8 @@ export interface DocsHeroProps {
     actions?: DocsHeroAction[] | undefined;
     /** The dot-separated fact row under the buttons. Omitted entirely when empty. */
     stats?: DocsHeroStat[] | undefined;
+    /** How the hero is framed. Defaults to `"plain"`. See {@link DocsHeroVariant}. */
+    variant?: DocsHeroVariant | undefined;
     /** Element used for the action links. Defaults to `"a"`; pass `next/link` for client-side nav. */
     linkComponent?: ElementType;
     /** Extra nodes rendered inside the panel, after the stat row. */
@@ -55,14 +69,19 @@ export interface DocsHeroProps {
 }
 
 /**
- * The docs index's opening panel: an eyebrow, the title, a lead paragraph, a row of calls to
- * action and a row of facts, on a tinted gradient card with a grid wash and a spectrum rule along
- * its top edge.
+ * The docs index's opening block: an eyebrow, the title, a lead paragraph, a row of calls to action
+ * and a row of facts - bare on the page by default, or wrapped in the tinted gradient panel with
+ * `variant="card"`.
  *
  * A pure presentational server component - it takes finished, already-localized strings and knows
  * nothing about a `Docs` instance, which is what lets it head a hand-assembled index page as
- * happily as the packaged {@link DocsIndex}. Every decorative layer is `aria-hidden` and driven by
- * CSS custom properties (`--scribekit-hero-*`), so a consumer restyles it without forking it.
+ * happily as the packaged {@link DocsIndex}.
+ *
+ * The card's decorative layers are `aria-hidden` and NOT RENDERED AT ALL in the plain variant,
+ * rather than hidden with CSS: they are three absolutely-positioned elements that only make sense
+ * inside a bounded surface, and leaving them in the tree for a consumer to un-style is how a
+ * "plain" hero ends up with a stray gradient bar across the top of the page. Each one is driven by
+ * a `--scribekit-hero-*` custom property, so a card can be restyled without forking the component.
  *
  * @param props - see {@link DocsHeroProps}.
  * @returns the hero section.
@@ -73,17 +92,23 @@ export function DocsHero({
     eyebrow,
     actions,
     stats,
+    variant = "plain",
     linkComponent: Link = "a",
     children,
     className,
 }: DocsHeroProps): ReactElement {
     const buttons = actions ?? [];
     const facts = stats ?? [];
+    const card = variant === "card";
     return (
-        <section className={`scribekit-docs-hero-panel${className ? ` ${className}` : ""}`}>
-            <span aria-hidden="true" className="scribekit-docs-hero-glow" />
-            <span aria-hidden="true" className="scribekit-docs-hero-grid" />
-            <span aria-hidden="true" className="scribekit-docs-hero-rule" />
+        <section className={`scribekit-docs-hero${card ? " is-card" : ""}${className ? ` ${className}` : ""}`}>
+            {card ? (
+                <>
+                    <span aria-hidden="true" className="scribekit-docs-hero-glow" />
+                    <span aria-hidden="true" className="scribekit-docs-hero-grid" />
+                    <span aria-hidden="true" className="scribekit-docs-hero-rule" />
+                </>
+            ) : null}
 
             <div className="scribekit-docs-hero-body">
                 {eyebrow ? <span className="scribekit-docs-hero-eyebrow">{eyebrow}</span> : null}
