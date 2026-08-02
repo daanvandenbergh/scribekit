@@ -2148,8 +2148,10 @@
     display: flex;
     align-items: center;
     gap: 9px;
-    /* `margin-left: auto` pushes it to the trailing edge on one line; once the row wraps it is the
-       only item on its line and the auto margin is inert, so it simply sits left. */
+    /* Pushes the box to the trailing edge while it shares a line with the heading. NOTE it is NOT
+       self-cancelling on wrap: a flex item alone on a wrapped line still has free space beside it,
+       so the auto margin strands the box against the right edge with a gap to its left. The media
+       query at the foot of this section is what undoes it. */
     margin-left: auto;
     height: 42px;
     padding: 0 14px;
@@ -2537,6 +2539,30 @@
     letter-spacing: 0.07em;
     text-transform: uppercase;
     color: var(--scribekit-ink-faint, #8189a8);
+}
+
+/*
+ * Narrow: the topic heading and its filter box stop sharing a line. Drop the auto margin so the
+ * box spans the column instead of hanging off the right edge with dead space beside it, and let a
+ * recent row's date and tag wrap rather than crushing the title between them.
+ */
+@media (max-width: 560px) {
+    .scribekit-docs-topics-filter {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .scribekit-docs-recent-row {
+        flex-wrap: wrap;
+        gap: 4px 10px;
+    }
+
+    .scribekit-docs-recent-title {
+        /* Own line, full width: at this size the ellipsis would otherwise eat most of the title. */
+        flex: 1 0 100%;
+        order: 3;
+        white-space: normal;
+    }
 }
 
 /* --- Docs: mobile (stack the app; collapse the left nav; hide the right minimap) --- */
