@@ -162,10 +162,17 @@ export function DocsNavbar({
         measure();
         const observer = new ResizeObserver(measure);
         observer.observe(header);
-        // The actions themselves too: a web font swapping in resizes a CTA without the bar changing
-        // size, and that is exactly a frame where the answer flips.
-        const right = pick(".scribekit-docs-navbar-right");
-        if (right) observer.observe(right);
+        // The brand and the actions THEMSELVES, not just the bar around them: what changes here is
+        // usually their content, and the bar's own box never moves when it does.
+        for (const selector of [".scribekit-docs-navbar-brand", ".scribekit-docs-navbar-right"]) {
+            const element = pick(selector);
+            if (element) observer.observe(element);
+        }
+        // AND once the web fonts land. This is the race that made the answer depend on the load:
+        // a wordmark measured in the fallback face is narrower than the same wordmark in the real
+        // one, so a bar that "fits" during the swap can be overflowing a frame later - and a font
+        // swap resizes no observed box, so nothing above would ever ask again.
+        void document.fonts?.ready.then(measure);
         return () => observer.disconnect();
     }, [actions, languagePicker, showSearch, withNavToggle]);
 
