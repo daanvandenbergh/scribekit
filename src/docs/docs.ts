@@ -369,6 +369,7 @@ export class Docs {
         return buildNavTree(this.getAllDocs(resolved), {
             basePath: this.basePath,
             defaultLocale: this.defaultLocale,
+            lang: resolved,
             prefixDefaultLocale: this.prefixDefaultLocale,
             tabs: this.tabs,
             groups: this.groups,

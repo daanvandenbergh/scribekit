@@ -87,10 +87,24 @@ export interface Doc {
 }
 
 /**
+ * The display label for a `tabs`/`groups` config entry: one string used in every language, or a
+ * per-locale map keyed by locale code (`{ en: "Get started", nl: "Aan de slag" }`).
+ *
+ * A bare string is the right choice only for a label that genuinely does not translate (a product
+ * name, "API"). Anything else needs the map: the nav label is rendered into the sidebar, the
+ * breadcrumb and the docs index card heading, so a single string prints the SAME language on every
+ * localized page - an English heading a few pixels from Dutch body copy.
+ *
+ * A map falls back to the docs' `defaultLocale` for a locale it has no entry for, and finally to
+ * the entry's own id, so a half-translated map degrades to something readable rather than blank.
+ */
+export type NavLabel = string | Record<string, string>;
+
+/**
  * One entry in a `tabs`/`groups` ordering config: either a bare id (matching a page's `tab`/
  * `group` value) or an `{ id, label }` pair when the display label should differ from the id.
  */
-export type NavConfigEntry = string | { id: string; label?: string | undefined };
+export type NavConfigEntry = string | { id: string; label?: NavLabel | undefined };
 
 /**
  * A resolved sidebar navigation item - one documentation page as it appears in the nav tree,

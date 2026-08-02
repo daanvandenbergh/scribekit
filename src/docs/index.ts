@@ -20,6 +20,7 @@ export type {
     NavConfigEntry,
     NavGroup,
     NavItem,
+    NavLabel,
     NavTab,
     NavTree,
 } from "./types.js";

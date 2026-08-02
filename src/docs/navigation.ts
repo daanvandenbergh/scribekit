@@ -19,6 +19,12 @@ export interface NavBuildOptions {
     basePath?: string | undefined;
     /** The default locale code (served unprefixed unless `prefixDefaultLocale`). */
     defaultLocale: string;
+    /**
+     * The language this tree is being built for, which is what a per-locale tab/group label is
+     * resolved against. Defaults to `defaultLocale` - so an existing caller that omits it keeps
+     * getting the default-locale labels it always got.
+     */
+    lang?: string | undefined;
     /** When `true`, the default locale is URL-prefixed too. */
     prefixDefaultLocale?: boolean | undefined;
     /** Optional tab display order + labels. */
@@ -53,19 +59,37 @@ function configIndex(entries: NavConfigEntry[] | undefined, id: string): number 
 }
 
 /**
- * The display label a config array assigns to `id`, or `undefined` when the id is absent or the
- * entry is a bare string (in which case the caller falls back to the id itself).
+ * The display label a config array assigns to `id`, resolved for one language - or `undefined`
+ * when the id is absent or the entry is a bare string (in which case the caller falls back to the
+ * id itself).
+ *
+ * A {@link NavLabel} map is read at `lang`, then at `defaultLocale`, then treated as absent. The
+ * per-locale form exists because this label reaches the sidebar, the breadcrumb AND the index card
+ * heading: a bare string prints one language on every localized page, which is why a docs site
+ * with a translated corpus must not use one for a translatable word.
  *
  * @param entries - the config array, or `undefined`.
  * @param id - the tab/group id.
- * @returns the configured label, or `undefined`.
+ * @param lang - the language being built.
+ * @param defaultLocale - the fallback locale for a map missing `lang`.
+ * @returns the configured label for this language, or `undefined`.
  */
-function configLabel(entries: NavConfigEntry[] | undefined, id: string): string | undefined {
+function configLabel(entries: NavConfigEntry[] | undefined, id: string, lang: string, defaultLocale: string): string | undefined {
     const entry = entries?.find((e) => entryId(e) === id);
-    if (!entry || typeof entry === "string") {
+    if (!entry || typeof entry === "string" || entry.label === undefined) {
         return undefined;
     }
-    return entry.label;
+    const { label } = entry;
+    if (typeof label === "string") {
+        return label;
+    }
+    // Own-property lookups only: a locale code like `constructor` must not resolve to an inherited
+    // `Object.prototype` member and be rendered as a heading.
+    const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(label, key);
+    if (has(lang)) {
+        return label[lang];
+    }
+    return has(defaultLocale) ? label[defaultLocale] : undefined;
 }
 
 /** A tab/group during assembly, tracking the tie-break keys stripped from the returned node. */
@@ -146,6 +170,7 @@ function compareItems(a: NavItem, b: NavItem): number {
  * @returns the ordered {@link NavTree}.
  */
 export function buildNavTree(metas: DocMeta[], opts: NavBuildOptions): NavTree {
+    const lang = opts.lang ?? opts.defaultLocale;
     let sequence = 0;
     /** Tab id -> its groups (group id -> items), preserving first-seen insertion order. */
     const tabs = new Map<string, { firstSeen: number; groups: Map<string, { firstSeen: number; items: NavItem[] }> }>();
@@ -175,7 +200,7 @@ export function buildNavTree(metas: DocMeta[], opts: NavBuildOptions): NavTree {
                 const items = group.items.slice().sort(compareItems);
                 return {
                     id: groupId,
-                    label: configLabel(opts.groups, groupId) ?? groupId,
+                    label: configLabel(opts.groups, groupId, lang, opts.defaultLocale) ?? groupId,
                     items,
                     configIndex: configIndex(opts.groups, groupId),
                     minOrder: Math.min(...items.map((i) => orderValue(i.order))),
@@ -185,7 +210,7 @@ export function buildNavTree(metas: DocMeta[], opts: NavBuildOptions): NavTree {
             navGroups.sort(compareOrdered);
             return {
                 id: tabId,
-                label: configLabel(opts.tabs, tabId) ?? tabId,
+                label: configLabel(opts.tabs, tabId, lang, opts.defaultLocale) ?? tabId,
                 groups: navGroups.map(({ id, label, items }) => ({ id, label, items })),
                 configIndex: configIndex(opts.tabs, tabId),
                 minOrder: Math.min(...navGroups.map((g) => g.minOrder)),

@@ -193,6 +193,55 @@ describe("buildNavTree - items", () => {
         expect(tree.tabs[0]!.groups[0]!.id).toBe("cfg");
         expect(tree.tabs[0]!.groups[0]!.label).toBe("Configuration");
     });
+
+    describe("per-locale config labels", () => {
+        /** A tab and a group both labelled in English and Dutch. */
+        const LOCALIZED: Pick<NavBuildOptions, "tabs" | "groups"> = {
+            tabs: [{ id: "doc", label: { en: "Get started", nl: "Aan de slag" } }],
+            groups: [{ id: "cfg", label: { en: "Configuration", nl: "Instellingen" } }],
+        };
+        const page = [meta("a", { tab: "doc", group: "cfg", order: 1 })];
+
+        it("resolves a label map against the language being built", () => {
+            const tree = buildNavTree(page, { ...OPTS, ...LOCALIZED, lang: "nl" });
+            expect(tree.tabs[0]!.label).toBe("Aan de slag");
+            expect(tree.tabs[0]!.groups[0]!.label).toBe("Instellingen");
+        });
+
+        it("falls back to the default locale for a language the map omits", () => {
+            const tree = buildNavTree(page, { ...OPTS, ...LOCALIZED, lang: "de" });
+            expect(tree.tabs[0]!.label).toBe("Get started");
+            expect(tree.tabs[0]!.groups[0]!.label).toBe("Configuration");
+        });
+
+        it("falls back to the default locale when `lang` is omitted entirely", () => {
+            // The pre-existing callers of this exported builder pass no `lang`; they must keep
+            // getting the default-locale label rather than the raw id.
+            const tree = buildNavTree(page, { ...OPTS, ...LOCALIZED });
+            expect(tree.tabs[0]!.label).toBe("Get started");
+        });
+
+        it("falls back to the id when the map covers neither the language nor the default", () => {
+            const tree = buildNavTree(page, {
+                ...OPTS,
+                tabs: [{ id: "doc", label: { fr: "Démarrer" } }],
+                lang: "nl",
+            });
+            expect(tree.tabs[0]!.label).toBe("doc");
+        });
+
+        it("keeps a bare string label as the all-locales value", () => {
+            const tree = buildNavTree(page, { ...OPTS, tabs: [{ id: "doc", label: "API" }], lang: "nl" });
+            expect(tree.tabs[0]!.label).toBe("API");
+        });
+
+        it("ignores an inherited Object.prototype member as a locale code", () => {
+            // `{}.constructor` is a truthy function; resolving it would render a heading of
+            // "function Object() { [native code] }".
+            const tree = buildNavTree(page, { ...OPTS, tabs: [{ id: "doc", label: { en: "Docs" } }], lang: "constructor" });
+            expect(tree.tabs[0]!.label).toBe("Docs");
+        });
+    });
 });
 
 describe("flattenNav", () => {

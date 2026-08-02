@@ -1981,9 +1981,13 @@
 .scribekit-docs-sections {
     display: grid;
     /* `auto-FIT`, not `auto-fill`: auto-fill keeps the empty tracks it laid out, so a corpus with a
-       single nav group left its one card stranded at the 280px minimum in a 1040px column. auto-fit
-       collapses the unused tracks, so one card fills the column and two still sit side by side. */
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+       single nav group left its one card stranded at the 280px minimum, hard against the left of a
+       1040px column. auto-fit collapses the unused tracks so that card grows instead.
+       Grows to 420px, NOT to `1fr`: a card is a list of page rows with the arrow pinned to the
+       trailing edge, so a full-column card puts ~850px of dead space between each label and its
+       arrow, and overhangs the 60ch hero copy above it. The cap keeps every card near the reading
+       measure however few there are. */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 420px));
     gap: 16px;
 }
 
