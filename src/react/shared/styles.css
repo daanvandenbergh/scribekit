@@ -2199,6 +2199,11 @@
         display: none;
     }
 
+    /* No ⌘K hint on a phone - there is no ⌘ key to press. The placeholder stays; that is the label. */
+    .scribekit-docs-nav-search .scribekit-docs-kbd-group {
+        display: none;
+    }
+
     .scribekit-docs-navbar-right {
         gap: 10px;
     }
