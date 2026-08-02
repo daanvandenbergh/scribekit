@@ -1946,6 +1946,21 @@
     margin-bottom: clamp(28px, 4vw, 44px);
 }
 
+.scribekit-docs-hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 5px 12px;
+    border: 1px solid var(--scribekit-primary-soft, #c7d2fe);
+    border-radius: 999px;
+    background: var(--scribekit-primary-subtle, #edf2fe);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--scribekit-primary, #2563eb);
+}
+
 .scribekit-docs-hero-title {
     margin: 0;
     font-size: clamp(2.1rem, 3vw + 1rem, 3rem);
@@ -1965,41 +1980,49 @@
 
 .scribekit-docs-sections {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* `auto-FIT`, not `auto-fill`: auto-fill keeps the empty tracks it laid out, so a corpus with a
+       single nav group left its one card stranded at the 280px minimum in a 1040px column. auto-fit
+       collapses the unused tracks, so one card fills the column and two still sit side by side. */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
 }
 
 .scribekit-docs-section-card {
-    padding: 22px 22px 18px;
+    /* No padding: the page rows are full-bleed, so their hover fill runs to the card's edges.
+       `overflow: hidden` is what clips that fill to the corner radius. */
+    overflow: hidden;
     background: var(--scribekit-surface, #ffffff);
     border: 1px solid var(--scribekit-border, #e5eaf0);
-    border-radius: 16px;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    border-radius: 20px;
+    box-shadow: var(--scribekit-card-shadow, 0 14px 34px rgba(40, 30, 120, 0.06));
 }
 
-.scribekit-docs-section-card:hover {
-    border-color: var(--scribekit-primary-soft, #c7d2fe);
-    box-shadow: var(--scribekit-card-shadow, 0 8px 24px -14px rgba(37, 99, 235, 0.28));
-    transform: translateY(-2px);
+/* The card has no hover of its own - the rows inside it are the hover targets, and a card that
+   also lifted would move the row out from under the pointer. */
+.scribekit-docs-section-head {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 20px 20px 16px;
 }
 
 .scribekit-docs-section-icon {
     display: inline-flex;
+    flex: none;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    margin-bottom: 14px;
-    border-radius: 9px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     color: var(--scribekit-primary, #2563eb);
     background: var(--scribekit-primary-subtle, #edf2fe);
 }
 
 .scribekit-docs-section-title {
-    margin: 0 0 10px;
-    font-size: 16px;
+    margin: 0;
+    font-size: 17px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     color: var(--scribekit-ink, #0b1b36);
 }
 
@@ -2009,26 +2032,49 @@
     margin: 0;
     padding: 0;
     list-style: none;
+    border-top: 1px solid var(--scribekit-border, #e5eaf0);
+}
+
+/* Hairline BETWEEN rows only - a trailing border under the last row would double up with the
+   card's own bottom edge. */
+.scribekit-docs-section-list li + li {
+    border-top: 1px solid var(--scribekit-border, #e5eaf0);
 }
 
 .scribekit-docs-section-link {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 0;
-    font-size: 14px;
+    gap: 12px;
+    padding: 16px 20px;
+    font-size: 15.5px;
+    font-weight: 600;
     color: var(--scribekit-nav-ink, #475569);
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .scribekit-docs-section-link:hover {
+    background: var(--scribekit-bg-subtle, #f7f8fe);
+    color: var(--scribekit-ink, #0b1b36);
+}
+
+.scribekit-docs-section-link-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
     color: var(--scribekit-primary, #2563eb);
+    background: var(--scribekit-primary-subtle, #edf2fe);
 }
 
 .scribekit-docs-section-arrow {
     flex: none;
+    /* Pushed to the trailing edge, so the label sits next to its icon rather than being stretched
+       across the row by a `space-between`. */
+    margin-left: auto;
     color: var(--scribekit-ink-subtle, #cbd5e1);
     transition: transform 0.18s ease, color 0.18s ease;
 }
@@ -2343,7 +2389,7 @@
     .scribekit-docs-toc-link,
     .scribekit-docs-feedback-btn,
     .scribekit-docs-prevnext-card,
-    .scribekit-docs-section-card,
+    .scribekit-docs-section-link,
     .scribekit-docs-section-arrow,
     .scribekit-docs-burger-bar,
     .scribekit-docs-nav.is-drawer {

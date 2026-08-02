@@ -658,6 +658,9 @@ describe("DocsIndex", () => {
         // hero (localized default title + site description)
         expect(html).toContain("Documentation");
         expect(html).toContain("The SwiftGuard documentation.");
+        // ...and NO eyebrow, because it is the same localized word as the default H1 - rendering it
+        // would stack "Documentation" above an identical "Documentation".
+        expect(html).not.toContain("scribekit-docs-hero-eyebrow");
         // section headings
         expect(html).toContain("Get started");
         expect(html).toContain("Configuration");
@@ -672,10 +675,21 @@ describe("DocsIndex", () => {
         expect(html).toContain("CollectionPage");
     });
 
-    it("uses custom title and description", () => {
+    it("uses custom title and description, and labels them with the localized eyebrow", () => {
         const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} title="Handbook" description="Everything you need." />);
         expect(html).toContain("Handbook");
         expect(html).toContain("Everything you need.");
+        // An overridden title no longer says what the page IS, so the eyebrow supplies the word.
+        expect(html).toContain("scribekit-docs-hero-eyebrow");
+        expect(html).toContain(">Documentation</span>");
+    });
+
+    it("gives every page row its own icon chip, not just the card", () => {
+        const html = renderToStaticMarkup(<DocsIndex docs={fakeDocs()} />);
+        const rowIcons = html.match(/scribekit-docs-section-link-icon/g) ?? [];
+        // One chip per page in the fixture's nav tree, so a regression to a single card-level icon
+        // (what this replaced) fails here rather than only in a browser.
+        expect(rowIcons.length).toBeGreaterThan(1);
     });
 
     it("replaces the hero with a custom header", () => {
