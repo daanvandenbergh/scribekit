@@ -3,6 +3,7 @@
 import { useEffect, useState, type ElementType, type ReactElement, type ReactNode } from "react";
 import type { NavTree } from "../../docs/types.js";
 import { docsLabels } from "../shared/i18n.js";
+import { DocsSearchButton } from "./DocsSearchButton.js";
 import { DocsIcon } from "./internal/icons.js";
 import { tabIdForPath } from "./internal/nav.js";
 import { useDocsNavState } from "./internal/nav-state.js";
@@ -39,10 +40,30 @@ export interface DocsSidebarProps {
      * content here behind your own class: hiding the CHILD leaves this slot's border and margin
      * behind as an empty ruled box under the nav. Pass it unconditionally; the breakpoint decides.
      *
-     * On a 390px screen the navbar carries a hamburger, a brand, a search and one CTA and little
-     * else, so whatever you give `DocsNavbar.languagePicker` is usually what has to move here.
+     * On a 390px screen the navbar carries a brand, a search icon and a hamburger and nothing else,
+     * so whatever you give `DocsNavbar.languagePicker` and `DocsNavbar.actions` moves here.
      */
     footer?: ReactNode;
+    /**
+     * The brand lockup for the DRAWER's header - normally the same logo + name you give
+     * `DocsNavbar`. Falls back to {@link DocsSidebarProps.label} (the word "Documentation") when
+     * omitted.
+     *
+     * Worth passing: an open drawer covers the left of the screen including the top bar, so it is
+     * the only thing the reader can see, and a lockup is what tells them whose docs they are in.
+     * Ignored outside drawer mode, where the navbar's own brand is still on screen.
+     */
+    brand?: ReactNode;
+    /**
+     * Whether the drawer carries a search field above the nav groups. Defaults to `true`.
+     *
+     * Drawer-only - it never appears in the desktop sidebar column, where the navbar's own search
+     * box is already on screen. Requires a {@link import("./DocsSearchProvider.js").DocsSearchProvider}
+     * like the rest of drawer mode.
+     */
+    showSearch?: boolean | undefined;
+    /** Placeholder for the drawer's search field. Defaults to the `lang` translation. */
+    searchPlaceholder?: string | undefined;
 }
 
 /**
@@ -72,6 +93,9 @@ export function DocsSidebar({
     label,
     renderIcon,
     footer,
+    brand,
+    showSearch = true,
+    searchPlaceholder,
 }: DocsSidebarProps): ReactElement {
     const navLabel = label ?? docsLabels(lang ?? "en").title;
     const icon = (name: string | undefined): ReactNode => (renderIcon ? renderIcon(name) : <DocsIcon name={name} />);
@@ -134,19 +158,38 @@ export function DocsSidebar({
             >
                 <div className="scribekit-docs-nav-inner">
                     {drawer ? (
-                        <div className="scribekit-docs-nav-head">
-                            <span className="scribekit-docs-nav-head-title">{navLabel}</span>
-                            <button
-                                type="button"
-                                className="scribekit-docs-nav-close"
-                                aria-label={docsLabels(lang ?? "en").closeNav}
-                                onClick={() => setNavOpen(false)}
-                            >
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                                    <path d="M4 4l8 8M12 4l-8 8" />
-                                </svg>
-                            </button>
-                        </div>
+                        <>
+                            <div className="scribekit-docs-nav-head">
+                                {/*
+                                  * The BRAND when the consumer gives us one, else the nav's label.
+                                  * A drawer that covers the whole left of the screen hides the top
+                                  * bar with it, so without the lockup here the panel is the only
+                                  * thing on screen and nothing on it says whose docs these are.
+                                  */}
+                                {brand ?? <span className="scribekit-docs-nav-head-title">{navLabel}</span>}
+                                <button
+                                    type="button"
+                                    className="scribekit-docs-nav-close"
+                                    aria-label={docsLabels(lang ?? "en").closeNav}
+                                    onClick={() => setNavOpen(false)}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                                        <path d="M4 4l8 8M12 4l-8 8" />
+                                    </svg>
+                                </button>
+                            </div>
+                            {/*
+                              * A real search FIELD, not the bar's icon. The drawer has the width for
+                              * a labelled box, and search is the fastest route through docs on a
+                              * phone - burying it behind an icon in the bar makes it the one thing
+                              * you have to already know about.
+                              */}
+                            {showSearch ? (
+                                <div className="scribekit-docs-nav-search">
+                                    <DocsSearchButton lang={lang} placeholder={searchPlaceholder} />
+                                </div>
+                            ) : null}
+                        </>
                     ) : (
                         <button
                             type="button"

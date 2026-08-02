@@ -91,22 +91,6 @@ export function DocsNavbar({
     const labels = docsLabels(lang ?? "en");
     return (
         <header className="scribekit-docs-navbar">
-            {withNavToggle ? (
-                <button
-                    type="button"
-                    className="scribekit-docs-navbar-burger"
-                    aria-label={navState.open ? labels.closeNav : labels.openNav}
-                    aria-expanded={navState.open}
-                    aria-controls="scribekit-docs-nav-body"
-                    onClick={() => navState.setOpen(!navState.open)}
-                >
-                    <span className="scribekit-docs-burger" aria-hidden="true">
-                        <span className="scribekit-docs-burger-bar" />
-                        <span className="scribekit-docs-burger-bar" />
-                        <span className="scribekit-docs-burger-bar" />
-                    </span>
-                </button>
-            ) : null}
             <Link href={homeHref} className="scribekit-docs-navbar-brand">
                 {logo ? (
                     <span className="scribekit-docs-navbar-logo" style={logoStyle}>
@@ -130,6 +114,27 @@ export function DocsNavbar({
                         <Fragment key={index}>{action}</Fragment>
                     ))}
                 </div>
+            ) : null}
+            {/*
+              * LAST in the row, so the phone bar reads brand -> search -> hamburger, with the menu
+              * button under the thumb at the outside edge. It is `display: none` above the layout
+              * breakpoint, so its position never affects the desktop bar.
+              */}
+            {withNavToggle ? (
+                <button
+                    type="button"
+                    className="scribekit-docs-navbar-burger"
+                    aria-label={navState.open ? labels.closeNav : labels.openNav}
+                    aria-expanded={navState.open}
+                    aria-controls="scribekit-docs-nav-body"
+                    onClick={() => navState.setOpen(!navState.open)}
+                >
+                    <span className="scribekit-docs-burger" aria-hidden="true">
+                        <span className="scribekit-docs-burger-bar" />
+                        <span className="scribekit-docs-burger-bar" />
+                        <span className="scribekit-docs-burger-bar" />
+                    </span>
+                </button>
             ) : null}
         </header>
     );

@@ -1090,6 +1090,21 @@
     color: var(--scribekit-ink, #0b1b36);
 }
 
+/*
+ * The drawer's search FIELD (not the bar's icon). Drawer chrome, so hidden by default and switched
+ * on inside the drawer breakpoint - the desktop sidebar column sits under a navbar that already has
+ * its own search box, and a second one there would just be a duplicate.
+ */
+.scribekit-docs-nav-search {
+    display: none;
+    margin-top: 14px;
+}
+
+.scribekit-docs-nav-search .scribekit-docs-search-trigger {
+    width: 100%;
+    max-width: none;
+}
+
 .scribekit-docs-nav-close {
     display: inline-flex;
     align-items: center;
@@ -1121,7 +1136,10 @@
  */
 .scribekit-docs-nav-foot {
     display: none;
-    align-items: center;
+    /* A COLUMN: this is where the top bar's actions go on a phone, and a CTA reads as a CTA at full
+       width. A row would shrink each one toward its label and line up three different shapes. */
+    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
     margin-top: 18px;
     padding-top: 14px;
@@ -2073,9 +2091,13 @@
         margin-top: 12px;
     }
 
-    /* The drawer's own header - a title and a close button - replaces the inline toggle here. */
+    /* The drawer's own header - a brand and a close button - replaces the inline toggle here. */
     .scribekit-docs-nav.is-drawer .scribekit-docs-nav-head {
         display: flex;
+    }
+
+    .scribekit-docs-nav.is-drawer .scribekit-docs-nav-search {
+        display: block;
     }
 
     .scribekit-docs-page {
@@ -2143,21 +2165,33 @@
     }
 
     /*
-     * Icon-only, and a FIXED square. As a `flex: 1` field it was handed whatever the overflowing row
-     * had left over, which was exactly ZERO pixels: the search button was in the DOM, correct and
-     * labelled, and no phone could see or tap it. It loses only the placeholder and a ⌘K hint for a
-     * key combination no phone keyboard has; `aria-label` already carries the accessible name.
+     * A BARE ICON - no field, no tile. As a `flex: 1` field it was handed whatever the overflowing
+     * row had left over, which was exactly ZERO pixels: the button was in the DOM, correct and
+     * labelled, and no phone could see or tap it. Boxing it instead put a second filled control
+     * next to the hamburger and made the little bar look busy, so it is now just the glyph. It
+     * loses only the placeholder and a ⌘K hint for a key combination no phone keyboard has, and the
+     * drawer carries a full search FIELD anyway; `aria-label` still carries the accessible name.
      */
     .scribekit-docs-navbar-search {
         flex: none;
-        /* The row has no flexible item left, so this is what still pins search + actions right. */
+        /* The row has no flexible item left, so this is what still pins search + menu right. */
         margin-left: auto;
     }
 
     .scribekit-docs-navbar-search .scribekit-docs-search-trigger {
-        width: 40px;
+        width: 38px;
+        height: 38px;
         padding: 0;
         justify-content: center;
+        border-color: transparent;
+        background: transparent;
+        color: var(--scribekit-ink, #0b1b36);
+    }
+
+    .scribekit-docs-navbar-search .scribekit-docs-search-trigger:hover {
+        border-color: transparent;
+        background: var(--scribekit-bg-subtle, #f7f9fc);
+        box-shadow: none;
     }
 
     .scribekit-docs-navbar-search .scribekit-docs-search-trigger-text,

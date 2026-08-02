@@ -359,6 +359,38 @@ describe("DocsSidebar", () => {
         expect(html).toContain('aria-label="Navigatie sluiten"');
     });
 
+    it("puts the brand lockup and a search field at the top of the drawer", () => {
+        const html = renderToStaticMarkup(
+            <DocsSearchProvider nav={NAV}>
+                <DocsSidebar nav={NAV} brand={<span data-brand="">Scribekit</span>} />
+            </DocsSearchProvider>,
+        );
+        expect(html).toContain("data-brand");
+        // The brand REPLACES the plain "Documentation" title when one is given.
+        expect(html).not.toContain("scribekit-docs-nav-head-title");
+        expect(html).toContain("scribekit-docs-nav-search");
+        // Brand first, then search, then the nav groups.
+        expect(html.indexOf("data-brand")).toBeLessThan(html.indexOf("scribekit-docs-nav-search"));
+        expect(html.indexOf("scribekit-docs-nav-search")).toBeLessThan(html.indexOf("scribekit-docs-group-items"));
+    });
+
+    it("falls back to the nav label when no brand is given, and drops the search on showSearch={false}", () => {
+        const html = renderToStaticMarkup(
+            <DocsSearchProvider nav={NAV}>
+                <DocsSidebar nav={NAV} showSearch={false} />
+            </DocsSearchProvider>,
+        );
+        expect(html).toContain("scribekit-docs-nav-head-title");
+        expect(html).toContain("Documentation");
+        expect(html).not.toContain("scribekit-docs-nav-search");
+    });
+
+    it("adds no drawer brand or search to a standalone (non-drawer) sidebar", () => {
+        const html = renderToStaticMarkup(<DocsSidebar nav={NAV} brand={<span data-brand="">Scribekit</span>} />);
+        expect(html).not.toContain("data-brand");
+        expect(html).not.toContain("scribekit-docs-nav-search");
+    });
+
     it("renders the footer slot below the groups, and nothing when it is omitted", () => {
         const withFooter = renderToStaticMarkup(
             <DocsSidebar nav={NAV} footer={<span data-foot="">Language</span>} />,
@@ -388,6 +420,10 @@ describe("DocsNavbar", () => {
         expect(html).toContain('aria-expanded="false"');
         // The bars are decoration; the button carries the accessible name.
         expect(html).toContain("scribekit-docs-burger-bar");
+        // ORDER: brand, then search, then the hamburger LAST - the phone bar reads left to right and
+        // the menu button belongs at the outside edge, under the thumb.
+        expect(html.indexOf("scribekit-docs-navbar-brand")).toBeLessThan(html.indexOf("scribekit-docs-navbar-search"));
+        expect(html.indexOf("scribekit-docs-navbar-search")).toBeLessThan(html.indexOf("scribekit-docs-navbar-burger"));
     });
 
     it("omits the hamburger without a provider (nothing owns the drawer state)", () => {
