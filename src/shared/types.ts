@@ -129,7 +129,12 @@ export interface PageMetadata {
               publishedTime?: string | undefined;
               modifiedTime?: string | undefined;
               authors?: string[] | undefined;
-              images?: { url: string }[] | undefined;
+              /**
+               * Share-card images. `alt` is emitted as `og:image:alt`, which is what a screen reader
+               * announces in place of the preview image when the link is shared - the picture itself
+               * is unreachable to that reader, so without it the card is announced as nothing.
+               */
+              images?: { url: string; alt?: string | undefined }[] | undefined;
               /** Language of this page's content (e.g. `"fr"`), emitted as `og:locale`. */
               locale?: string | undefined;
               /** Languages this page is also available in, emitted as `og:locale:alternate`. */
@@ -142,7 +147,13 @@ export interface PageMetadata {
               card?: string | undefined;
               title?: string | undefined;
               description?: string | undefined;
-              images?: string[] | undefined;
+              /**
+               * Share-card images, in the same object form as {@link PageMetadata.openGraph}'s, so
+               * `alt` reaches `twitter:image:alt` too. It was a bare `string[]`, which has nowhere to
+               * put the alt text - the two must stay the same shape or the next person adds the alt
+               * to one card and not the other.
+               */
+              images?: { url: string; alt?: string | undefined }[] | undefined;
           }
         | undefined;
 }

@@ -48,8 +48,26 @@ describe("buildDocMetadata", () => {
         expect(meta.openGraph?.type).toBe("article");
         expect(meta.openGraph?.url).toBe("/docs/greeting-and-voice");
         expect(meta.openGraph?.modifiedTime).toBe("2026-07-03");
-        expect(meta.openGraph?.images).toEqual([{ url: "/assets/docs/greeting-and-voice/hero.jpg" }]);
-        expect(meta.twitter?.images).toEqual(["/assets/docs/greeting-and-voice/hero.jpg"]);
+        expect(meta.openGraph?.images).toEqual([
+            { url: "/assets/docs/greeting-and-voice/hero.jpg", alt: "Greeting & voice" },
+        ]);
+        expect(meta.twitter?.images).toEqual([
+            { url: "/assets/docs/greeting-and-voice/hero.jpg", alt: "Greeting & voice" },
+        ]);
+    });
+
+    it("gives every share-card image an `alt`, taken from the page's own title", () => {
+        // og:image:alt is what a screen reader announces in place of the preview when the link is
+        // shared - the image is unreachable to that reader, so without it the card announces nothing.
+        // The title is used because it is ALREADY the alt on the rendered hero <img>, so the two
+        // cannot describe the same picture differently.
+        const meta = buildDocMetadata(DOC, SITE);
+        for (const image of [...(meta.openGraph?.images ?? []), ...(meta.twitter?.images ?? [])]) {
+            expect(image.alt, `${image.url} must carry alt text`).toBe(DOC.title);
+        }
+        // Vacuity guard: a builder that stopped emitting images would pass the loop above.
+        expect(meta.openGraph?.images).toHaveLength(1);
+        expect(meta.twitter?.images).toHaveLength(1);
     });
 
     it("omits publishedTime/modifiedTime/images when no dates or image are set", () => {

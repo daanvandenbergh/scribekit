@@ -126,7 +126,9 @@ export function buildPostMetadata(
             publishedTime: meta.date || undefined,
             modifiedTime: meta.updated ?? (meta.date || undefined),
             authors: [author],
-            images: meta.image ? [{ url: meta.image }] : undefined,
+            // `alt` is the entry's own title - the SAME string the rendered hero <img alt>
+            // already carries, so it is grounded in visible content rather than invented.
+            images: meta.image ? [{ url: meta.image, alt: meta.title }] : undefined,
             locale: ogLocale(meta.lang),
             alternateLocale: alternateLocale.length > 0 ? alternateLocale.map(ogLocale) : undefined,
         },
@@ -134,7 +136,7 @@ export function buildPostMetadata(
             card: "summary_large_image",
             title: meta.title,
             description: meta.description,
-            images: meta.image ? [meta.image] : undefined,
+            images: meta.image ? [{ url: meta.image, alt: meta.title }] : undefined,
         },
     };
 }

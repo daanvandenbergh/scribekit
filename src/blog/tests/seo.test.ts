@@ -46,9 +46,23 @@ describe("buildPostMetadata", () => {
         expect(meta.openGraph?.url).toBe("/blog/hello-world");
         expect(meta.openGraph?.publishedTime).toBe("2026-06-28");
         expect(meta.openGraph?.modifiedTime).toBe("2026-07-07");
-        expect(meta.openGraph?.images).toEqual([{ url: "/assets/blog/hello-world.jpg" }]);
+        expect(meta.openGraph?.images).toEqual([{ url: "/assets/blog/hello-world.jpg", alt: "Hello World" }]);
         expect(meta.twitter?.card).toBe("summary_large_image");
-        expect(meta.twitter?.images).toEqual(["/assets/blog/hello-world.jpg"]);
+        expect(meta.twitter?.images).toEqual([{ url: "/assets/blog/hello-world.jpg", alt: "Hello World" }]);
+    });
+
+    it("gives every share-card image an `alt`, taken from the post's own title", () => {
+        // og:image:alt is what a screen reader announces in place of the preview when the link is
+        // shared - the image is unreachable to that reader, so without it the card announces nothing.
+        // The title is used because it is ALREADY the alt on the rendered hero <img>, so the two
+        // cannot describe the same picture differently.
+        const meta = buildPostMetadata(POST, SITE);
+        for (const image of [...(meta.openGraph?.images ?? []), ...(meta.twitter?.images ?? [])]) {
+            expect(image.alt, `${image.url} must carry alt text`).toBe(POST.title);
+        }
+        // Vacuity guard: a builder that stopped emitting images would pass the loop above.
+        expect(meta.openGraph?.images).toHaveLength(1);
+        expect(meta.twitter?.images).toHaveLength(1);
     });
 
     it("falls back modifiedTime to publish date and omits images when no image", () => {
