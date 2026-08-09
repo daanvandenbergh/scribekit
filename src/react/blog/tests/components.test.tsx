@@ -1,13 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-// Replace the RSC MDX compiler with a synchronous stub so the (otherwise async) BlogPage
+// Replace the (async) MDX renderer with a synchronous stub so the (otherwise async) BlogPage
 // tree can be rendered with renderToStaticMarkup; the stub echoes `source` so we can assert
 // the MDX body was passed through.
-vi.mock("next-mdx-remote/rsc", async () => {
+vi.mock("../../shared/mdx.js", async () => {
+    const actual = await vi.importActual<typeof import("../../shared/mdx.js")>("../../shared/mdx.js");
     const { jsx } = await import("react/jsx-runtime");
     return {
-        MDXRemote: (props: { source: string }) => jsx("pre", { "data-testid": "mdx", children: props.source }),
+        ...actual,
+        MdxContent: (props: { source: string }) => jsx("pre", { "data-testid": "mdx", children: props.source }),
     };
 });
 

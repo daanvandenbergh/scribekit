@@ -621,6 +621,8 @@ import rehypePrettyCode from "rehype-pretty-code";
 />;
 ```
 
+**Compiling is memoized.** A body already compiled in this process is not compiled again - the cache is keyed on the MDX source text *and* your plugin set, so a page edited under `next dev` is a different key and always renders fresh, and two different plugin sets never share an entry.
+
 ---
 
 ## API reference

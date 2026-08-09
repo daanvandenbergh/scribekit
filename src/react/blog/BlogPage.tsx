@@ -1,11 +1,11 @@
 import { type ElementType, type ReactElement } from "react";
-import { MDXRemote, type MDXRemoteProps } from "next-mdx-remote/rsc";
+import type { MDXRemoteProps } from "next-mdx-remote/rsc";
 import { postJsonLd } from "../../blog/seo.js";
 import { localePath } from "../../shared/locales.js";
 import type { Blog } from "../../blog/blog.js";
 import { blogLabels } from "../shared/i18n.js";
 import { withHeadingId } from "../shared/headings.js";
-import { withGfm } from "../shared/mdx.js";
+import { MdxContent, withGfm } from "../shared/mdx.js";
 import { JsonLd } from "../shared/JsonLd.js";
 import { BlogSidebar } from "./BlogSidebar.js";
 
@@ -51,7 +51,7 @@ export interface BlogPageProps {
 
 /**
  * Renders a single blog post: an optional back-link, the title, the formatted date, the hero
- * image, and the MDX body (compiled with `next-mdx-remote/rsc`) inside a `.scribekit-prose`
+ * image, and the MDX body (compiled with `next-mdx-remote`, memoized per source+options - see `shared/mdx.ts`) inside a `.scribekit-prose`
  * container, alongside a right-side sidebar with a heading minimap (table of contents), the
  * estimated reading time, and "Similar pages". When the post declares an `author`, their name
  * appears in the meta row (with a small round avatar when `author-image` is set) and a plain
@@ -139,7 +139,7 @@ export function BlogPage({
                 <Img className="scribekit-post-image" src={meta.image} alt={meta.title} width={1200} height={630} fetchPriority="high" />
             ) : null}
             <div className="scribekit-prose">
-                <MDXRemote source={content} components={mergedComponents} options={withGfm(mdxOptions)} />
+                <MdxContent source={content} components={mergedComponents} options={withGfm(mdxOptions)} />
             </div>
             {meta.author ? (
                 <div className="scribekit-author-bio">

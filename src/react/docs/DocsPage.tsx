@@ -1,9 +1,9 @@
 import { type ElementType, type ReactElement } from "react";
-import { MDXRemote, type MDXRemoteProps } from "next-mdx-remote/rsc";
+import type { MDXRemoteProps } from "next-mdx-remote/rsc";
 import type { Docs } from "../../docs/docs.js";
 import { docsLabels } from "../shared/i18n.js";
 import { withHeadingId } from "../shared/headings.js";
-import { withGfm } from "../shared/mdx.js";
+import { MdxContent, withGfm } from "../shared/mdx.js";
 import { JsonLd } from "../shared/JsonLd.js";
 import { DocsToc } from "./DocsToc.js";
 import { DocsFeedback } from "./DocsFeedback.js";
@@ -80,7 +80,7 @@ function Chevron({ dir }: { dir: "left" | "right" }): ReactElement {
 /**
  * Renders a single documentation page: a breadcrumb, the title and lead, a meta row (reading time
  * and last-updated date), the hero image (when the page's front-matter sets `image`, rendered with
- * `imgComponent`), the MDX body (compiled with `next-mdx-remote/rsc`) inside a
+ * `imgComponent`), the MDX body (compiled with `next-mdx-remote`, memoized per source+options - see `shared/mdx.ts`) inside a
  * `.scribekit-prose` container, a "Was this page helpful?" widget, prev/next cards from the sidebar
  * reading order, and a right-hand "On this page" minimap (the same scroll-spy `BlogSidebar` the
  * blog uses). SEO JSON-LD (a `TechArticle` + `BreadcrumbList`) is derived from `docs.site`.
@@ -182,7 +182,7 @@ export function DocsPage({
             ) : null}
 
             <div className="scribekit-prose">
-                <MDXRemote source={content} components={mergedComponents} options={withGfm(mdxOptions)} />
+                <MdxContent source={content} components={mergedComponents} options={withGfm(mdxOptions)} />
             </div>
 
             {showFeedback ? (
