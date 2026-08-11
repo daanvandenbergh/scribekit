@@ -5,15 +5,16 @@ tab: "Tutorials"
 group: "Tutorials"
 order: 1
 icon: "rocket"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/build-a-blog/hero.en.jpg"
 ---
 
 By the end of this tutorial you have a working blog at `/blog`: a searchable grid of post cards, a
-page per post, and a category filter, all built from a folder of MDX files. You write three small
-route files and two posts. Nothing else.
+page per post, and a category filter, all built from a folder of MDX files. You write two route
+files, one shared module, and two posts, plus a one-line stylesheet import in your root layout.
 
-**Prerequisites.** Node 20 or newer, a Next.js App Router app on version 14 or newer, and
+**Prerequisites.** A Next.js App Router app on **Next 15 or newer** (the route files below use the
+awaited `params` shape) on Node 20.9 or newer, and
 `@daanvandenbergh/scribekit` plus `next-mdx-remote` installed - see
 [Installation](/installation). This tutorial uses a single language; every path below is
 relative to your Next app root (the directory `next dev` runs from).
@@ -36,9 +37,10 @@ export const blog = new Blog({
 });
 ```
 
-`contentDir` resolves against the app root, so `"./blog"` means a `blog/` folder next to your
-`package.json` - not inside `app/`. The leading underscore in `_blog.ts` keeps Next from treating
-the file as a route.
+`contentDir` resolves against `process.cwd()` - the directory `next dev` or `next build` runs from -
+so `"./blog"` means a `blog/` folder next to your `package.json`, not inside `app/`. The leading
+underscore in `_blog.ts` marks the file as a colocated module rather than a route; it is a
+convention, since only `page`, `route`, and `layout` files are ever routes.
 
 `siteUrl` and `brandName` are both required before any SEO method runs. Set only one of them and
 `blog.overviewMetadata()` throws with a message telling you to pass a site config. You use those
@@ -151,9 +153,14 @@ Import it once and only once. It is marked as a side effect, so bundlers keep it
 Start your dev server and open `http://localhost:3000/blog`.
 
 You see a search box reading "Search posts…", and below it one card with the title "Hello world",
-its description, its date, and a "Read more →" link. Click the card and you land on
-`/blog/hello-world`: the post title, a "1 min read" line, your `## Why this exists` heading, and a
-"← Blog" back link.
+its description, its date, a "1 min read" chip, and a "Read more →" link. Click the card and you land
+on `/blog/hello-world`: a "← Blog" back link, the post title, a meta line carrying the author name
+and "1 min read", your `## Why this exists` heading, an "On this page" minimap on the right (it
+appears because the body has a `##`), and a "Written by / Your Name" bio closing the article.
+
+Two of those come from choices in step 4: the author name and bio because the front-matter sets
+`author`, and the minimap because there is a heading to list. Pass `showSidebar={false}` to drop the
+minimap, or omit `author` to drop the bio.
 
 If the grid says "No posts yet - check back soon.", the content directory is wrong. `contentDir`
 resolves against the directory the app runs from, so confirm `blog/hello-world/en.mdx` sits beside
@@ -187,7 +194,9 @@ in the browser, so there is no round trip.
 `categories` is a **YAML list**, never a bare string. `categories: "Guides"` is silently dropped -
 the field parses, the page renders, and the post simply has no categories forever.
 
-Add to `blog/hello-world/en.mdx`:
+**Replace** the front-matter block of `blog/hello-world/en.mdx` with this - do not append a second
+one, because only the first `---` block in a file is parsed, and a pasted second block becomes body
+text while the categories are never read:
 
 ```mdx
 ---
@@ -200,7 +209,7 @@ categories:
 ---
 ```
 
-And to `blog/writing-with-mdx/en.mdx`:
+Replace the front-matter of `blog/writing-with-mdx/en.mdx` the same way:
 
 ```mdx
 ---
@@ -226,6 +235,7 @@ Two posts, a searchable and filterable card grid at `/blog`, a page per post at 
 and canonical, OpenGraph, and Twitter metadata on both routes. Every new post is one more folder
 under `blog/`; no route file changes again.
 
-Every prop and default touched here - `pageSize`, `linkComponent`, `imgComponent`, the label
-overrides - is listed in the [API reference](/api-reference). The concepts behind the file
-layout are in [Getting started](/getting-started).
+The one prop you set here is `pageSize`. The ones left at their defaults - `linkComponent`,
+`imgComponent`, `showSidebar`, and the label overrides - are all listed in the
+[API reference](/api-reference). The concepts behind the file layout are in
+[Getting started](/getting-started).

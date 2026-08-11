@@ -5,7 +5,7 @@ tab: "Documentation"
 group: "Guides"
 order: 2
 icon: "list"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/docs-guide/hero.en.jpg"
 ---
 
@@ -34,7 +34,7 @@ tab: "Documentation"
 group: "Get started"
 order: 2
 icon: "rocket"
-updated: "2026-07-16"
+updated: "2026-08-11"
 ---
 
 ## Install the package
@@ -48,18 +48,19 @@ The body starts at `##` - `title` already renders the H1.
 
 ## Place the page in the sidebar
 
-Four fields do the slotting. `tab` is the top-level section, `group` is the sidebar heading, `order` sorts within the group, and `icon` names the glyph:
+Five fields do the slotting. `tab` is the top-level section, `group` is the sidebar heading, `order` sorts within the group, `icon` names the glyph, and the optional `label` overrides the sidebar text when the `title` is too long to scan:
 
 ```yaml
 tab: "Documentation"
 group: "Guides"
 order: 2
 icon: "list"
+label: "Recipes"
 ```
 
 Reuse the exact `tab` and `group` strings your other pages use, character for character. They are matched as literals, so `"Get started"` and `"Get Started"` are two different groups.
 
-Within a group, pages sort by `order` ascending; a page with no `order` sorts after every page that has one.
+Within a group, pages sort by `order` ascending; a page with no `order` sorts after every page that has one. **Ties break alphabetically by `title`** - so two pages at `order: 2` do not error and do not keep the order you wrote them in, they sort by the alphabet, and the unordered bucket is alphabetical too. Within a group, keep `order` dense `1..N` with no repeats.
 
 ### The YAML types are load-bearing
 
@@ -76,15 +77,15 @@ After writing a header, re-read it: `order` a number, `hidden` a boolean, `keywo
 
 `icon` maps against a built-in set. Valid names, and only these:
 
-`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`.
+`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `plug`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`.
 
-Any other name silently renders the neutral `document` glyph rather than erroring, so a typo looks like a deliberate choice forever. To use your own glyphs instead, pass `renderIcon` to `DocsSidebar` or `DocsIndex`.
+Any other name silently renders the neutral `document` glyph rather than erroring, so a typo looks like a deliberate choice forever. To use your own glyphs instead, pass `renderIcon` to `DocsSidebar`, `DocsIndex`, **and `DocsSearchProvider`** - the command palette renders its own result icons, so miss that third one and your custom set silently reverts to the built-ins inside ⌘K.
 
 The docs index card for a group takes the icon of that group's **first** page, so give whichever page sorts first an icon that represents the whole group.
 
 ## Order the tabs and groups themselves
 
-`order` sorts pages inside a group. To sort the tabs and the groups, list them on the `Docs` instance. Both arrays are purely presentational and both accept either a bare id or an id with a display label:
+`order` sorts pages inside a group. To sort the tabs and the groups, list them on the `Docs` instance. Both arrays are purely presentational, and each entry is a bare id, or an object carrying a display `label` and an optional `description` - the one-line blurb the docs index prints under that topic's heading:
 
 ```ts
 import { Docs } from "@daanvandenbergh/scribekit";
@@ -94,9 +95,15 @@ export const docs = new Docs({
     siteUrl: "https://example.com",
     brandName: "My Site",
     tabs: ["Documentation", { id: "Skills", label: "Claude skills" }],
-    groups: ["Get started", "Guides", "Reference"],
+    groups: [
+        { id: "Get started", description: "Install it and render your first page." },
+        "Guides",
+        "Reference",
+    ],
 });
 ```
+
+Both `label` and `description` also accept a **per-locale map** - `{ en: "Claude skills", fr: "Compétences Claude" }` - resolved at the current language, then at `defaultLocale`, then falling through to the id. On a translated corpus use the map form: a bare string prints the same language on every localized page.
 
 Tabs and groups then sort on three keys, in this order:
 
@@ -122,7 +129,7 @@ What it loses:
 - prev/next (`getAdjacent` returns `{}`)
 - the breadcrumb (`getBreadcrumb` returns `undefined`)
 - the sitemap
-- the docs index `ItemList` in the JSON-LD
+- the docs index - both its topic cards and the `ItemList` in its JSON-LD
 - its siblings' hreflang alternates, and the JSON-LD translation cross-links
 
 It is "unlisted", not "private". Anyone with the URL reads the page.
@@ -165,7 +172,18 @@ export function DocsChrome({ nav, lang, children }: { nav: NavTree; lang: string
                 />
                 <DocsTabs nav={nav} activePath={activePath} lang={lang} linkComponent={Link} />
                 <div className="scribekit-docs-body">
-                    <DocsSidebar nav={nav} activePath={activePath} lang={lang} linkComponent={Link} />
+                    <DocsSidebar
+                        nav={nav}
+                        activePath={activePath}
+                        lang={lang}
+                        linkComponent={Link}
+                        brand={<strong>My Site</strong>}
+                        footer={[
+                            <DocsNavbarButton key="blog" href="/blog" linkComponent={Link}>
+                                Blog
+                            </DocsNavbarButton>,
+                        ]}
+                    />
                     <main className="scribekit-docs-main">{children}</main>
                 </div>
             </div>
@@ -191,9 +209,10 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
 }
 ```
 
-Four rules that decide whether this works:
+Five rules that decide whether this works:
 
-- **`DocsNavbar` must sit inside `DocsSearchProvider`.** The provider owns the single palette that both the navbar's search box and the ⌘K shortcut raise. Outside it, `open()` is a no-op: nothing throws, the search box just does nothing forever. The navbar renders that box itself via `showSearch`, which defaults to `true`. To trigger the palette from somewhere else, render `DocsSearchButton` inside the provider, or call `useDocsSearch().open()`.
+- **`DocsNavbar` must sit inside `DocsSearchProvider`.** The provider owns the single palette that both the navbar's search box and the ⌘K shortcut raise, **and** the drawer state the mobile hamburger toggles. Outside it, `open()` is a no-op and the navbar drops its hamburger entirely: nothing throws, but below the layout breakpoint the navigation has no opener at all. The navbar renders the search box itself via `showSearch`, which defaults to `true`. To trigger the palette from somewhere else, render `DocsSearchButton` inside the provider, or call `useDocsSearch().open()`.
+- **Navbar `actions` auto-hide, so pass the same nodes to the sidebar's `footer`.** The navbar measures itself and drops the whole `actions` group when the bar is too narrow, marking itself `data-cramped`; the stylesheet then reveals the sidebar drawer's `footer` in its place. Give both slots the same nodes, as above, or your Blog button simply vanishes on a phone with nothing to replace it. `brand` is the drawer's own lockup.
 - **`DocsTabs` returns `null` when `!nav.multiTab`.** A corpus whose pages all share one `tab`, or carry none, renders no tab bar at all. Leaving `DocsTabs` in the tree costs nothing and starts working the day you add a second tab.
 - **The table of contents is already in `DocsPage`** (`showToc`, default `true`). `DocsToc` is only for placing the minimap yourself, and it returns `null` when `toc.length === 0`, so a page with no `##` or `###` headings renders no empty shell.
 - **Do not override `h2` or `h3` in `DocsPage`'s `components` map.** `DocsPage` injects anchor ids into those two headings, and that is what the minimap jumps to. Your map is spread last, so your `h2` wins and the ids vanish along with the jump links. If you must override them, inject your own ids.
@@ -321,7 +340,7 @@ Declare the `--scribekit-*` tokens yourself:
 }
 ```
 
-**There is no `:root` block in the stylesheet to override.** Every token exists only as an inline `var(--name, fallback)` at each call site, and that fallback is what you see when you declare nothing. Declaring the property anywhere it inherits from makes every call site pick it up. [API reference](/api-reference) lists the tokens.
+**There is no `:root` block in the stylesheet to override.** Every token you would theme exists only as an inline `var(--name, fallback)` at each call site, and that fallback is what you see when you declare nothing. Declaring the property anywhere it inherits from makes every call site pick it up. (The one exception is the internal `--scribekit-docs-chrome-top`, which the stylesheet assigns itself - see below.) [API reference](/api-reference) lists the tokens.
 
 **No dark mode ships.** The stylesheet has no `prefers-color-scheme` block and no `.dark` class. Dark theming is entirely yours, and the tokens are the whole mechanism:
 

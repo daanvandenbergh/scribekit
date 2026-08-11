@@ -41,6 +41,6 @@ docs body carries are raw paths Next never rewrites, so on a project site (`/<re
   var `next.config.mjs` uses). Verified: hero src comes out `/scribekit/assets/...`.
 
 So with these two components a scribekit corpus renders correctly on a **project site** as well as at the
-root. The one thing they can't fix is scribekit's absolute SEO URLs (canonical/sitemap/OG), which omit the
-`/<repo>` subpath - a library-level limitation. If that matters, prefer root hosting (custom domain or a
-`<owner>.github.io` user/org site), where the base path is empty and even those are correct.
+root. Absolute SEO URLs (canonical/sitemap/OG) are correct there too, provided `siteUrl` includes the
+`/<repo>` segment - scribekit prepends the origin's sub-path rather than dropping it. Root hosting (custom
+domain or a `<owner>.github.io` user/org site) is simply one less moving part, the base path being empty.

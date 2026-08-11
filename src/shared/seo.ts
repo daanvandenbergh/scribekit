@@ -22,12 +22,25 @@ export const FALLBACK_LOCALE = "en";
 /**
  * Resolves a root-relative path (or absolute URL) to an absolute URL against the site origin.
  *
- * @param siteUrl - the absolute site origin (`SiteConfig.siteUrl`).
+ * A `siteUrl` may carry a sub-path (`https://user.github.io/repo`, the origin of a GitHub Pages
+ * *project* site). That sub-path is **prepended** to a root-relative path rather than discarded -
+ * plain `new URL("/x", "https://h/repo")` would yield `https://h/x`, silently dropping `/repo`
+ * from every sitemap and JSON-LD URL while the canonical, resolved by Next against
+ * `metadataBase`, kept it. This mirrors Next's own `metadataBase` join so the two can never
+ * disagree.
+ *
+ * @param siteUrl - the absolute site origin (`SiteConfig.siteUrl`), optionally with a sub-path.
  * @param pathOrUrl - a root-relative path (e.g. `/docs/x`) or an already-absolute URL.
  * @returns the absolute URL string.
  */
 export function absoluteUrl(siteUrl: string, pathOrUrl: string): string {
-    return new URL(pathOrUrl, siteUrl).toString();
+    const base = new URL(siteUrl);
+    if (/^[a-z][a-z0-9+.-]*:/i.test(pathOrUrl)) {
+        return new URL(pathOrUrl).toString();
+    }
+    const prefix = base.pathname.replace(/\/+$/, "");
+    const path = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
+    return new URL(`${prefix}${path}`, base).toString();
 }
 
 /**

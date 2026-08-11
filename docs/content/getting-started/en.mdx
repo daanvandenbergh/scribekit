@@ -5,7 +5,7 @@ tab: "Documentation"
 group: "Get started"
 order: 1
 icon: "book"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/getting-started/hero.en.jpg"
 ---
 
@@ -18,7 +18,7 @@ Scribekit is one npm package, `@daanvandenbergh/scribekit`, with three entry poi
 | Import | What it holds |
 | --- | --- |
 | `@daanvandenbergh/scribekit` | The `Blog` and `Docs` classes, their types and errors, and the shared helpers |
-| `@daanvandenbergh/scribekit/react` | The React components that render both surfaces |
+| `@daanvandenbergh/scribekit/react` | The React components that render both surfaces, plus the label catalogs and the `JsonLd` helper |
 | `@daanvandenbergh/scribekit/styles.css` | The stylesheet for those components |
 
 You write content as MDX. A class reads it. Components render it. Nothing else sits in between.
@@ -27,9 +27,11 @@ You write content as MDX. A class reads it. Components render it. Nothing else s
 
 Scribekit renders two surfaces, and they draw the line between "what ships" and "what you bring" in different places.
 
-The **docs** surface ships the whole shell. `DocsNavbar` gives you the brand row and a ⌘K search palette, `DocsTabs` the tab bar, `DocsSidebar` the grouped nav, `DocsToc` the scroll-spy minimap, and `DocsPage` the breadcrumb, title, lead, reading time, MDX body, feedback widget, and prev/next links. `DocsIndex` builds a landing page of section cards from the same nav tree. You bring the logo, the right-hand navbar actions, and the layout that arranges them.
+The **docs** surface ships the whole shell. `DocsNavbar` gives you the brand row and the ⌘K trigger, `DocsTabs` the tab bar, `DocsSidebar` the grouped nav and its mobile drawer, `DocsToc` the scroll-spy minimap, and `DocsPage` the breadcrumb, title, lead, reading time, MDX body, feedback widget, and prev/next links. The palette itself lives in `DocsSearchProvider`, which has to wrap the shell - it owns both the ⌘K overlay and the drawer state. `DocsSearchButton` and `DocsNavbarButton` are the trigger and the action button as standalone pieces, and `DocsFeedback` is the widget on its own.
 
-The **blog** surface ships less on purpose. `BlogOverview` renders a searchable, category-filtered card grid that pages in as you scroll, and `BlogPage` renders one post with its minimap and similar-posts list. The navbar, the footer, and the marketing chrome around them stay yours, because a blog usually lives inside a site that already has a design, while a docs site usually is the design.
+`DocsIndex` builds the landing page, and it is a wrapper rather than a monolith: it derives its data from the instance and renders `DocsHero`, a `DocsTopicGrid` of section cards, and a `DocsRecentlyUpdated` list. All three are exported separately, so an index that needs sections the kit does not ship composes them by hand. You bring the logo, the right-hand navbar actions, and the layout that arranges them.
+
+The **blog** surface ships less on purpose. `BlogOverview` renders a searchable, category-filtered card grid that pages in as you scroll, and `BlogPage` renders one post with its minimap and similar-posts list; the client children they delegate to, `BlogOverviewGrid` and `BlogSidebar`, are exported too for anyone assembling their own. The navbar, the footer, and the marketing chrome around them stay yours, because a blog usually lives inside a site that already has a design, while a docs site usually is the design.
 
 Two pieces stay quiet until they have something to say: `DocsTabs` renders nothing when the corpus has one tab, and `DocsLanguagePicker` renders nothing when there is one locale. A single-language, single-tab site needs no configuration to avoid the chrome it does not need.
 
@@ -66,17 +68,17 @@ icon: "book"
 ---
 ```
 
-From those fields, `Docs` builds the sidebar tree, the tab bar, the breadcrumb, the prev/next links, the search index, the page metadata, and the sitemap. Adding a page is adding a file. There is no second place to update, so the nav cannot drift from the content.
+From those fields, `Docs` builds the sidebar tree, the tab bar, the breadcrumb, the prev/next links, the page metadata, and the sitemap. Search is not one of them: the ⌘K palette fuzzy-searches the nav tree client-side over `title`, `label`, `group`, and `tab`, so those four strings are the entire search surface. Adding a page is adding a file. There is no second place to update, so the nav cannot drift from the content.
 
-The `new Docs({...})` call is site configuration, not page configuration. Its `tabs` and `groups` arrays only set the display order and labels of sections that your pages already declare; `siteUrl` and `brandName` are what the SEO helpers require, and they throw without both.
+The `new Docs({...})` call is site configuration, not page configuration. Its `tabs` and `groups` arrays only set the display order, labels, and one-line descriptions of sections that your pages already declare - the descriptions being what the index topic cards print; `siteUrl` and `brandName` are what the SEO helpers require, and they throw without both.
 
 Handing the config to YAML has a cost, and it is worth knowing before it bites you: **YAML types are load-bearing**. `order` must be a bare number, because `order: "3"` is silently dropped and the page sorts last. `hidden` must be a bare boolean, because `hidden: "true"` does not hide anything. The reader drops a wrong-typed field rather than failing, so the page still builds and simply sits in the wrong place.
 
 ## Why the React layer splits server and client
 
-The components that touch your content are server components. `DocsPage` and `BlogPage` read the instance and parse the MDX body with `next-mdx-remote/rsc`; `DocsIndex` and `BlogOverview` assemble their card grids from the nav tree and the post list instead, without touching MDX. All four render on the server, so the MDX compiler and your page bodies never reach the browser bundle.
+The components that touch your content are server components. `DocsPage` and `BlogPage` read the instance and compile the MDX body through `next-mdx-remote`'s `serialize`, behind a wrapper that memoizes the compile so a repeated render skips it. `DocsIndex` and `BlogOverview` derive their data on the server - the nav tree, the post list, the icons, the JSON-LD - and hand a plain serializable list to a client grid child, which is how the instance itself never crosses the boundary. Your page bodies and the MDX compiler never reach the browser bundle.
 
-Only what genuinely needs a browser is a client component: the search palette, the scroll-spy minimap, the sidebar, the language picker, the feedback buttons, and the blog's search-and-filter grid. That split is the reason a page of prose costs you almost no JavaScript while the interactive parts still work.
+Only what genuinely needs a browser is a client component: the search palette, the scroll-spy minimap, the sidebar, the navbar (it measures itself to decide when to drop its action buttons), the tab bar (it measures the active tab to place the sliding indicator), the docs index's topic filter, the language picker, the feedback buttons, and the blog's search-and-filter grid. That split is the reason a page of prose costs you almost no JavaScript while the interactive parts still work.
 
 MDX rendering has one fixed behaviour worth knowing up front: `remark-gfm` is always on and cannot be turned off, so tables, task lists, and strikethrough always parse. Your own remark and rehype plugins are added to it, never instead of it.
 
@@ -90,9 +92,10 @@ The skills are portable by design. They learn the project they are dropped into 
 
 Being clear about the edges is faster than discovering them:
 
-- **No dark mode ships.** The stylesheet has no `prefers-color-scheme` block and no `.dark` class. Every colour is a `var(--scribekit-*, fallback)` at its call site, so dark theming is yours to do by declaring those custom properties.
+- **No dark mode ships.** The stylesheet has no `prefers-color-scheme` block and no `.dark` class. Most colours are a `var(--scribekit-*, fallback)` at their call site, so token overrides get you most of the way - but a handful, the drawer backdrop and some `DocsHero` surfaces among them, are literal `rgba()` a token cannot reach.
 - **No CMS and no database.** There is no admin UI, no editor, and no runtime content store. Content is MDX in your repo.
 - **No comments, no analytics, no auth.** The package renders content and its navigation. Everything else is your app's job.
-- **No custom MDX components.** Scribekit registers none, so `<Callout>` or `<Note>` in a body renders nothing unless you pass your own via the `components` prop.
+- **No block-level MDX components.** Scribekit registers none, so `<Callout>` or `<Note>` in a body renders nothing unless you pass your own via the `components` prop. The two exceptions are `h2` and `h3`, which are registered so they carry the anchor ids the minimap jumps to - override those and you have to inject your own ids.
+- **No CLI.** The package has no `bin`. The Claude Code skills below are the tooling.
 
 For the full option tables and method signatures, see the [API reference](/api-reference).

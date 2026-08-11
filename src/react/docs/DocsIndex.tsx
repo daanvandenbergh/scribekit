@@ -18,7 +18,7 @@ export interface DocsIndexProps {
     lang?: string;
     /** Element used for every link. Defaults to `"a"`; pass `next/link` for client-side nav. */
     linkComponent?: ElementType;
-    /** Hero heading. Defaults to `"<brand> docs"` (or `"Documentation"` when no brand is set). */
+    /** Hero heading. Defaults to the localized `"Documentation"` label; the brand is not used. */
     title?: string;
     /** Hero subtitle. Defaults to the site `description`. */
     description?: string;

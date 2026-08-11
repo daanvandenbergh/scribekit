@@ -15,6 +15,18 @@ describe("absoluteUrl", () => {
             "https://cdn.example.com/a.jpg",
         );
     });
+
+    it("prepends a sub-path carried by the site origin instead of discarding it", () => {
+        expect(absoluteUrl("https://user.github.io/repo", "/docs/x")).toBe("https://user.github.io/repo/docs/x");
+        expect(absoluteUrl("https://user.github.io/repo/", "/docs/x")).toBe("https://user.github.io/repo/docs/x");
+        expect(absoluteUrl("https://user.github.io/repo", "/")).toBe("https://user.github.io/repo/");
+    });
+
+    it("leaves an already-absolute URL alone even when the origin has a sub-path", () => {
+        expect(absoluteUrl("https://user.github.io/repo", "https://cdn.example.com/a.jpg")).toBe(
+            "https://cdn.example.com/a.jpg",
+        );
+    });
 });
 
 describe("ogLocale", () => {

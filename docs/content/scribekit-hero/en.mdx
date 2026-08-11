@@ -40,8 +40,8 @@ Design, brand, and content are separated so a design change never means re-editi
 
 | File | Scope | Contents |
 | --- | --- | --- |
-| **Component** - `assets/hero.js` | Ships with the skill | The reusable hero design: structure, base styles, auto-fit, readiness. **Never copied into a project, never recoloured.** |
-| **Settings** - `hero.settings.js` | One per surface | `brand` (font, badge/logo, eyebrow, default byline) and `gradients`. The **only** place a project customises how heroes look. |
+| **Component** - `assets/hero.js` | Ships with the skill | The reusable hero design: structure, base styles, auto-fit, readiness. **Never recoloured**, and copied into a project only as the documented last-resort fork (see below). |
+| **Settings** - `hero.settings.js` | One per surface | `brand` (font, badge/logo including `badge.bare`, accent, eyebrow, `texture`, `css`, default byline) and `gradients`. The usual place a project customises how heroes look. |
 | **Params** - `<slug>/hero.js` | One per hero | Pure data: the gradient pick, title, and subtitle, plus an optional byline. Saved so any hero is reproducible. |
 
 Settings are seeded from `assets/hero.settings.template.js`, which exports `brand` and `gradients`. Where the file lives depends on the surface:
@@ -51,6 +51,19 @@ Settings are seeded from `assets/hero.settings.template.js`, which exports `bran
 | Blog | `<content-dir>/hero.settings.js` |
 | Docs | `<docs-content-dir>/hero.settings.js` |
 | README | `.agentstore/scribekit-hero/readme/hero.settings.js` |
+
+## Customising the component
+
+Three seams, in the order you should reach for them. Stop at the first that does the job.
+
+1. **`brand.*` in `hero.settings.js`.** The font, the badge or logo, the accent, the eyebrow, the texture, the default byline. Covers most projects.
+2. **`brand.css`** - a raw CSS string appended after the component's own stylesheet, so it wins at equal specificity over the component's selectors (`.stage`, `.content`, `.eyebrow`, `.badge`, `.title`, `.subtitle`, `.byline`). This is the seam for anything the `brand` fields do not express, and it stays inside the settings file.
+3. **`hero.component.js`** beside the surface's `hero.settings.js` - a full copy of `assets/hero.js`, edited freely. The render step uses it in place of the shipped component. This is a **fork**: that surface stops receiving upstream fixes to auto-fit, readiness, and capture timing, permanently. Last resort.
+
+Two traps worth knowing before you touch the component at all:
+
+- **When the skill resolves through `node_modules`, `assets/` is read-only.** The next `npm install` reverts your edit silently, and `regenerate-heroes` then renders heroes missing whatever you added. Use seam 2 or 3 instead.
+- **A backtick anywhere in `BASE_CSS`, even inside a comment, breaks the module** and renders a blank `#0e0e11` image with no error. Run `node --check assets/hero.js` after editing it.
 
 A params file carries the gradient name plus the text, and nothing else. The eyebrow comes from `hero.settings.js` and is never repeated per hero:
 
@@ -135,20 +148,20 @@ For docs this is `DocMeta.image`, the page's OG/social-card image. The docs page
 
 ## Files
 
-| File | Lines | Purpose |
-| --- | --- | --- |
-| `SKILL.md` | 177 | The router and the shared design foundation: Step 0, the three-files model, auto-create settings, the 6 gradients, `tune-gradients`, the render pipeline, guardrails. |
-| `blog.md` | 87 | `blog-hero` and `regenerate-heroes`. |
-| `docs.md` | 88 | `docs-hero` and `regenerate-docs-heroes`. |
-| `readme.md` | 126 | `readme-hero`: size and radius, the transparent rounded PNG, README wiring. |
-| `assets/hero.js` | 285 | The reusable hero component. Exports `renderHero` and `renderGallery`. |
-| `assets/hero.settings.template.js` | 137 | The seed copied to each surface as `hero.settings.js`. Exports `brand` and `gradients`. |
-| `assets/hero.host.html` | 47 | Single-hero render host. Tokens `{{HERO_COMPONENT}}`, `{{HERO_SETTINGS}}`, `{{HERO_PARAMS}}`. |
-| `assets/hero.gallery.html` | 29 | The `tune-gradients` gallery host. Two tokens. |
+| File | Purpose |
+| --- | --- |
+| `SKILL.md` | The router and the shared design foundation: Step 0, the three-files model, customising the component, auto-create settings, the 6 gradients, `tune-gradients`, the render pipeline, guardrails. |
+| `blog.md` | `blog-hero` and `regenerate-heroes`. |
+| `docs.md` | `docs-hero` and `regenerate-docs-heroes`. |
+| `readme.md` | `readme-hero`: size and radius, the transparent rounded PNG, README wiring. |
+| `assets/hero.js` | The reusable hero component. Exports `renderHero` and `renderGallery`. |
+| `assets/hero.settings.template.js` | The seed copied to each surface as `hero.settings.js`. Exports `brand` and `gradients`. |
+| `assets/hero.host.html` | Single-hero render host. Tokens `{{HERO_COMPONENT}}`, `{{HERO_SETTINGS}}`, `{{HERO_PARAMS}}`. |
+| `assets/hero.gallery.html` | The `tune-gradients` gallery host. Two tokens. |
 
 ## Constraints
 
-- Only `hero.settings.js` carries brand, colour, size, and radius. A project's colours are never hardcoded into the shared `assets/hero.js`, and the component is never copied into a project.
+- Only `hero.settings.js` carries brand, colour, size, and radius. A project's colours are never hardcoded into the shared `assets/hero.js`; the component is copied into a project only as the deliberate `hero.component.js` fork, and never edited in place under `node_modules`.
 - The output shape per surface is never conflated: blog and docs are opaque JPEG rectangles with no baked rounding; the README is a rounded transparent PNG.
 - Every hero is a **local asset**, never a remote URL.
 - **Committed files are never modified by a render.** The host HTML is filled into a throwaway scratchpad copy, and that copy is what gets screenshotted.
@@ -166,6 +179,7 @@ The claude-in-chrome MCP blocks `file://`, so the render runs **headless Chrome 
   --screenshot="<out>.png" "file://<scratchpad-host>.html[?lang=<code>]"
 ```
 
+- `{{HERO_COMPONENT}}` resolves to the surface's own `hero.component.js` when that file exists, and to the shipped `assets/hero.js` otherwise. That substitution is the whole fork mechanism.
 - `--allow-file-access-from-files` is **required**. It lets the host's ES-module `import`s resolve over `file://`, which Chrome CORS-blocks otherwise.
 - Use a **fresh `--user-data-dir` per render**. A running or stale Chrome locks the profile.
 - **Chrome lingers about 60 seconds** after writing the screenshot in `--headless=new`, so the render is backgrounded and polled for the `.png` rather than blocked on. macOS has no GNU `timeout`.

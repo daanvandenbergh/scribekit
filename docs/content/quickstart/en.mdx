@@ -5,13 +5,13 @@ tab: "Documentation"
 group: "Get started"
 order: 3
 icon: "workflow"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/quickstart/hero.en.jpg"
 ---
 
 By the end of this page you have a docs page rendering at `http://localhost:3000/docs/hello` and a docs index at `/docs`, built from four files. It is the shortest path that works: one language, one tab, no search palette. For the full shell, see [Build a docs site](/build-a-docs-site); for individual recipes, see the [Docs guide](/docs-guide).
 
-**Prerequisites:** a Next.js App Router app, and `@daanvandenbergh/scribekit` plus `next-mdx-remote` installed with the stylesheet imported in your root layout, as described in [Installation](/installation).
+**Prerequisites:** a Next.js App Router app on **Next 15 or newer** (the route files below use the awaited `params` shape), and `@daanvandenbergh/scribekit` plus `next-mdx-remote` installed with the stylesheet imported in your root layout, as described in [Installation](/installation).
 
 ## 1. Create the Docs instance
 
@@ -35,7 +35,7 @@ Three things this file decides:
 - `siteUrl` and `brandName` are both required before any SEO method runs. Omit either and `docMetadata` throws.
 - `basePath` is unset, so it defaults to `/docs`. That is why the routes below live at `app/docs/`.
 
-The leading underscore keeps Next from treating `_docs.ts` as a route.
+The leading underscore marks the file as internal. It is a convention, not a requirement: only `page`, `route`, and `layout` files (and the other reserved names) are ever routes, so `app/docs/docs.ts` would be just as safe.
 
 Nothing renders yet. There is no content and no route.
 
@@ -60,7 +60,7 @@ The body starts at `##`, because the `title` above renders the H1.
 Front-matter rules that matter right now:
 
 - `order` is a **bare number**. Write `order: "1"` and the field is silently dropped, sending the page to the bottom of its group.
-- `icon` must come from the built-in set: `book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`. Any other name silently renders the neutral `document` glyph.
+- `icon` must come from the built-in set: `book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `plug`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`. Any other name silently renders the neutral `document` glyph.
 - `description` is the lead paragraph, the meta description, and the OG description. Leave it out and all three ship empty.
 
 There is no `tab` here, so the page falls into the single implicit tab and no tab bar renders.
@@ -87,7 +87,11 @@ export function generateStaticParams() {
 /** Per-page SEO metadata: title, description, canonical, OpenGraph, Twitter. */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    return docs.docMetadata(docs.getDoc(slug));
+    try {
+        return docs.docMetadata(docs.getDoc(slug));
+    } catch {
+        return { title: "Page not found" };
+    }
 }
 
 /** The page at /docs/<slug>. */
@@ -105,11 +109,17 @@ export default async function DocSlugPage({ params }: { params: Promise<{ slug: 
 
 You only need `slug` here, because this app has one language. `lang` is what a `[lang]` route segment would consume.
 
-`params` is a Promise and must be awaited: that is the App Router's shape, not Scribekit's. Because `dynamicParams = false`, only the slugs from `generateStaticParams` ever reach these functions, so `getDoc` cannot miss.
+`params` is a Promise and must be awaited: that is the App Router's shape from Next 15 on, not Scribekit's. `dynamicParams = false` means only the slugs from `generateStaticParams` reach these functions, so in practice `getDoc` does not miss - but `generateMetadata` still guards it, because that is the shape you want the day you add `redirects` and a slug with no file on disk starts being prerendered.
 
-Later, when you rename a slug and list the old one in the instance's `redirects` map, spread `docs.getRedirectRefs()` into `generateStaticParams` as well. An unrendered slug 404s at the router before the component could redirect it, so the redirect would never fire. See the [Docs guide](/docs-guide).
+Which is exactly the next step, when you rename a slug and list the old one in the instance's `redirects` map. Change `generateStaticParams` to spread the redirect refs in before the map:
 
-Run `npm run dev` and open `http://localhost:3000/docs/hello`. You see the title as an H1, the description as the lead, a reading-time pill, your `## What this page proves` heading, and a "Was this page helpful?" widget at the bottom. There are no prev/next links yet, because there is nowhere to go: the corpus has one page.
+```ts
+return [...docs.getDocRefs(), ...docs.getRedirectRefs()].map((ref) => ({ slug: ref.slug }));
+```
+
+An unrendered slug 404s at the router before the component could redirect it, so without that spread the redirect never fires. See the [Docs guide](/docs-guide) for the matching route body.
+
+Run `npm run dev` and open `http://localhost:3000/docs/hello`. You see a breadcrumb reading "Get started / Hello", the title as an H1, the description as the lead, a reading-time pill, your `## What this page proves` heading, an "On this page" minimap on the right, and a "Was this page helpful?" widget at the bottom. There are no prev/next links yet, because there is nowhere to go: the corpus has one page. (The breadcrumb has no section segment of its own, because the page sets no `tab`.)
 
 ## 4. Add the docs index
 
@@ -125,7 +135,7 @@ export function generateMetadata() {
     return docs.indexMetadata();
 }
 
-/** The docs landing page at /docs: a hero plus a card per section. */
+/** The docs landing page at /docs: hero, topic cards, and recently-updated. */
 export default function DocsIndexPage() {
     return <DocsIndex docs={docs} />;
 }
@@ -133,7 +143,9 @@ export default function DocsIndexPage() {
 
 This route has no dynamic segment, so it needs no `generateStaticParams` and no `await`.
 
-Open `http://localhost:3000/docs`. You see a hero headed "Documentation" and one card for the "Get started" group, listing your Hello page and linking to `/docs/hello`. The card takes its icon from the group's first page, which is the `book` you set in step 2.
+Open `http://localhost:3000/docs`. You see a hero headed "Documentation" with a fact row reading "1 article · 1 topic", then a "Browse by topic" heading with a filter box, and under it one card for the "Get started" group, listing your Hello page and linking to `/docs/hello`. The card takes its icon from the group's first page, which is the `book` you set in step 2.
+
+The hero has no subtitle, because the `Docs` config in step 1 sets no `description`. There is no "Recently updated" section either: that section renders only once some page carries an `updated:` date.
 
 ## 5. Confirm the loop is closed
 

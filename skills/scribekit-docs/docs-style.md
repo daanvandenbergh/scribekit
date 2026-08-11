@@ -119,7 +119,7 @@ label: "Quickstart"           # optional sidebar label override; defaults to tit
 keywords:                      # optional; a YAML LIST, not a comma string
     - docs
     - quickstart
-image: "/assets/docs/<slug>/hero.en.jpg"   # optional OG/social-card image (NOT rendered on-page); illustrative path - the real leading-slash path is set by /scribekit-hero docs-hero, don't hardcode this prefix
+image: "/assets/docs/<slug>/hero.en.jpg"   # optional; DocsPage renders it inline above the body AND uses it as the OG/social card; illustrative path - the real leading-slash path is set by /scribekit-hero docs-hero, don't hardcode this prefix
 updated: "2026-07-09"         # last-updated ISO date, QUOTED, from `date +%F`; set on any material revision
 date: "2026-07-09"            # optional first-published ISO date, QUOTED
 hidden: true                  # optional; page stays routable but leaves the nav/prev-next/index. BARE BOOLEAN

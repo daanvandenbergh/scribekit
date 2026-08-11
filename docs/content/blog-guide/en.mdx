@@ -5,7 +5,7 @@ tab: "Documentation"
 group: "Guides"
 order: 1
 icon: "document"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/blog-guide/hero.en.jpg"
 ---
 
@@ -33,7 +33,7 @@ Write the front-matter, then the body:
 title: "Hello, world"
 description: "One sentence. It is the card blurb, the meta description, and the OG card."
 date: "2026-07-16"
-updated: "2026-07-16"
+updated: "2026-08-11"
 keywords:
     - mdx
     - next.js
@@ -55,9 +55,9 @@ Those are the fields `PostMeta` parses. Anything else is dropped. Three details 
 - **`slug` and `lang` are never front-matter fields.** They come from the folder name and the file name.
 - **`readingTime` is computed from the body**, so never author it.
 
-### Two silent failures
+### Three silent failures
 
-Nothing errors in either case. The post ships looking fine and quietly wrong.
+Nothing errors in any of these. The post ships looking fine and quietly wrong.
 
 **`categories` must be a YAML list.** Only an array survives:
 
@@ -74,11 +74,13 @@ categories: "News"   # silently dropped - the post has no categories at all
 
 **`date` is not validated.** There is no `YYYY-MM-DD` shape check: any string passes through verbatim. `date: "yesterday"` lands in `meta.date`, in the JSON-LD `datePublished`, and in the sort key that orders `getAllPosts()`. Generate the value with `date +%F` rather than typing it.
 
+**A translation for an unconfigured locale is never discovered.** The walk probes `post.<ext>`, the default locale's file, and then **only the locale codes listed in `BlogConfig.locales`**. Write `fr.mdx` before adding `fr` to that array and the file is skipped in silence: no error, no page, invisible to `getPostRefs`, `getAllPosts`, and `sitemapEntries`. Configure the locale first, then write the file.
+
 ### Never create both `post.mdx` and `en.mdx`
 
 One folder holding both files resolves two files to one post, and the two read paths disagree about it:
 
-- `entries()` throws `DuplicatePostError`, which takes down `getPostSlugs`, `getAllPosts`, and `sitemapEntries` - so the build fails, not just that post.
+- Every listing method throws `DuplicatePostError` - `getPostSlugs`, `getPostRefs`, `getAllPosts`, `getAllCategories`, `getTranslations`, `sitemapEntries`, and `rssFeed` - because all of them walk through `entries()`. The build fails, not just that post, and `getPostRefs` is the one your `generateStaticParams` depends on.
 - `getPost` does not throw. It silently returns `en.mdx`.
 
 Pick one file name per language and stay with it.
@@ -138,13 +140,29 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
 `getPostRefs()` returns every `(slug, lang)` pair. With no `locales` configured that is one ref per post, so mapping `ref.slug` is enough.
 
-**If you configured `locales`**, move the tree to `app/[lang]/blog/[slug]` and map both fields, or the second language's refs collide with the first:
+**If you configured `locales`**, map both fields, or the second language's refs collide with the first - and **thread `lang` into the components**, or every localized route renders the default language:
 
-```ts
+```tsx
 export function generateStaticParams() {
     return blog.getPostRefs().map((ref) => ({ lang: ref.lang, slug: ref.slug }));
 }
+
+export default async function BlogPostPage({ params }: { params: Promise<{ lang: string; slug: string }> }) {
+    const { lang, slug } = await params;
+    return <BlogPage blog={blog} slug={slug} lang={lang} linkComponent={Link} />;
+}
 ```
+
+`BlogPage` and `BlogOverview` both default `lang` to `blog.defaultLocale`, so omitting it does not error - it renders English at `/fr/blog/x`, or throws `PostNotFoundError` during the build if the post exists only as `fr.mdx`.
+
+Where the tree lives depends on one config flag, and getting it wrong 404s the default locale:
+
+| Config | Default locale served at | Other locales |
+| --- | --- | --- |
+| `prefixDefaultLocale: false` (the default) | `/blog/<slug>` - keep `app/blog/[slug]` and **add** `app/[lang]/blog/[slug]` for the rest | `/fr/blog/<slug>` |
+| `prefixDefaultLocale: true` | `/en/blog/<slug>` - move everything under `app/[lang]/blog/[slug]` | `/fr/blog/<slug>` |
+
+Every rendered link - card links, the back link, similar posts - and every canonical, hreflang, and sitemap URL goes through the same `localePath` helper, so the routes have to match what it produces.
 
 **If you opt out of `dynamicParams = false`**, guard the unknown slug yourself. With it, an unknown slug 404s at the router and `getPost` only ever sees a valid one:
 
@@ -210,20 +228,14 @@ const post = blog.getPost("hello-world");
 const similar = blog.similarPosts(post, 3);
 ```
 
-### How the ranking actually works
+### What you can actually tune
 
-1. Each post becomes a bag of words. Every **keyword weighs 3**, the **title 2**, the **description 1**. It is raw term frequency with no idf.
-2. Tokens are lowercased, split on anything that is not a letter or a number, and kept only when they are **3 characters or longer** and not in `STOPWORDS`.
-3. Candidates are scored by **cosine similarity** against the current post, with the post itself excluded by slug.
-4. **A score of exactly 0 is dropped.** A post with no shared words never appears, so a short list is a real answer, not a bug.
-5. Ties break by **`date` descending**.
-6. `blog.similarPosts(post)` scores against `getAllPosts(post.meta.lang)` only: **same language, never cross-language**.
+Two facts decide whether the list is any good. The full algorithm - the weights, the tokenizer, the stopword list - is in the [API reference](/api-reference).
 
-Three limits worth knowing before you tune anything:
+- **Keywords are the only lever you control.** `categories` are not scored at all, so two posts in the same category that share no title, description, or keyword tokens never see each other.
+- **A score of exactly 0 is dropped**, so a short list is a real answer, not a bug. A post whose title, description, and keywords produce no tokens gets `[]` back.
 
-- **`categories` are not part of the ranking today.** Two posts in the same category that share no title, description, or keyword tokens score 0 and never see each other. Keywords are the lever.
-- **`STOPWORDS` is English-only** - 22 words. In a French post, `pour` and `dans` are long enough to survive tokenizing and count as content words.
-- A post whose title, description, and keywords produce no tokens has an empty vector and gets `[]` back.
+Matching is same-language only: `blog.similarPosts(post)` scores against `getAllPosts(post.meta.lang)`.
 
 To drop the list along with the minimap, pass `showSidebar={false}`.
 
@@ -298,3 +310,25 @@ image: "/assets/blog/hello-world/hero.en.jpg"
 That one value does three jobs: `BlogPage` renders it above the body at 1200x630, `BlogOverview` uses it as the card thumbnail, and `postMetadata` / `postJsonLd` use it for the OG and Twitter card. Nothing validates it, so a wrong path is a broken image rather than an error.
 
 To generate one on-brand, run the [/scribekit-hero](/scribekit-hero) skill, which renders the JPEG from HTML and CSS and writes it where the front-matter expects it.
+
+## Serve an RSS feed
+
+`blog.rssFeed(lang?)` returns one locale's complete RSS 2.0 document, newest post first. Serve it from a route handler:
+
+```ts
+// app/blog/rss.xml/route.ts
+import { blog } from "../_blog";
+
+/** Prerender the feed with the rest of the site rather than building it per request. */
+export const dynamic = "force-static";
+
+export function GET() {
+    return new Response(blog.rssFeed(), {
+        headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
+    });
+}
+```
+
+`rssFeedPath(blog.site, lang)` gives the conventional mount path for a locale - the locale's index path plus `/rss.xml`, so `/blog/rss.xml` by default, or `/en/rss.xml` under `prefixDefaultLocale`. Use it for the `<link rel="alternate" type="application/rss+xml">` in your layout so the two can never disagree.
+
+Like every listing method, it throws `DuplicatePostError` and needs `siteUrl` and `brandName` on the instance.

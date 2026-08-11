@@ -5,7 +5,7 @@ tab: "Documentation"
 group: "Reference"
 order: 1
 icon: "code"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/api-reference/hero.en.jpg"
 ---
 
@@ -29,7 +29,9 @@ import { BlogPage, DocsPage, DocsSidebar } from "@daanvandenbergh/scribekit/reac
 import "@daanvandenbergh/scribekit/styles.css";
 ```
 
-Peer dependencies: `next` (>=14), `react` (>=18), `react-dom` (>=18), and `next-mdx-remote` (`^5 || ^6`, optional, required by `BlogPage` and `DocsPage`). `remark-gfm` (`^4.0.1`) is a real dependency, not a peer.
+Peer dependencies: `react` (`>=18`) is the only hard one. `next` (`>=14`), `react-dom` (`>=18`), and `next-mdx-remote` (`^5 || ^6`) are all marked optional in `peerDependenciesMeta`, so npm stays quiet for a consumer who only imports the `Blog` or `Docs` class - though `BlogPage` and `DocsPage` need `next`, `react-dom`, and `next-mdx-remote` at render time.
+
+Real dependencies, installed for you: `@daanvandenbergh/i18nkit`, `fuse.js`, `gray-matter`, `remark-gfm`, and `server-only`.
 
 ## Docs
 
@@ -75,7 +77,7 @@ new Docs(config: DocsConfig)
 | `readonly groups` | `NavConfigEntry[]` |
 | `readonly site` | `SiteConfig \| undefined` |
 
-`contentDir`, `extension`, `basePath`, and `redirects` are private.
+Nothing else is exposed. `basePath` and `redirects` are private fields; `contentDir` and `extension` are not fields at all - they are passed straight into the internal content store at construction time and never held on the instance.
 
 ### Methods
 
@@ -115,13 +117,13 @@ This Docs was created without a `site` config; pass `siteUrl` and `brandName` to
 
 `entries()` walks the immediate subdirectories of `contentDir` only. There is no recursion and no nested slugs, and a missing `contentDir` yields `[]`. Per `<slug>/` folder it checks `post<ext>` first, then `<defaultLocale><ext>`; **both present is a `DuplicateDocError`**. It then checks each configured non-default locale as `<code><ext>`. A `<slug>/fr.mdx` whose `fr` is not in `config.locales` is never discovered.
 
-`getDoc()` uses the opposite priority:
+Reading one page uses the opposite priority. `getDoc()` delegates to the internal content store, whose candidate list is:
 
 ```ts
 const candidates =
-    resolved === this.defaultLocale
-        ? [`${slug}/${resolved}${this.extension}`, `${slug}/post${this.extension}`]
-        : [`${slug}/${resolved}${this.extension}`];
+    lang === this.defaultLocale
+        ? [`${slug}/${lang}${this.extension}`, `${slug}/post${this.extension}`]
+        : [`${slug}/${lang}${this.extension}`];
 ```
 
 For the default locale, `<defaultLocale><ext>` wins and `post<ext>` is the fallback. A non-default locale has no `post` fallback. A resolved path that escapes `contentDir` throws `DocNotFoundError`.
@@ -225,7 +227,7 @@ new Blog(config: BlogConfig)
 | `readonly prefixDefaultLocale` | `boolean` |
 | `readonly site` | `SiteConfig \| undefined` |
 
-`contentDir` and `extension` are private.
+Nothing else is exposed; `contentDir` and `extension` are not fields at all, only constructor arguments handed to the internal content store.
 
 ### Methods
 
@@ -247,6 +249,7 @@ new Blog(config: BlogConfig)
 | `postJsonLd(post)` | `JsonLd` | `Error` when `site` is unset |
 | `overviewJsonLd(posts, lang?)` | `JsonLd` | `Error` when `site` is unset |
 | `sitemapEntries()` | `SitemapEntry[]` | `DuplicatePostError`, `Error` when `site` is unset |
+| `rssFeed(lang?)` | `string`, one locale's complete RSS 2.0 document, newest post first | `DuplicatePostError`, `Error` when `site` is unset |
 
 `requireSite()` throws this message verbatim:
 
@@ -376,11 +379,14 @@ Pure and fs-free. They import no `next` and no `react`, and none of them throw.
 | --- | --- | --- |
 | `basePath` | `string?` | no |
 | `defaultLocale` | `string` | **yes** |
+| `lang` | `string?` | no |
 | `prefixDefaultLocale` | `boolean?` | no |
 | `tabs` | `NavConfigEntry[]?` | no |
 | `groups` | `NavConfigEntry[]?` | no |
 
 An omitted `basePath` falls back to `"/blog"`, because `normalizeBasePath` supplies that default. `Docs` always passes its own `basePath`, so this only affects direct callers of `buildNavTree`.
+
+`lang` is the language the tree is built for, and it selects which entry of a per-locale tab or group `label` / `description` map is used. It defaults to `defaultLocale`. `Docs.getNavTree` always passes it.
 
 ### Sort rules
 
@@ -413,7 +419,7 @@ Pure and fs-free. Each takes a `SiteConfig` whose `siteUrl` and `brandName` are 
 | --- | --- |
 | `buildDocMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `metadataBase`, `` title: `${meta.title} \| ${site.brandName}` ``, `description`, `keywords`, `authors`, `alternates.canonical` and `languages`, OpenGraph (`type: "article"`, `publishedTime`, `modifiedTime: meta.updated ?? meta.date`, `images`, `locale`, `alternateLocale`), Twitter (`card: "summary_large_image"`). Sets `robots: { index: false }` **iff `meta.hidden`**. hreflang is `undefined` when `translations.length <= 1` |
 | `buildIndexMetadata(site, lang?, langs = []): PageMetadata` | `` title: `Docs \| ${site.brandName}` ``, OG `type: "website"` with `` title: `${brandName} Docs` ``. No `robots` key; the index is never noindexed |
-| `docJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `TechArticle` and a `BreadcrumbList` (Home, Docs, the group name only, the page title). The `tab` never appears in JSON-LD breadcrumbs |
+| `docJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `TechArticle` and a `BreadcrumbList` (Home, Docs, the group name only, the page title). The `tab` never appears in JSON-LD breadcrumbs. When the page is translated, the `TechArticle` also carries `workTranslation` (an array, on the original-language version) or `translationOfWork` (on each translation) |
 | `indexJsonLd(items, site, lang?): JsonLd` | `CollectionPage`, `BreadcrumbList`, and an `ItemList` **only when `items.length > 0`** |
 
 The docs section name in breadcrumbs is the literal `"Docs"`.
@@ -424,8 +430,10 @@ The docs section name in breadcrumbs is the literal `"Docs"`.
 | --- | --- |
 | `buildPostMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `` title: `${meta.title} \| ${site.brandName}` ``, `alternates.canonical`, OG `type: "article"`, `publishedTime: meta.date \|\| undefined`, `modifiedTime: meta.updated ?? (meta.date \|\| undefined)`, `locale`, `twitter.card: "summary_large_image"`. **Never sets `robots`** |
 | `buildOverviewMetadata(site, lang?, langs = []): PageMetadata` | `` title: `Blog \| ${site.brandName}` ``, OG `type: "website"` with `` title: `${brandName} Blog` ``. hreflang only when `langs.length > 1` |
-| `postJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `BlogPosting` and a `BreadcrumbList` of 3 items (Home, Blog, the title) |
+| `postJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `BlogPosting` and a `BreadcrumbList` of 3 items (Home, Blog, the title). A translated post also carries `workTranslation` / `translationOfWork`, as the docs builder does |
 | `overviewJsonLd(posts, site, lang?): JsonLd` | `CollectionPage`, a `BreadcrumbList` of 2 items, and an `ItemList` **only when `posts.length > 0`** |
+| `buildRssFeed(posts: PostMeta[], site: SiteConfig, lang?): string` | One locale's complete RSS 2.0 document, newest post first. This is what `Blog.rssFeed()` wraps |
+| `rssFeedPath(site: SiteConfig, lang: string): string` | The conventional mount path for that locale's feed: the locale's index path plus `/rss.xml`, so `/blog/rss.xml` by default, or `/en/rss.xml` under `prefixDefaultLocale` |
 
 ## Shared helpers
 
@@ -437,7 +445,7 @@ The docs section name in breadcrumbs is the literal `"Docs"`.
 | `formatDate(iso: string, locale = "en-GB"): string` | `""` returns `""`. Parses at **UTC midnight**, so there is no timezone day-shift. An unparseable value is **returned unchanged**. Otherwise renders a long date, for example `"28 June 2026"` |
 | `isoDateString(value: unknown): string \| undefined` | A `string` is **passed through unvalidated**. A valid `Date` becomes `YYYY-MM-DD`. Anything else, including an invalid `Date`, becomes `undefined` |
 | `normalizeBasePath(basePath: string \| undefined): string` | `basePath ?? "/blog"`, then adds a leading `/` and strips a trailing `/`. `"/"` returns `""`, a root mount |
-| `buildSitemap(refs, site, translationsOf): SitemapEntry[]` | One entry per ref **in the order given**. `alternates` are emitted only when a slug has more than one translation |
+| `buildSitemap(refs, site, translationsOf): SitemapEntry[]` | One entry per ref **in the order given**. `alternates` are emitted only when a slug has more than one translation. A `siteUrl` carrying a sub-path (`https://user.github.io/repo`) has that sub-path **prepended**, not discarded, so a project-site sitemap matches its canonicals |
 
 ### localePath
 
@@ -496,10 +504,11 @@ Docs navigation types:
 | Type | Shape |
 | --- | --- |
 | `Doc` | `{ meta: DocMeta; content: string }`, where `content` is the MDX body with front matter stripped |
-| `NavConfigEntry` | `string \| { id: string; label?: string }` |
-| `NavItem` | `{ slug, title, label, icon?, href, lang, tab?, group?, order? }`. `label` is `meta.label ?? meta.title`; `href` comes from `localePath` |
-| `NavGroup` | `{ id, label, items }`. `id` is `""` for the ungrouped bucket |
-| `NavTab` | `{ id, label, groups }`. `id` is `""` for the implicit single tab |
+| `NavLabel` | `string \| Record<string, string>`. A bare string is used for every language; a map is resolved at `lang`, then `defaultLocale`, then falls through to the id |
+| `NavConfigEntry` | `string \| { id: string; label?: NavLabel; description?: NavLabel }`. `description` is the one-sentence blurb the docs index topic card prints under its heading |
+| `NavItem` | `{ slug, title, label, description?, icon?, href, lang, tab?, group?, order?, updated?, readingTime? }`. `label` is `meta.label ?? meta.title`; `href` comes from `localePath`. `DocsIndex` reads `description`, `updated`, and `readingTime` |
+| `NavGroup` | `{ id, label, description?, items }`. `id` is `""` for the ungrouped bucket |
+| `NavTab` | `{ id, label, description?, groups }`. `id` is `""` for the implicit single tab |
 | `NavTree` | `{ tabs, multiTab }`, where `multiTab === tabs.length > 1` |
 | `BreadcrumbSegment` | `{ label: string; href?: string }`. **`breadcrumbFor` never sets `href`**, so the field exists but is always absent |
 | `Breadcrumb` | `{ tab?, group?, title, segments }` |
@@ -555,8 +564,8 @@ The interactive body rendered by `BlogOverview`: fuzzy search, category filters,
 | `imgComponent` | `ElementType` | `"img"` |
 | `linkComponent` | `ElementType` | `"a"` |
 | `showSidebar` | `boolean` | `true` |
-| `tocTitle` | `string` | `"On this page"` |
-| `similarTitle` | `string` | `"Similar pages"` |
+| `tocTitle` | `string` | translated (e.g. `"On this page"`) |
+| `similarTitle` | `string` | translated (e.g. `"Similar pages"`) |
 | `similarCount` | `number` | passes `undefined` through, so the backend default `3` applies |
 | `readingLabel` | `(minutes: number) => string` | translated |
 
@@ -575,6 +584,9 @@ The interactive body rendered by `BlogOverview`: fuzzy search, category filters,
 | --- | --- | --- |
 | `DocsPage` | server | `docs`, `slug` |
 | `DocsIndex` | server | `docs` |
+| `DocsHero` | server | `title` |
+| `DocsTopicGrid` | client | `topics` |
+| `DocsRecentlyUpdated` | server | `items` |
 | `DocsNavbar` | client | none |
 | `DocsNavbarButton` | server-safe, no hooks | `children` |
 | `DocsTabs` | client | `nav` |
@@ -600,13 +612,13 @@ The interactive body rendered by `BlogOverview`: fuzzy search, category filters,
 | `showBreadcrumb` | `boolean` | `true` |
 | `showToc` | `boolean` | `true` |
 | `showFeedback` | `boolean` | `true` |
-| `tocTitle` | `string` | `"On this page"` |
-| `previousLabel` | `string` | `"Previous"` |
-| `nextLabel` | `string` | `"Next"` |
-| `feedbackQuestion` | `string` | `"Was this page helpful?"` |
-| `feedbackYesLabel` | `string` | `"Yes"` |
-| `feedbackNoLabel` | `string` | `"No"` |
-| `feedbackThanksLabel` | `string` | `"Thanks for the feedback!"` |
+| `tocTitle` | `string` | translated (e.g. `"On this page"`) |
+| `previousLabel` | `string` | translated (e.g. `"Previous"`) |
+| `nextLabel` | `string` | translated (e.g. `"Next"`) |
+| `feedbackQuestion` | `string` | translated (e.g. `"Was this page helpful?"`) |
+| `feedbackYesLabel` | `string` | translated (e.g. `"Yes"`) |
+| `feedbackNoLabel` | `string` | translated (e.g. `"No"`) |
+| `feedbackThanksLabel` | `string` | translated (e.g. `"Thanks for the feedback!"`) |
 | `onFeedback` | `(vote: "yes" \| "no") => void` | none |
 | `readingLabel` | `(minutes: number) => string` | translated |
 | `updatedLabel` | `(date: string) => string` | translated |
@@ -620,12 +632,61 @@ The interactive body rendered by `BlogOverview`: fuzzy search, category filters,
 | `docs` | `Docs` | required |
 | `lang` | `string` | `docs.defaultLocale` |
 | `linkComponent` | `ElementType` | `"a"` |
-| `title` | `string` | the localized word **"Documentation"** |
+| `title` | `string` | the localized word **"Documentation"** (`docsLabels(lang).title`); the brand is not used |
 | `description` | `string` | `site?.description` |
 | `header` | `ReactNode` | the built-in hero |
-| `renderIcon` | `(name: string \| undefined) => ReactNode` | `<DocsIcon name={name} size={18} />` |
+| `actions` | `DocsHeroAction[]` | none. The index does not invent a destination |
+| `heroVariant` | `DocsHeroVariant` | `"plain"` |
+| `children` | `ReactNode` | none. Rendered between the hero and the topic grid |
+| `showStats` | `boolean` | `true`. The hero's article-count / topic-count / newest-update row |
+| `filter` | `boolean` | `true`. The topic grid's filter box |
+| `pagesPerTopic` | `number` | `3` |
+| `recentCount` | `number` | `5`. `0` drops the "Recently updated" section |
+| `accents` | `string[]` | the built-in blue-to-coral cycle |
+| `renderIcon` | `(name: string \| undefined) => ReactNode` | `<DocsIcon name={name} size={19} />` |
 
-The JSDoc suggesting `title` defaults to `"<brand> docs"` is wrong. The default is `docsLabels(lang).title`, the localized word "Documentation".
+`DocsIndex` is a wrapper, not a monolith: it derives its data from the `Docs` instance and then renders `DocsHero`, your `children`, `DocsTopicGrid`, and `DocsRecentlyUpdated`. All three are exported separately, so an index that needs sections the kit does not ship can compose them by hand and still emit `docs.indexJsonLd(lang)` through the exported `JsonLd` component.
+
+#### DocsHero
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `title` | `string` | required. The `<h1>` |
+| `description` | `string` | omitted when unset |
+| `eyebrow` | `string` | omitted when unset |
+| `actions` | `DocsHeroAction[]` | omitted entirely when empty |
+| `stats` | `DocsHeroStat[]` | omitted entirely when empty |
+| `variant` | `DocsHeroVariant` | `"plain"`; `"card"` wraps it in the tinted gradient panel |
+| `linkComponent` | `ElementType` | `"a"` |
+| `children` | `ReactNode` | none. Rendered inside the panel, after the stat row |
+| `className` | `string` | none |
+
+#### DocsTopicGrid
+
+The "Browse by topic" section. A **client** component, because its filter is local state - which is why every prop is plain data and icons arrive as already-rendered nodes rather than through a `renderIcon` callback. The filter searches each page's title and description plus its topic's title, across **every** page, including the ones the `pagesPerTopic` cap hides from the card.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `topics` | `DocsTopic[]` | required |
+| `labels` | `DocsTopicGridLabels` | required |
+| `pagesPerTopic` | `number` | `3` |
+| `filter` | `boolean` | `true` |
+| `accents` | `string[]` | `["#2563eb", "#5b57f2", "#7c4fe0", "#9a55d0", "#b0487e", "#c25b4a", "#c4699e"]` |
+| `linkComponent` | `ElementType` | `"a"` |
+| `headingId` | `string` | `"scribekit-docs-topics"` |
+| `className` | `string` | none |
+
+#### DocsRecentlyUpdated
+
+A pure presentational server component. It does **not** sort or slice - it renders exactly the rows it is given, in the order given, and returns `null` when `items` is empty, so a corpus with no `updated:` dates simply has no section.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `items` | `DocsRecentItem[]` | required |
+| `heading` | `string` | translated |
+| `linkComponent` | `ElementType` | `"a"` |
+| `headingId` | `string` | `"scribekit-docs-recent"` |
+| `className` | `string` | none |
 
 #### DocsNavbar
 
@@ -642,8 +703,13 @@ Must be rendered inside `DocsSearchProvider`.
 | `lang` | `string` | none |
 | `showSearch` | `boolean` | `true` |
 | `searchPlaceholder` | `string` | translated |
-| `actions` | `ReactNode[]` | none |
+| `actions` | `ReactNode[]` | none. Auto-hidden when the bar is too narrow - see below |
 | `languagePicker` | `ReactNode` | none |
+| `showNavToggle` | `boolean` | `true`. The drawer hamburger; pass `false` for a navbar with no sidebar |
+
+`brandName` and `docsText` are `ReactNode`, not `string`, so either can be a lockup rather than a word.
+
+The navbar measures itself and **drops the whole `actions` group when the bar is too narrow**, marking itself `data-cramped`. Pass the same nodes to `DocsSidebar`'s `footer` prop and the stylesheet reveals them there exactly when the bar gives up, so nothing becomes unreachable on a phone.
 
 #### DocsNavbarButton
 
@@ -682,6 +748,10 @@ Must be rendered inside `DocsSearchProvider`.
 | `linkComponent` | `ElementType` | `"a"` |
 | `label` | `string` | translated |
 | `renderIcon` | `(name: string \| undefined) => ReactNode` | `<DocsIcon name={name} />` at size 16 |
+| `footer` | `ReactNode` | none. Drawer-mode only: shown when `DocsNavbar` sets `data-cramped` |
+| `brand` | `ReactNode` | none. Drawer-mode only: the drawer's brand lockup |
+| `showSearch` | `boolean` | `true`. Drawer-mode only |
+| `searchPlaceholder` | `string` | translated |
 
 #### DocsLanguagePicker
 
@@ -722,15 +792,15 @@ Owns the ⌘K palette.
 | `children` | `ReactNode` | required |
 | `lang` | `string` | `"en"` |
 | `linkComponent` | `ElementType` | `"a"` |
-| `searchPlaceholder` | `string` | `"Search docs…"` |
-| `searchEmptyLabel` | `string` | `"No results"` |
-| `renderIcon` | `(name: string \| undefined) => ReactNode` | none |
+| `searchPlaceholder` | `string` | translated (e.g. `"Search docs…"`) |
+| `searchEmptyLabel` | `string` | translated (e.g. `"No results"`) |
+| `renderIcon` | `(name: string \| undefined) => ReactNode` | `<DocsIcon name={name} />`. Pass your own set here too, or the palette's result icons revert to the built-ins |
 
 #### DocsSearchButton
 
 | Prop | Type | Default |
 | --- | --- | --- |
-| `placeholder` | `string` | `"Search docs…"` |
+| `placeholder` | `string` | translated (e.g. `"Search docs…"`) |
 | `lang` | `string` | `"en"` |
 | `className` | `string` | none |
 
@@ -762,13 +832,15 @@ Opens the palette owned by `DocsSearchProvider`. Call it from any client compone
 
 ### Exported prop types
 
-`BlogOverviewProps`, `BlogOverviewGridProps`, `BlogPageProps`, `BlogSidebarProps`, `DocsPageProps`, `DocsIndexProps`, `DocsNavbarProps`, `DocsNavbarButtonProps`, `DocsNavbarButtonVariant`, `DocsTabsProps`, `DocsSidebarProps`, `DocsLanguagePickerProps`, `DocsTocProps`, `DocsSearchProviderProps`, `DocsSearchButtonProps`, `DocsFeedbackProps`, `Language`, `BlogLabels`, `DocsLabels`.
+`BlogOverviewProps`, `BlogOverviewGridProps`, `BlogPageProps`, `BlogSidebarProps`, `DocsPageProps`, `DocsIndexProps`, `DocsHeroProps`, `DocsHeroAction`, `DocsHeroStat`, `DocsHeroVariant`, `DocsTopicGridProps`, `DocsTopicGridLabels`, `DocsTopic`, `DocsTopicPage`, `DocsRecentlyUpdatedProps`, `DocsRecentItem`, `DocsNavbarProps`, `DocsNavbarButtonProps`, `DocsNavbarButtonVariant`, `DocsTabsProps`, `DocsSidebarProps`, `DocsLanguagePickerProps`, `DocsTocProps`, `DocsSearchProviderProps`, `DocsSearchButtonProps`, `DocsFeedbackProps`, `Language`, `BlogLabels`, `DocsLabels`.
+
+The `/react` subpath also exports the `JsonLd` component and the i18n core (`ui`, `CATALOG`, `blogLabels`, `docsLabels`, `resolveLanguage`).
 
 ## The icon set
 
 `DocMeta.icon` and `DocsIcon`'s `name` accept these names:
 
-`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`
+`book`, `rocket`, `workflow`, `phone`, `voice`, `calendar`, `globe`, `clock`, `plug`, `link`, `mail`, `grid`, `list`, `check`, `gear`, `code`, `sparkles`, `shield`, `document`
 
 Any other name silently renders the neutral `document` glyph. It does not error. A missing or `undefined` name also falls back to `document`. Lookup uses `Object.prototype.hasOwnProperty.call(...)`, so `icon: "toString"` cannot resolve to an inherited member. Every glyph uses a `0 0 24 24` viewBox, `fill="none"`, `stroke="currentColor"`, `strokeWidth={1.7}`, round caps and joins, and `aria-hidden="true"`. The path table itself is module-private and not exported.
 
@@ -785,7 +857,9 @@ Pass a `renderIcon` prop to `DocsSidebar` or `DocsIndex` to substitute your own 
 }
 ```
 
-52 distinct tokens are referenced. **No dark mode ships.** The stylesheet contains no `prefers-color-scheme` block and no `.dark` class; its only four media queries are two `max-width: 1080px` rules and two `prefers-reduced-motion: reduce` rules. Dark theming is entirely your job, via token overrides.
+62 distinct tokens are referenced. **No dark mode ships.** The stylesheet contains no `prefers-color-scheme` block and no `.dark` class; its nine media queries are responsive breakpoints at `1080px`, `1081px`, `640px`, and `560px`, plus two `prefers-reduced-motion: reduce` blocks. Dark theming is entirely your job, via token overrides.
+
+One caveat before you try it: a handful of colours are written as literal `rgba()` with no token in front of them - the drawer backdrop and some `DocsHero` surfaces among them - so a token override alone will not reach every pixel.
 
 ### Tokens with no single default
 
@@ -797,7 +871,7 @@ Six tokens are referenced with **different fallbacks at different call sites**, 
 | `--scribekit-ink-subtle` | `#94a3b8` |
 | `--scribekit-bg-subtle` | `#f7f9fc` |
 | `--scribekit-border` | `#e5eaf0` |
-| `--scribekit-card-shadow` | `0 14px 34px -18px rgba(11, 27, 54, 0.35)` |
+| `--scribekit-border-strong` | `#eaeef4` |
 | `--scribekit-docs-tabbar-top` | `0` |
 
 ### Brand and accent
@@ -825,6 +899,7 @@ Six tokens are referenced with **different fallbacks at different call sites**, 
 | `--scribekit-ink-soft` | `#5a6b82` |
 | `--scribekit-ink-subtle` | no single default; see above |
 | `--scribekit-ink-hover` | `#15264a` |
+| `--scribekit-ink-faint` | `#8189a8` |
 | `--scribekit-nav-ink` | `#475569` |
 | `--scribekit-toc-ink` | `#64748b` |
 
@@ -835,7 +910,7 @@ Six tokens are referenced with **different fallbacks at different call sites**, 
 | `--scribekit-surface` | `#ffffff` |
 | `--scribekit-bg-subtle` | no single default; see above |
 | `--scribekit-border` | no single default; see above |
-| `--scribekit-border-strong` | `#eaeef4` |
+| `--scribekit-border-strong` | no single default; see above |
 | `--scribekit-navbar-bg` | `rgba(255, 255, 255, 0.9)` |
 | `--scribekit-docs-nav-bg` | `linear-gradient(180deg, #fcfdfe, #fbfcfe)` |
 | `--scribekit-docs-nav-hover` | `#f1f4f9` |
@@ -845,7 +920,7 @@ Six tokens are referenced with **different fallbacks at different call sites**, 
 
 | Token | Default |
 | --- | --- |
-| `--scribekit-card-shadow` | no single default; see above |
+| `--scribekit-card-shadow` | `0 14px 34px -18px rgba(11, 27, 54, 0.35)` |
 | `--scribekit-menu-shadow` | `0 14px 40px -12px rgba(11, 27, 54, 0.28)` |
 | `--scribekit-palette-shadow` | `0 24px 70px rgba(11, 27, 54, 0.28)` |
 | `--scribekit-focus-ring` | `rgba(37, 99, 235, 0.18)` |
@@ -856,6 +931,18 @@ Six tokens are referenced with **different fallbacks at different call sites**, 
 | --- | --- |
 | `--scribekit-font-sans` | `"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` |
 | `--scribekit-font-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` |
+| `--scribekit-font-display` | `inherit`. Set it to give headings their own face |
+
+### The docs index hero and topic cards
+
+| Token | Default |
+| --- | --- |
+| `--scribekit-topic-accent` | `#5b57f2`. Per-card, overridden by `DocsTopicGrid`'s `accents` |
+| `--scribekit-hero-bg` | `linear-gradient(160deg, #f7f8fe 0%, #f4f1fd 46%, #fbf3f8 100%)` |
+| `--scribekit-hero-cta` | `linear-gradient(120deg, #2563eb, #6d5df6 62%, #8a54d8)` |
+| `--scribekit-hero-rule` | `linear-gradient(90deg, #2563eb, #6d5df6 38%, #9a55d0 68%, #c4699e 100%)` |
+| `--scribekit-hero-glow` | two `radial-gradient` washes; set `none` to blank them |
+| `--scribekit-hero-shadow` | `0 20px 48px rgba(40, 30, 120, 0.06)` |
 
 ### Code blocks
 
@@ -878,7 +965,7 @@ Six tokens are referenced with **different fallbacks at different call sites**, 
 | `--scribekit-docs-body-min-height` | `60vh` |
 | `--scribekit-docs-nav-width` | `300px` |
 | `--scribekit-docs-toc-width` | `250px` |
-| `--scribekit-docs-index-width` | `1040px` |
+| `--scribekit-docs-index-width` | `1080px` |
 | `--scribekit-docs-navbar-search-width` | `440px` |
 
 ### Sticky-chrome offsets
@@ -899,7 +986,7 @@ Exported from `@daanvandenbergh/scribekit/react`.
 | Export | Type |
 | --- | --- |
 | `ui` | An `@daanvandenbergh/i18nkit` `I18n` instance over 24 locales, with `default: "en"` |
-| `CATALOG` | The copy catalog, 24 entries |
+| `CATALOG` | The copy catalog, 36 entries, each covering all 24 locales |
 | `blogLabels` | `(lang: string) => BlogLabels` |
 | `docsLabels` | `(lang: string) => DocsLabels` |
 | `resolveLanguage` | `(raw: string \| undefined) => Language` |
@@ -953,18 +1040,32 @@ The i18n module imports no react, next, or server-only code, so both server and 
 | `docsTitle` | `"Documentation"` |
 | `docsLanguage` | `"Language"` |
 | `docsChangeLanguage` | `"Change language"` |
+| `docsOpenNav` | `"Open navigation"` |
+| `docsCloseNav` | `"Close navigation"` |
+| `docsBrowseByTopic` | `"Browse by topic"` |
+| `docsRecentlyUpdated` | `"Recently updated"` |
+| `docsFilterPages` | `"Filter pages"` |
+| `docsClearFilter` | `"Clear filter"` |
+| `docsPageCount` | `` (n) => `${n} page(s)` `` |
+| `docsArticleCount` | `` (n) => `${n} article(s)` `` |
+| `docsTopicCount` | `` (n) => `${n} topic(s)` `` |
+| `docsResultCount` | `"{count} pages match “{query}”"` |
+| `docsResultCountOne` | `"1 page matches “{query}”"` |
+| `docsNoMatches` | `"Nothing matches “{query}”"` |
+
+The last three are **templates with `{count}` / `{query}` placeholders**, not functions, because `DocsTopicGrid` is a client component and a function cannot cross the server/client boundary.
 
 `back` is authored with `ui.uniform("← Blog")`, so it is one string for all 24 languages.
 
 `blogLabels(lang)` returns `BlogLabels`: `empty`, `readMore`, `searchPlaceholder`, `loadMore`, `allCategories`, `back`, `onThisPage`, `similarPages`, `filterByCategory`, `writtenBy`, `publishedLabel(date)`, `readingLabel(minutes)`.
 
-`docsLabels(lang)` returns `DocsLabels`: `title`, `onThisPage`, `previous`, `next`, `feedbackQuestion`, `feedbackYes`, `feedbackNo`, `feedbackThanks`, `searchPlaceholder`, `searchEmpty`, `language`, `changeLanguage`, `updatedLabel(date)`, `readingLabel(minutes)`.
+`docsLabels(lang)` returns `DocsLabels`, 26 members: `title`, `onThisPage`, `previous`, `next`, `feedbackQuestion`, `feedbackYes`, `feedbackNo`, `feedbackThanks`, `searchPlaceholder`, `searchEmpty`, `language`, `changeLanguage`, `openNav`, `closeNav`, `browseByTopic`, `recentlyUpdated`, `filterPages`, `clearFilter`, `updatedLabel(date)`, `readingLabel(minutes)`, `pageCountLabel(count)`, `articleCountLabel(count)`, `topicCountLabel(count)`, `resultCountTemplate`, `resultCountOneTemplate`, `noMatchesTemplate`.
 
 `BlogSidebar`'s `title` and `similarTitle`, `DocsToc`'s `title`, and `DocsFeedback`'s `yesLabel`, `noLabel`, and `thanksLabel` hardcode English defaults instead of reading the catalog. Their parent components always pass the translated values, so this surfaces only when you render those components directly.
 
 ## MDX
 
-`BlogPage` and `DocsPage` both render with `MDXRemote` from `next-mdx-remote/rsc`, passing your `components` and `mdxOptions` through their own merge steps. Those merge steps are internal; the observable contract is below.
+`BlogPage` and `DocsPage` both render the body through `MdxContent`, a package-internal wrapper that takes the same props `MDXRemote` does but calls `serialize` from `next-mdx-remote/serialize` and memoizes the compile in a 256-entry cache keyed on the options signature and the source text - so a repeated render of the same page skips the compile entirely. Only the `MDXRemoteProps` **type** comes from `next-mdx-remote/rsc`. The merge steps are internal; the observable contract is below.
 
 **`remark-gfm` is always on and cannot be disabled.** It is prepended to `options.mdxOptions.remarkPlugins` on every render, so tables, strikethrough, task lists, and autolinks are always available. There is no prop, config option, or plugin ordering that turns it off. Your own plugins are **preserved, never replaced**; `rehypePlugins`, `parseFrontmatter`, and the rest pass through untouched.
 

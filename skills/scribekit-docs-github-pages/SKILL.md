@@ -110,10 +110,10 @@ middleware for clean default-locale URLs - see Step 5), then rejoin at Step 1.
      paths.
    - **Hosting model - both work.** A **project site** (`/<repo>/` base path) renders correctly: the
      template's `BaseImg` + `BodyLink` and the workflow's `NEXT_PUBLIC_BASE_PATH` plumbing make heroes,
-     links, and assets resolve under the subpath (Step 5) - no custom domain needed. The **only** thing a
-     subpath can't fix is scribekit's absolute SEO URLs (canonical/sitemap/OG omit `/<repo>`). If SEO
-     matters, prefer **root hosting** - a custom domain (`public/CNAME`) or a `<owner>.github.io` user/org
-     site - where the base path is empty and even those are correct.
+     links, and assets resolve under the subpath (Step 5) - no custom domain needed. Absolute SEO URLs
+     are correct too, as long as `siteUrl` includes the `/<repo>` segment: `absoluteUrl` prepends the
+     origin's sub-path rather than discarding it. **Root hosting** - a custom domain (`public/CNAME`) or
+     a `<owner>.github.io` user/org site - is simply one less moving part.
 
 2. **Copy the template and fill it in.** Copy **[assets/app-template/](./assets/app-template/)** per its
    `README.md` table (`_docs.ts`, `_docs-links.tsx`, `_docs-chrome.tsx`, `layout.tsx`, `page.tsx`,
@@ -266,16 +266,17 @@ two automatically; only the third has no clean fix. All verified by building the
    `BaseImg` prepends `NEXT_PUBLIC_BASE_PATH`, so the hero src becomes `/scribekit/assets/...` (verified).
    `next/image` does **not** do this - under `images.unoptimized` it passes the src through unprefixed -
    which is why `BaseImg` exists.
-3. **Absolute SEO URLs** - `absoluteUrl` does `new URL(path, siteUrl)`, so a root-relative `localePath`
-   **drops `siteUrl`'s subpath**: canonical / sitemap / `hreflang` / OG come out missing `/<repo>` even
-   when `siteUrl` includes it. **No clean app-side fix** (it is a library limitation).
+3. **Absolute SEO URLs** - **handled by Step 4**: set `siteUrl` to the full Pages origin *including*
+   `/<repo>` and `absoluteUrl` prepends that sub-path to every root-relative `localePath`, so canonical /
+   sitemap / `hreflang` / OG all carry it. (Canonical and OG additionally resolve through Next's
+   `metadataBase`, which joins the same pathname - the two agree.) Getting `siteUrl` wrong is the only
+   failure mode left here.
 
-So a **project site now renders correctly** - heroes, links, assets all resolve - and needs **no custom
-domain**. In DEPLOY mode, add `imgComponent={BaseImg}` + `components={{ a: BodyLink }}` (and the Step 1
-`NEXT_PUBLIC_BASE_PATH` config) to the existing `[slug]` route to get the same. The **only** residue is
-#3, the absolute SEO-metadata URLs. If those matter, **root hosting removes even that**: a custom domain
-(`public/CNAME`, `siteUrl` set to it) or a `<owner>.github.io` user/org repo serves at the root, base path
-empty, everything correct. Recommend root hosting when SEO is a priority; otherwise a project site is fine.
+So a **project site renders correctly and is SEO-correct** - heroes, links, assets and metadata all
+resolve - and needs **no custom domain**. In DEPLOY mode, add `imgComponent={BaseImg}` +
+`components={{ a: BodyLink }}` (and the Step 1 `NEXT_PUBLIC_BASE_PATH` config) to the existing `[slug]`
+route to get the same. Root hosting - a custom domain (`public/CNAME`, `siteUrl` set to it) or a
+`<owner>.github.io` user/org repo - is still fewer moving parts, since the base path is simply empty.
 
 ---
 
@@ -322,7 +323,7 @@ Actions from enabling Pages), enable it once by hand and re-run:
   chrome, `_docs.ts`, `next.config.*`, `package.json`) - but still never edits the MDX page bodies or
   their front-matter.
 - **Be honest about static-export limits.** Middleware clean-URLs, true 308 redirects, and correct
-  absolute SEO URLs under a project subpath are the real trade-offs - state them, do not paper over them.
+  are the real trade-offs - state them, do not paper over them.
 - **Confirm before destructive or outward-facing edits:** overwriting an existing workflow, deleting a
   `proxy.ts`/`middleware.ts`, or changing the public URL scheme (`prefixDefaultLocale`) all change how
   the live site behaves - show the user what changes and get agreement first.

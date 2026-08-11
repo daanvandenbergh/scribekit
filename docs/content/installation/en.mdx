@@ -5,7 +5,7 @@ tab: "Documentation"
 group: "Get started"
 order: 2
 icon: "rocket"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/installation/hero.en.jpg"
 ---
 
@@ -29,6 +29,8 @@ Scribekit declares four peer dependencies. Your project supplies them:
 | `next-mdx-remote` | `^5 \|\| ^6` | Optional peer. Required to render any post or docs page body |
 
 The optional markings keep npm quiet for consumers who only import the `Blog` or `Docs` class in a script. If you render pages, install `next-mdx-remote`.
+
+Everything else the package needs at runtime - `@daanvandenbergh/i18nkit`, `fuse.js`, `gray-matter`, `remark-gfm`, and `server-only` - is a real dependency and arrives with the install.
 
 ## Import the stylesheet once
 
@@ -86,9 +88,9 @@ Link only what you need. `scribekit-hero` and `scribekit-docs-github-pages` each
 
 ### Install scribekit-docs and scribekit-blog together
 
-`scribekit-docs` has a hard dependency on `scribekit-blog`. It reads two files from it, `house-style.md` for voice and MDX rules and `research-protocol.md` for how it sources facts, and it **stops** when it cannot resolve them. Linking `scribekit-docs` on its own gives you a skill that refuses to run. Link both, in the same directory, as shown above.
+`scribekit-docs` depends on `scribekit-blog`. It reads two files from it, `house-style.md` for voice and MDX rules and `research-protocol.md` for how it sources facts, and it **stops** when it cannot resolve them at any of three locations, in order: a sibling `scribekit-blog` link, `.claude/skills/scribekit-blog/` from the project root or `$HOME`, or `node_modules/@daanvandenbergh/scribekit/skills/scribekit-blog/`.
 
-`scribekit-hero` is self-contained and depends on nothing, but `scribekit-blog` and `scribekit-docs` hand off to it to render hero images. Without it, they skip the hero and leave `image:` unset.
+That last fallback means the package you installed in step 1 already satisfies the dependency, so linking `scribekit-docs` alone still runs. Link both anyway - the sibling link is what keeps working if the skills are ever copied out of a project that has no scribekit install. The same three-location fallback applies to `scribekit-hero`, which `scribekit-blog` and `scribekit-docs` hand off to for hero images.
 
 ## Add the CLAUDE.md rule
 

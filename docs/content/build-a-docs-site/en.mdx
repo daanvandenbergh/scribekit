@@ -5,7 +5,7 @@ tab: "Tutorials"
 group: "Tutorials"
 order: 2
 icon: "book"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/build-a-docs-site/hero.en.jpg"
 ---
 
@@ -13,10 +13,11 @@ By the end of this tutorial you have a docs site at `/docs` with the whole shell
 navbar, a tab bar, a grouped sidebar, a ⌘K search palette, a breadcrumb, prev/next footer links,
 and a table-of-contents minimap. All of it is built from one `Docs` instance and a folder of MDX.
 
-[Quickstart](/quickstart) is the minimal version of this - a single tab, a sidebar, one page.
-This tutorial is its fuller sibling: same instance, the complete chrome around it.
+[Quickstart](/quickstart) is the minimal version of this: one page, one route pair, no chrome at
+all. This tutorial is its fuller sibling - same instance, the complete shell around it.
 
-**Prerequisites.** Node 20 or newer, a Next.js App Router app on version 14 or newer, and
+**Prerequisites.** A Next.js App Router app on **Next 15 or newer** (the route file in step 5 uses
+the awaited `params` shape) on Node 20.9 or newer, and
 `@daanvandenbergh/scribekit` plus `next-mdx-remote` installed - see
 [Installation](/installation). This tutorial uses a single language; every path is relative to
 your Next app root (the directory `next dev` runs from). If you have not imported
@@ -44,15 +45,17 @@ export const docs = new Docs({
 });
 ```
 
-`contentDir` resolves against the app root, so `"./docs"` is a `docs/` folder next to your
-`package.json`, not inside `app/`. `siteUrl` and `brandName` must both be set or the SEO methods
-throw. `tabs` and `groups` are display order only - you extend them in step 7.
+`contentDir` resolves against `process.cwd()` - the directory `next dev` or `next build` runs from -
+so `"./docs"` is a `docs/` folder next to your `package.json`, not inside `app/`. `siteUrl` and
+`brandName` must both be set or the SEO methods throw. `tabs` and `groups` are display order only -
+you extend them in step 8.
 
 ## 2. Build the chrome
 
-The navbar, tab bar, and sidebar all need the current pathname to highlight the active page, and
-`usePathname()` is a client hook. So the chrome is one thin client component that reads the
-pathname once and passes it down.
+`DocsTabs` and `DocsSidebar` need the current pathname to highlight the active page, and
+`usePathname()` is a client hook. All four chrome components are client components anyway - the
+navbar measures itself, the tab bar measures its active tab - so the chrome is one thin client
+component that reads the pathname once and passes it down.
 
 Create `app/docs/_docs-chrome.tsx`:
 
@@ -71,7 +74,7 @@ export function DocsChrome({ nav, children }: { nav: NavTree; children: ReactNod
     return (
         <DocsSearchProvider nav={nav} linkComponent={Link}>
             <div className="scribekit-docs">
-                <DocsNavbar brandName="Example" homeHref="/" linkComponent={Link} />
+                <DocsNavbar brandName="Example" homeHref="/docs" linkComponent={Link} />
                 <DocsTabs nav={nav} activePath={activePath} linkComponent={Link} />
                 <div className="scribekit-docs-body">
                     <DocsSidebar nav={nav} activePath={activePath} linkComponent={Link} />
@@ -83,11 +86,15 @@ export function DocsChrome({ nav, children }: { nav: NavTree; children: ReactNod
 }
 ```
 
+`homeHref` defaults to `"/"`, which is your app root rather than the docs index - so on a site
+mounted at `/docs`, set it explicitly as above or clicking the brand leaves the docs.
+
 `DocsNavbar` **must sit inside `DocsSearchProvider`**. The provider owns the one ⌘K palette that
-both the navbar's search button and the keyboard shortcut open. Put the navbar outside it and
-nothing errors - the search button still renders, it just does nothing when clicked, because
-outside a provider the `open` callback is a no-op. That silence is the whole reason to get the
-nesting right the first time.
+both the navbar's search button and the keyboard shortcut open, and the drawer state behind the
+mobile hamburger. Put the navbar outside it and nothing errors - the search button still renders and
+does nothing when clicked, because outside a provider the `open` callback is a no-op, and the navbar
+drops its hamburger entirely, so below the layout breakpoint the navigation has no opener at all.
+That silence is the whole reason to get the nesting right the first time.
 
 ## 3. Wire the layout
 
@@ -112,7 +119,10 @@ cross into the client chrome as a prop.
 
 ## 4. Add the index route
 
-`DocsIndex` renders a hero plus a card per sidebar group, built from the same nav tree.
+`DocsIndex` renders three sections off the same nav tree: a hero with a fact row (article count,
+topic count, newest update), a filterable "Browse by topic" grid with one card per sidebar group
+listing its first three pages, and a "Recently updated" list. Each is exported separately -
+`DocsHero`, `DocsTopicGrid`, `DocsRecentlyUpdated` - if you ever want to compose the index by hand.
 
 Create `app/docs/page.tsx`:
 
@@ -137,6 +147,8 @@ Create `app/docs/[slug]/page.tsx`:
 
 ```tsx
 import { DocsPage } from "@daanvandenbergh/scribekit/react";
+import { DocNotFoundError } from "@daanvandenbergh/scribekit";
+import { notFound, permanentRedirect } from "next/navigation";
 import { docs } from "../_docs";
 
 /** Unknown slugs 404 at the router instead of rendering on demand. */
@@ -157,21 +169,35 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
 }
 
-/** A docs page at /docs/<slug>. */
+/** A docs page at /docs/<slug>, or a redirect when the slug was renamed. */
 export default async function DocSlugPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
+    try {
+        docs.getDoc(slug);
+    } catch (err) {
+        if (err instanceof DocNotFoundError) {
+            const renamedTo = docs.getRedirect(slug);
+            if (renamedTo) permanentRedirect(renamedTo);
+            notFound();
+        }
+        throw err;
+    }
     return <DocsPage docs={docs} slug={slug} />;
 }
 ```
 
 `params` is a Promise and must be awaited - the App Router's shape from Next 15 on.
 
-Spreading **both** `getDocRefs()` and `getRedirectRefs()` is not optional. Both return
-`{ slug, lang }` entries, and on a single-language site `getRedirectRefs()` fills `lang` with your
-default locale, so mapping to `{ slug: ref.slug }` is all a `[slug]` route needs. The reason to
-include them: `dynamicParams = false` makes an unrendered slug 404 **at the router**, before the
-component that would redirect it ever runs. Skip the redirect refs and the day you rename a page,
-its old URL dies rather than redirecting. Adding them now costs one spread and saves that.
+The redirect handling comes as a pair, and half of it is a build failure. Spreading **both**
+`getDocRefs()` and `getRedirectRefs()` prerenders the old slug: `dynamicParams = false` makes an
+unrendered slug 404 **at the router**, before any component could redirect it. But a prerendered
+slug with no file on disk makes `getDoc` throw `DocNotFoundError` during the build - so the
+component has to catch it and hand off to `getRedirect`. Ship the spread without the catch and the
+build breaks the first time you actually rename a page.
+
+Both methods return `{ slug, lang }` entries, and on a single-language site `getRedirectRefs()`
+fills `lang` with your default locale, so mapping to `{ slug: ref.slug }` is all a `[slug]` route
+needs.
 
 ## 6. Write two pages and watch the sidebar assemble
 
@@ -221,12 +247,17 @@ rather than by anything you chose.
 
 Start your dev server and open `http://localhost:3000/docs`.
 
-The index shows a "Get started" card listing both pages. Click through to `/docs/getting-started`
-and the shell is there: the navbar with your brand and a search button, the sidebar with a
-"Get started" group and both pages under it, "Getting started" highlighted, a breadcrumb reading
-"Get started / Getting started", a "Next → Installation" link at the foot, and an "On this page"
-minimap tracking your `##` headings as you scroll. Press ⌘K (Ctrl+K on Windows and Linux) and the
-palette opens; type `install` and Installation comes up.
+The index shows a hero with a "2 articles · 1 topic" fact row and a "Get started" card listing both
+pages. Click through to `/docs/getting-started` and the shell is there: the navbar with your brand,
+a "Docs" pill beside it, and a search button; the sidebar with a "Get started" group and both pages
+under it, "Getting started" highlighted; a breadcrumb reading **"Documentation / Get started /
+Getting started"**; a reading-time pill; a "Next → Installation" link at the foot; a "Was this page
+helpful?" widget; and an "On this page" minimap tracking your `##` headings as you scroll. Press ⌘K
+(Ctrl+K on Windows and Linux) and the palette opens; type `install` and Installation comes up.
+
+The breadcrumb leads with the tab because these pages set `tab: "Documentation"` - a page that sets
+no `tab` falls into the implicit empty bucket, which contributes no segment. To drop the extras,
+`showFeedback={false}` removes the widget and `docsText={null}` removes the "Docs" pill.
 
 One thing is missing: **there is no tab bar.** That is next.
 

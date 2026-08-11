@@ -98,8 +98,9 @@ kebab-case of the title; **verify unique against every `<contentDir>/<slug>/` fo
 ### 7. Hero image (default ON, but match the corpus) - via /scribekit-hero
 **First check whether sibling pages carry `image:` / a `hero.js`.** If the docs corpus has **none** (a
 surface that never wired heroes), match it - **skip the hero and leave `image:` unset** unless the user
-asks for one: `DocMeta.image` is an optional OG/social-card field the page never renders inline, and a
-lone hero no sibling has breaks consistency. Otherwise (siblings have heroes, or the user opts in),
+asks for one: `DocsPage` renders `image` **inline above the body** (and uses it as the OG/social card),
+with no prop to suppress it, so a lone hero no sibling has is visible on the page itself, not just in a
+social preview. Otherwise (siblings have heroes, or the user opts in),
 hand the page's hero to the **[/scribekit-hero](../scribekit-hero/docs.md)** skill's **docs-hero** create
 flow: on first use it seeds the docs surface's `hero.settings.js` from the brand; then it writes the
 page's `<slug>/hero.js` params, renders an on-brand hero, saves the JPEG to the project's assets dir,

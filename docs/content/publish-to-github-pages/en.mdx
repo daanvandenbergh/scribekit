@@ -5,17 +5,18 @@ tab: "Tutorials"
 group: "Tutorials"
 order: 3
 icon: "globe"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/publish-to-github-pages/hero.en.jpg"
 ---
 
 By the end of this tutorial your docs site is live at a GitHub Pages URL and redeploys itself on
-every push to your default branch. You patch one config file, add two files, flip one setting in
-the GitHub UI, and push.
+every push to your default branch. You patch one config file, add four files, wire two of them into
+your page route, and push. The workflow turns Pages on by itself the first time it runs.
 
 **Prerequisites.** A working scribekit docs site that renders locally - see
 [Build a docs site from scratch](/build-a-docs-site) - and a GitHub repository with a remote
-set up. Node 20 or newer, and a committed `package-lock.json` (the workflow uses `npm ci`).
+set up. Node 20.9 or newer (Next 16's floor; the workflow installs 22), and a committed
+`package-lock.json` (the workflow uses `npm ci`).
 
 A scribekit docs site is already static-export-ready. The `Docs` class reads the filesystem at
 build time, pages render as server components, search is client-side, and every dynamic route
@@ -29,15 +30,21 @@ skill changes before you let it.
 
 ## 1. Turn on static export
 
-Merge two keys into your existing Next config. Preserve everything already in the object.
+Merge three keys into your existing Next config. Preserve everything already in the object.
 
 In `next.config.mjs`:
 
 ```js
+// The deploy workflow sets NEXT_PUBLIC_BASE_PATH from GitHub's `configure-pages` `base_path`
+// output: empty for a custom domain or user/org site, "/<repo>" for a project site. Unset (a
+// local build) means root-served.
+const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: "export",
     images: { unoptimized: true },
+    ...(base ? { basePath: base, assetPrefix: base } : {}),
 };
 
 export default nextConfig;
@@ -45,16 +52,18 @@ export default nextConfig;
 
 `output: "export"` is what makes `next build` emit a static `out/` directory instead of a server
 bundle. `images: { unoptimized: true }` keeps a local build from failing if anything in your app
-uses `next/image`.
+uses `next/image`. The `base` spread is what makes the site work under a project subpath: your app
+owns the base path, reading one environment variable that both this file and your hero `<img>`
+(step 4) resolve against.
 
-Two things **not** to add here:
+Two things **not** to do here:
 
 - **Do not add `trailingSlash: true`.** The export writes `docs/<slug>.html`, which Pages already
   serves at the extensionless `/docs/<slug>`, and that matches scribekit's no-trailing-slash
   canonical URLs. Turn trailing slashes on and every canonical disagrees with the URL it is served
   at.
-- **Do not hardcode `basePath` or `assetPrefix`.** The workflow's `configure-pages` step injects
-  the right values for your Pages URL in step 3. Hardcoding them breaks local builds and fights CI.
+- **Do not hardcode a literal base path.** Derive it from `NEXT_PUBLIC_BASE_PATH`, as above. A
+  hardcoded `basePath: "/my-repo"` breaks local builds and every other host you deploy to.
 
 ## 2. Add public/.nojekyll
 
@@ -66,7 +75,8 @@ touch public/.nojekyll
 
 It stops the exported `_next/` folder from ever being treated as Jekyll source. The artifact
 deploy flow does not run Jekyll anyway, so this is belt and braces - it costs nothing and removes
-the doubt.
+the doubt. A `touch out/.nojekyll` step in the workflow does the same job; either is enough, and
+doing both is harmless.
 
 ## 3. Add the deploy workflow
 
@@ -99,27 +109,33 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Set up Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
+                  # Next.js 16 requires Node >= 20.9; 22 is the current LTS.
                   node-version: 22
                   cache: npm
 
+            # Outputs `base_path` ("/<repo>" for a project site, empty for root hosting), and
+            # `enablement: true` turns Pages on for you on the first run.
             - name: Configure Pages
-              uses: actions/configure-pages@v5
+              id: pages
+              uses: actions/configure-pages@v6
               with:
-                  static_site_generator: next
+                  enablement: true
 
             - name: Install dependencies
               run: npm ci
 
             - name: Build static export
+              env:
+                  NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
               run: npx --no-install next build
 
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v5
               with:
                   path: ./out
 
@@ -135,19 +151,88 @@ jobs:
               uses: actions/deploy-pages@v5
 ```
 
-Adjust three things to your repo:
+Adjust four things to your repo:
 
 - **Default branch.** The trigger says `branches: [main]`. If yours is not `main`, change it.
 - **App in a subdirectory.** If your Next app lives below the repo root (say `web/`), add a
-  `defaults: { run: { working-directory: web } }` block to the `build` job and change the upload
-  `path:` to `./web/out`.
+  `defaults: { run: { working-directory: web } }` block to the `build` job, change the upload
+  `path:` to `./web/out`, and add `cache-dependency-path: web/package-lock.json` under
+  `setup-node`'s `with:`.
 - **No lockfile.** Both `npm ci` and `cache: npm` need a committed `package-lock.json`. If you have
   none, commit one, or drop the `cache: npm` line and change `npm ci` to `npm install`.
+- **TypeScript app.** Your app's **own** `package.json` must list `typescript`, `@types/node`,
+  `@types/react`, and `@types/react-dom`. The workflow runs `npx --no-install next build`, so it
+  cannot install them for you, and a repo-root `package.json` does not count for an app in a
+  subdirectory. See the troubleshooting note in step 7.
 
-`configure-pages@v5` with `static_site_generator: next` is the step that injects `basePath` and
-`assetPrefix` for your Pages URL, which is why step 1 left them alone.
+`configure-pages@v6` does two things here. It emits `steps.pages.outputs.base_path` - `/<repo>` for
+a project site, empty for root hosting - which the build step passes in as `NEXT_PUBLIC_BASE_PATH`,
+the variable step 1's config reads. And `enablement: true` turns Pages on for the repository on the
+first run, so you do not have to.
 
-## 4. Set siteUrl to the Pages origin
+Note what is deliberately **absent**: `static_site_generator: next`. That mode lets the action
+inject `basePath` itself, which would leave your app unable to read the same value - and the hero
+`<img>` in step 4 needs it.
+
+## 4. Make the hero and in-body links base-path aware
+
+Skip this step only if you are certain you will never host under a subpath. Two things scribekit
+renders are **raw HTML** that no `linkComponent` touches, and both 404 on a project site unless you
+override them: the hero image from `image:` front-matter (a plain `<img src="/assets/...">`, which
+`next/image` will not prefix once `images.unoptimized` is set) and prose links inside your MDX
+bodies (plain `<a href="/...">`).
+
+Add `app/docs/_docs-image.tsx`:
+
+```tsx
+import type { ImgHTMLAttributes } from "react";
+
+const BASE = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
+
+/** Renders the hero image, prefixing a root-relative src with the deployment base path. */
+export function BaseImg({ src = "", ...props }: ImgHTMLAttributes<HTMLImageElement>) {
+    const resolved = typeof src === "string" && src.startsWith("/") ? `${BASE}${src}` : src;
+    return <img src={resolved} {...props} />;
+}
+```
+
+And `app/docs/_docs-links.tsx`:
+
+```tsx
+import Link from "next/link";
+import type { AnchorHTMLAttributes } from "react";
+
+/** Internal (`/`-rooted) links go through next/link (base-path aware); others stay a plain <a>. */
+export function BodyLink({ href = "", children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
+    if (href.startsWith("/")) {
+        return (
+            <Link href={href} {...props}>
+                {children}
+            </Link>
+        );
+    }
+    return (
+        <a href={href} {...props}>
+            {children}
+        </a>
+    );
+}
+```
+
+Then wire both into your existing `app/docs/[slug]/page.tsx`:
+
+```tsx
+import { BaseImg } from "../_docs-image";
+import { BodyLink } from "../_docs-links";
+
+// ...
+return <DocsPage docs={docs} slug={slug} linkComponent={Link} imgComponent={BaseImg} components={{ a: BodyLink }} />;
+```
+
+`BaseImg` reads the same `NEXT_PUBLIC_BASE_PATH` your `next.config.mjs` does, which is the whole
+reason step 3's workflow passes the value to the app instead of letting `configure-pages` inject it.
+
+## 5. Set siteUrl to the Pages origin
 
 Your `_docs.ts` still carries whatever `siteUrl` you developed against. Leave it and you ship
 canonical, sitemap, and OpenGraph URLs pointing at a site that is not yours.
@@ -172,24 +257,18 @@ export const docs = new Docs({
 
 If a sibling `_blog.ts` shares the origin, update it too.
 
-**The project-site sharp edge.** If your repo is not named `<owner>.github.io` and has no custom
-domain, the site is served under a `/<repo>` subpath, and one thing does not come out right:
-navigation and assets work fine, because scribekit's links go through your `linkComponent` and CI
-injects the base path - but the **absolute SEO URLs come out missing the `/<repo>` segment**, even
-with `siteUrl` set as above. Scribekit builds them with `new URL(path, siteUrl)`, and a
-root-relative path discards `siteUrl`'s subpath. That is inherent to subpath hosting, not
-something a setting fixes.
+**Include the subpath.** For a project site, `siteUrl` carries the `/<repo>` segment, and scribekit
+prepends it to every absolute URL it builds - canonicals and OpenGraph resolve through Next's
+`metadataBase`, and the sitemap and JSON-LD go through the same join. Set it as the table says and
+a project site's metadata is correct; there is nothing further to work around.
 
-Two clean ways out, both root-hosted and both correct:
+Root hosting is still simpler if you have the choice, and either of these gets you there:
 
 - **A custom domain.** Add `public/CNAME` containing the domain, point DNS at Pages, and set
   `siteUrl` to it. The base path becomes empty.
-- **A user or org site.** Name the repo `<owner>.github.io`. Also root, also correct.
+- **A user or org site.** Name the repo `<owner>.github.io`. Also root.
 
-If you keep the project subpath, the site works and reads fine; only its absolute metadata omits
-`/<repo>`.
-
-## 5. Check for middleware
+## 6. Check for middleware
 
 If your app has a `middleware.ts` or `proxy.ts` that rewrites clean locale URLs (`/docs/...` onto
 `/en/docs/...`), **static export drops it**. Middleware does not exist on a static host. Only the
@@ -208,23 +287,18 @@ One more honesty note while you are here: if you use the `redirects` config for 
 those stop being true `308`s. The build still succeeds and real visitors still land on the new
 URL - Next turns the redirect into a client-side one that fires after hydration. But to a crawler
 or a JS-less client, the old URL is a blank `200` with no `308` and no canonical. If those old URLs
-matter for SEO, serve `public/<oldpath>.html` meta-refresh stubs instead and drop
-`getRedirectRefs()` from `generateStaticParams`. You cannot keep both: a `public/` file and a
-prerendered route at the same path collide.
-
-## 6. Flip the Pages source
-
-This is the one step that cannot be scripted, and skipping it makes the workflow's deploy job fail
-with a Pages-not-enabled error.
-
-In your repository on GitHub:
-
-**Settings → Pages → Build and deployment → Source →** select **"GitHub Actions"**.
+matter for SEO, serve `public/<oldpath>.html` meta-refresh stubs instead, and drop **both**
+`getRedirectRefs()` from `generateStaticParams` **and** the `permanentRedirect` branch from the
+route, so it stops emitting those pages. You cannot keep both: a `public/` file and a prerendered
+route at the same path collide. Give each stub a `<link rel="canonical" href="<newUrl>">` next to
+its meta refresh, and remember that on a project site the stub's target must carry the base path
+too, or it 404s.
 
 ## 7. Push and watch it go live
 
 ```bash
-git add next.config.mjs public/.nojekyll .github/workflows/deploy.yml app/docs/_docs.ts
+git add next.config.mjs public/.nojekyll .github/workflows/deploy.yml \
+    app/docs/_docs.ts app/docs/_docs-image.tsx app/docs/_docs-links.tsx app/docs/[slug]/page.tsx
 git commit -m "Publish docs to GitHub Pages"
 git push
 ```
@@ -237,8 +311,15 @@ Open it. Your docs index loads, the sidebar and tab bar are there, ⌘K opens th
 prev/next walks the corpus. The client components hydrate straight from the static HTML, so
 nothing about the shell degrades.
 
-If assets 404 and the page renders unstyled, that is the base-path tell: check that step 1 left
-`basePath` and `assetPrefix` out of `next.config.mjs` and let `configure-pages` set them.
+If the `deploy` job fails with *"Get Pages site failed"* or a not-found error, an org policy has
+blocked the workflow's `enablement: true`. Enable Pages once by hand - **Settings → Pages → Build
+and deployment → Source →** select **"GitHub Actions"** - and re-run the workflow. After that the
+setting sticks and the step is a no-op.
+
+If assets 404 and the page renders unstyled, that is the base-path tell: check that
+`next.config.mjs` reads `NEXT_PUBLIC_BASE_PATH` (step 1) and that the workflow's build step passes
+`NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}` (step 3). A missing env var is the
+usual cause. If the page is styled but the hero image is the only 404, you skipped step 4.
 
 If the `build` job fails with *"It looks like you're trying to use TypeScript but do not have the
 required package(s) installed"*, your app's `package.json` is missing the TypeScript toolchain.
@@ -253,8 +334,8 @@ npm install --save-dev typescript @types/node @types/react @types/react-dom
 ## What you have now
 
 A live docs site on GitHub Pages that rebuilds and redeploys on every push to your default branch,
-with correct canonical and sitemap URLs if you are root-hosted. Writing a new page is a new folder
-under `docs/` and a push.
+with correct canonical, OpenGraph, and sitemap URLs whether you are root-hosted or under a project
+subpath. Writing a new page is a new folder under `docs/` and a push.
 
 To sanity-check the export before pushing, run `npx next build` from your app root and confirm
 `out/` holds your docs HTML, a populated `_next/`, and `.nojekyll`.

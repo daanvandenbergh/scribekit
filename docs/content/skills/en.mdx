@@ -5,7 +5,7 @@ tab: "Skills"
 group: "Skills"
 order: 1
 icon: "sparkles"
-updated: "2026-07-16"
+updated: "2026-08-11"
 image: "/assets/docs/skills/hero.en.jpg"
 ---
 
@@ -78,6 +78,7 @@ The dependency picture is not symmetric, and it matters at install time.
 | docs -> hero | conditional | `write` step 7 calls `docs-hero` only if sibling pages already carry heroes, or you ask |
 | docs -> blog | **hard dependency** | docs reads blog's `house-style.md` and `research-protocol.md`, and **STOPs** without them |
 | hero -> nothing | none | self-contained; it carries its own design assets |
+| github-pages -> nothing | none | self-contained; hands off to `/scribekit-docs` when there is no corpus to publish |
 
 Two of these deserve a note.
 
@@ -90,9 +91,10 @@ together**, even if you only want docs.
 
 **docs calls hero conditionally, blog does not.** A blog post without a hero looks broken, so blog
 always renders one. A docs corpus that never wired heroes should stay that way, so `scribekit-docs`
-checks whether sibling pages carry `image:` first, and skips the hero if none do. `DocMeta.image` is
-an optional social-card field the page never renders inline, and one hero no sibling has is worse
-than no hero at all.
+checks whether sibling pages carry `image:` first, and skips the hero if none do. `DocsPage` renders
+`image` inline above the body as well as using it for the social card, with no prop to suppress it -
+so one hero no sibling has is visible on the page itself, not just in a preview, and it reads as a
+mistake.
 
 Both hero handoffs degrade rather than fail. If `/scribekit-hero` is not installed, the skill skips
 the image, leaves `image:` unset, and tells you to install it.
@@ -100,8 +102,9 @@ the image, leaves `image:` unset, and tells you to install it.
 ## The guardrails they share
 
 Four rules hold across these skills, and they are the reason you can run them unattended. The
-dev-server and git-branch rules bind all four; the other two bind the three that write content,
-since `scribekit-docs-github-pages` edits deploy config rather than pages.
+dev-server and git-branch rules bind all four. The date rule binds blog, docs, and hero. Never-fabricate
+binds the two that write prose - `scribekit-hero` renders text it is handed, so the rule has nothing
+to bite on there, and `scribekit-docs-github-pages` writes config rather than pages.
 
 - **Never fabricate.** Blog: never a statistic, quote, date, source, or a named customer, case, or
   event. Docs: never an API detail. Unsupported means cut it or soften it to a claim you can defend.
@@ -119,7 +122,7 @@ since `scribekit-docs-github-pages` edits deploy config rather than pages.
 | `scribekit-blog` | `write`, `rewrite` | `--scan`, `--no-hero`, `--no-translations` | [/scribekit-blog](/scribekit-blog) |
 | `scribekit-docs` | `write`, `rewrite`, `reorganize`, `deep-verify` | `--scan`, `--no-hero` | [/scribekit-docs](/scribekit-docs) |
 | `scribekit-hero` | `blog-hero`, `regenerate-heroes`, `docs-hero`, `regenerate-docs-heroes`, `readme-hero`, `tune-gradients` | none | [/scribekit-hero](/scribekit-hero) |
-| `scribekit-docs-github-pages` | none (one linear job) | `--verify` | [/scribekit-docs-github-pages](/scribekit-docs-github-pages) |
+| `scribekit-docs-github-pages` | auto: deploy or create (no mode argument) | `--verify` | [/scribekit-docs-github-pages](/scribekit-docs-github-pages) |
 
 `scribekit-hero` is worth one line of rationale: it renders heroes deterministically from HTML and
 CSS via headless Chrome, and explicitly never uses an AI image generator or stock photo. The reason

@@ -15,8 +15,10 @@ and code sample is true. It is not for a marketing or blog article; that is
 [`/scribekit-blog`](/scribekit-blog).
 
 ```text
-/scribekit-docs [write|rewrite|reorganize|deep-verify] [topic | slug-or-path] [--scan]
+/scribekit-docs [write|rewrite|reorganize|deep-verify] [topic | slug-or-path] [--scan] [--no-hero]
 ```
+
+The skill's own `argument-hint` lists only `--scan`; `--no-hero` is a `write`-only opt-out it also recognises.
 
 Nothing about any project is baked in. Every invocation begins with Step 0, which learns the
 project's voice and routes, finds the `Docs` wiring, maps the corpus, and reads the real source code.
@@ -47,11 +49,28 @@ structure**.
 `reorganize` never renames a slug: "A reorganize run therefore changes zero URLs." Badly-named slugs
 are reported at the end instead of being touched.
 
-`deep-verify` is report-first always. It lists every finding, numbered, and applies only the ones you
-pick, with an optional note attached to each. The defects it computes across the corpus include
-undocumented API surface, pages that contradict each other, broken links and anchors, translations
-drifted from their original, samples that no longer compile, and docs that are true against `src/`
-but wrong against the published package.
+`deep-verify` is report-first always. It answers one question first, in one line - the worst unfixed
+severity, on the ladder Critical / High / Medium / Low / Info, where any unfixed Critical or High
+means **not ready to deploy**. Then it lists every finding, numbered, and applies only the ones you
+pick, with an optional note attached to each.
+
+It fans out one agent per slug (not per locale file), keeping to about 10-12 at a time and running a
+larger corpus in a second batch, which it names in its coverage line - a silently truncated corpus is
+the one failure the mode must never have. The corpus-level checks it then computes are eleven:
+
+| | Check |
+| --- | --- |
+| **C1** | Undocumented public API surface - capabilities no page mentions |
+| **C2** | Documented-but-deleted APIs, deduplicated to one finding per dead symbol |
+| **C3** | Cross-page contradictions, including conflicting prescriptions with no source anchor |
+| **C4** | Terminology drift - one concept, two names, across pages |
+| **C5** | The link graph: dead slugs, dead anchors, orphans, per-locale target existence |
+| **C6** | Translation drift, including a slug missing a configured locale entirely |
+| **C7** | Reading-order coherence along the prev/next walk |
+| **C8** | Stale `updated:` versus the git history of the sources a page's facts trace to |
+| **C9** | Code samples typecheck, in one batched `tsc --noEmit` |
+| **C10** | Published-artifact drift - docs true against `src/` but wrong against what `npm install` delivers |
+| **C11** | Getting-started integrity - does a page still walk the current wiring end to end |
 
 **Never run two modes in one invocation.** A `rewrite` with no target lists the pages and asks which.
 An ambiguous request gets one clarifying question first.
@@ -104,7 +123,9 @@ is why that file is the definition of "verified" for the whole skill.
 | `<contentDir>/<slug>/<defaultLocale><ext>` | Every `write`. |
 | `<contentDir>/<slug>/<lang><ext>` | Once per non-default locale. |
 | `<contentDir>/README.md` | Seeded once, verbatim. Never overwritten if it already exists. |
+| `<contentDir>/hero.settings.js` | Seeded once, on the first hero for the docs surface. |
 | `<contentDir>/<slug>/hero.js` and `<assets>/docs/<slug>/hero.<code>.jpg` | Only when the hero runs (see below). |
+| A one-line deploy verdict | Every `deep-verify` run. Any unfixed Critical or High means not ready to deploy. |
 | `_docs.ts` `tabs` / `groups` arrays | **Only** when `write` introduces a brand-new tab or group, or wholesale under `reorganize`. |
 
 The default locale resolves as `config.defaultLocale ?? locales[0].code ?? locale.split("-")[0] ??
@@ -114,8 +135,9 @@ The default locale resolves as `config.defaultLocale ?? locales[0].code ?? local
 group, so the new section is ordered and labelled rather than sorted last under its raw id. It
 touches nothing else in that file.
 
-`reorganize` edits the front-matter of **every locale file** of moved pages, plus the `_docs.ts`
-`tabs` / `groups` arrays. It edits **no bodies** and does **not** bump `updated:`.
+`reorganize` edits the front-matter of **every page, in every locale** - the slot fields on moved
+pages, plus the silent YAML-type failures anywhere in the corpus - and the `_docs.ts` `tabs` /
+`groups` arrays. It edits **no bodies** and does **not** bump `updated:`.
 
 `deep-verify` writes a scratchpad brief, then edits only the bodies of pages whose findings the user
 approved. "**Findings the user did not approve are dropped.**"
@@ -131,7 +153,7 @@ approved. "**Findings the user did not approve are dropped.**"
 | Slugs | "**Never rename a `<slug>/` folder.** The slug is the page's public URL." A deliberate rename is the user's call and needs a `redirects` entry. |
 | JSDoc vs behaviour | "Where a symbol's **JSDoc disagrees with its executed behaviour, the behaviour wins**" - comments drift, and a page that trusted a stale comment is wrong. |
 | YAML types | The frontmatter YAML types are **load-bearing**: `order` a bare number, `hidden` a bare boolean, `keywords` a YAML list. A wrong type is silently dropped to `undefined`. |
-| Reconstruction | "Assume you cannot call `getNavTree`/`getAllDocs`/`getDoc`" - `Docs` is `server-only`. Reconstruct what they would return, and "**say which** - never present a reconstruction as executed truth." |
+| Reconstruction | Reconstruct the reader's output by default, since `Docs` is `server-only` - but **take either escape hatch when it works**, because a reconstruction is a simulation and these are ground truth: import the fs-free `buildNavTree` / `flattenNav` directly, or run the whole class under `node --conditions=react-server`, the condition a framework actually resolves. Either way, "**say which** - never present a reconstruction as executed truth." |
 | Dev server | "**Never start a dev server**" - the skill asks the user to run it. |
 | Git | "**Never create git branches.**" |
 | Date | "**Today's real date** comes from `date +%F`, never a guess." |
@@ -152,7 +174,7 @@ They are resolved at the first path that exists:
 
 ```text
 <this-skill-dir>/../scribekit-blog/<file>
-.claude/skills/scribekit-blog/<file>
+.claude/skills/scribekit-blog/<file>          # project root or $HOME
 node_modules/<package-name>/skills/scribekit-blog/<file>
 ```
 
@@ -172,9 +194,15 @@ first of three paths that exists:
 
 ```text
 <this-skill-dir>/../scribekit-hero/SKILL.md
-.claude/skills/scribekit-hero/SKILL.md
+.claude/skills/scribekit-hero/SKILL.md          # project root or $HOME
 node_modules/<package-name>/skills/scribekit-hero/SKILL.md
 ```
 
 If `/scribekit-hero` is not installed, the skill skips the hero, leaves `image:` unset, and tells you
 to install it.
+
+`write` is not the only mode that reaches for it. `rewrite` Step 9 verifies the existing hero and
+routes what it finds: a missing or off-brand hero becomes a recommendation to run
+`/scribekit-hero docs-hero`, and gradients that are themselves off become
+`/scribekit-hero tune-gradients docs`. `regenerate-docs-heroes` is the third entry point, for
+re-rendering every page's hero after a design change.

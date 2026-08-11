@@ -10,13 +10,15 @@ image: "/assets/docs/scribekit-blog/hero.en.jpg"
 ---
 
 A portable Claude Code skill that writes or rewrites a single MDX blog post for whatever project it
-is dropped into, optimised for classic search and for AI answer engines. It runs a mandatory web
+is dropped into, optimized for classic search and for AI answer engines. It runs a mandatory web
 research pass, plans SEO and GEO targeting against a live SERP read, drafts in the project's own
 learned voice, and self-scores against a 100-point rubric.
 
 ```text
-/scribekit-blog [write|rewrite] [topic | slug-or-path] [--scan]
+/scribekit-blog [write|rewrite] [topic | slug-or-path] [--scan] [--no-hero] [--no-translations]
 ```
+
+Only `--scan` appears in the skill's own `argument-hint`; the other two are opt-out phrases the `write` task recognises.
 
 Nothing about any project is baked in. Every invocation begins with Step 0, which learns the
 project's identity, voice, content directory, frontmatter contract, locales, and real routes before
@@ -46,7 +48,7 @@ in the content directory and asks which.
 | File | Purpose |
 | --- | --- |
 | `SKILL.md` | The router. Step 0 project learning, mode selection, and the non-negotiables. |
-| `write.md` | The write task, 10 steps. |
+| `write.md` | The write task, 10 steps. It ends by suggesting `rewrite --scan` on the new slug as an independent audit pass. |
 | `rewrite.md` | The audit-and-apply task, 9 steps. |
 | `house-style.md` | Voice craft, burstiness, MDX formatting, the banned AI-slop lists, the frontmatter contract. Also read by `/scribekit-docs`. |
 | `research-protocol.md` | Tools, source-quality ladder, the research loop, citing, the sources list. Also read by `/scribekit-docs`, with its polarity inverted. |
@@ -57,11 +59,12 @@ in the content directory and asks which.
 
 | Path | When |
 | --- | --- |
-| `<contentDir>/<slug>/<defaultLocale>.<ext>` | Every `write`. The locale-named file is favoured over `post.<ext>`. |
+| `<contentDir>/<slug>/<defaultLocale>.<ext>` | Every `write`. The locale-named file is preferred over `post.<ext>`. |
 | `<contentDir>/<slug>/<lang>.<ext>` | Once per non-default locale, unless `--no-translations`. |
 | `<contentDir>/README.md` | Seeded once from `assets/content-dir-README.md`, verbatim. Never overwritten if it already exists. |
-| `<contentDir>/<slug>/hero.js` | Hero parameters, written by `/scribekit-hero`. |
-| `<assets>/blog/<slug>/hero.<code>.jpg` | The rendered hero, wired into the post's `image:` frontmatter. |
+| `<contentDir>/hero.settings.js` | Seeded once by `/scribekit-hero` on the first hero for the blog surface, from the project brand. Never re-seeded. |
+| `<contentDir>/<slug>/hero.js` | Hero parameters, written by `/scribekit-hero`. **One file per post, covering every language** - a `(locale) => params` map when the blog is multi-language. |
+| `<assets>/blog/<slug>/hero.<code>.jpg` | The rendered hero, wired into the post's `image:` frontmatter. One per locale, because the hero bakes the title text into the image - a translation never points `image:` at the default-language hero. |
 
 The language is the file's name, never a frontmatter field. `<slug>/post.<ext>` still resolves as a
 language-neutral fallback, but the locale-named form is preferred.
@@ -70,7 +73,7 @@ language-neutral fallback, but the locale-named form is preferred.
 
 | Constraint | Rule |
 | --- | --- |
-| Fabrication | "**Never fabricate** a statistic, quote, date, source, or a named customer / case / event." Unsupported means cut it or soften it to a claim you can defend. Every number is traceable to the sources list. |
+| Fabrication | "**Never fabricate** a statistic, quote, date, source, or a named customer / case / event." Unsupported means cut it or soften it to a claim you can defend. Every number is traceable to the sources list, which is printed **in chat**, not into the post, as `<claim/stat> - <number> - <Publisher>, <date> - <URL>`. |
 | Banned phrases | Any banned phrase caps the Voice and Anti-slop category at `<=10` out of 20. |
 | Score floor | The `write` task self-scores before finishing and "does not ship below ~90 (a state-of-the-art bar, not a passing grade)". |
 | Dev server | "**Never start a dev server**" - the skill asks the user to run it. |
@@ -95,7 +98,7 @@ The hero image is not scored numerically. The `rewrite` task's Verify hero step 
 on being present, on-brand, the correct ratio, legible at card scale, and carrying descriptive alt
 text.
 
-The score is reported per category with a one-line justification, plus a prioritised, concrete fix
+The score is reported per category with a one-line justification, plus a prioritized, concrete fix
 list ordered most impactful first. A bare number is never reported without the fixes.
 
 ## How it calls /scribekit-hero
@@ -112,7 +115,7 @@ The skill is resolved at the first of three paths that exists:
 
 ```text
 <this-skill-dir>/../scribekit-hero/SKILL.md
-.claude/skills/scribekit-hero/SKILL.md
+.claude/skills/scribekit-hero/SKILL.md          # project root or $HOME
 node_modules/@daanvandenbergh/scribekit/skills/scribekit-hero/SKILL.md
 ```
 

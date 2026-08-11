@@ -207,7 +207,7 @@ The interactive parts live in `BlogOverviewGrid`, a **client component** rendere
 
 ## Docs
 
-The `Docs` class turns a folder of `.mdx` pages into a tabbed, grouped navigation - assembled from each page's front-matter, **not** a separate config file. The components render the app: a top bar (`DocsNavbar`), a tab bar (`DocsTabs`), a left nav (`DocsSidebar`), a page with breadcrumb / meta / prev-next (`DocsPage`), a right-hand scroll-spy minimap (`DocsToc`, rendered by `DocsPage`), and a landing page of section cards (`DocsIndex`). One `DocsSearchProvider` owns the ⌘K palette the navbar button and keyboard shortcut share. Like the blog, `DocsNavbar` is optional and you own the rest of the chrome.
+The `Docs` class turns a folder of `.mdx` pages into a tabbed, grouped navigation - assembled from each page's front-matter, **not** a separate config file. The components render the app: a top bar (`DocsNavbar`), a tab bar (`DocsTabs`), a left nav (`DocsSidebar`), a page with breadcrumb / meta / prev-next (`DocsPage`), a right-hand scroll-spy minimap (`DocsToc`, rendered by `DocsPage`), and a landing page (`DocsIndex`, composing `DocsHero` + `DocsTopicGrid` + `DocsRecentlyUpdated`, each exported separately). One `DocsSearchProvider` owns the ⌘K palette the navbar button and keyboard shortcut share. Like the blog, `DocsNavbar` is optional and you own the rest of the chrome.
 
 ### 1. Configure one `Docs` instance
 
@@ -355,7 +355,7 @@ The sidebar is assembled from the pages themselves - **there is no separate nav 
 - **`order`** sorts pages within their group (ascending); unordered pages sort after, then by title.
 - **`hidden: true`** keeps a page routable via direct link but out of the sidebar, prev/next, index, sitemap, and served `robots: noindex` (so a draft isn't crawled).
 
-`docs.getNavTree(lang)` returns the resolved tree (`tabs → groups → ordered pages`) and drives `getBreadcrumb`, `getAdjacent` (prev/next), and `DocsIndex`'s section cards.
+`docs.getNavTree(lang)` returns the resolved tree (`tabs → groups → ordered pages`) and drives `getBreadcrumb`, `getAdjacent` (prev/next), and `DocsIndex`'s topic cards.
 
 ### Renaming a page: `redirects`
 
