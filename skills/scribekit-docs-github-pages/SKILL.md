@@ -132,7 +132,12 @@ middleware for clean default-locale URLs - see Step 5), then rejoin at Step 1.
      `box-sizing: border-box` the index section cards wrap oddly, and `body { margin: 0 }` removes the
      default inset).
    - `package.json` - deps `next`, `react`, `react-dom`, `next-mdx-remote`, and
-     `@daanvandenbergh/scribekit`; commit a lockfile (the workflow's `npm ci` needs it).
+     `@daanvandenbergh/scribekit`, **plus devDeps `typescript`, `@types/node`, `@types/react`,
+     `@types/react-dom`** - the template's route files are `.ts`/`.tsx`, so `next build` aborts with
+     *"It looks like you're trying to use TypeScript but do not have the required package(s) installed"*
+     without them (in CI that is fatal: `npx --no-install` cannot fetch them). Commit a lockfile (the
+     workflow's `npm ci` needs it). If the app is a **subdirectory** of a repo whose root already has
+     TypeScript, it still needs its own copy - `npm ci` runs in the app dir and Next resolves from there.
    - Ensure the corpus's hero JPEGs sit under the app's `public/` at the `image:` paths.
 
 Then continue to Step 1. A freshly scaffolded app has no middleware and no `redirects`, so most of Step 5
@@ -195,6 +200,12 @@ Adjust it to the project:
 - **No `package-lock.json`.** Both `npm ci` **and** `setup-node`'s `cache: npm` fail without a committed
   lockfile. If there is none, either commit one, or drop the `cache: npm` line and change the install
   step to `npm install`. (For a subdir app, also set `cache-dependency-path: <subdir>/package-lock.json`.)
+- **TypeScript app, no TypeScript deps.** If the app has a `tsconfig.json` or any `.ts`/`.tsx` file, its
+  **own** `package.json` must list `typescript`, `@types/node`, `@types/react`, `@types/react-dom` as
+  devDependencies - and the lockfile must be regenerated after adding them. Locally `next build` offers to
+  install them for you; in CI `npx --no-install next build` cannot, so it dies with *"It looks like you're
+  trying to use TypeScript but do not have the required package(s) installed"*. Check this before pushing
+  - a repo-root `package.json` having them does not help a subdir app.
 
 If `.github/workflows/deploy.yml` already exists, show the user the diff and ask before overwriting.
 

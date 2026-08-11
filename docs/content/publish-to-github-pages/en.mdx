@@ -240,6 +240,16 @@ nothing about the shell degrades.
 If assets 404 and the page renders unstyled, that is the base-path tell: check that step 1 left
 `basePath` and `assetPrefix` out of `next.config.mjs` and let `configure-pages` set them.
 
+If the `build` job fails with *"It looks like you're trying to use TypeScript but do not have the
+required package(s) installed"*, your app's `package.json` is missing the TypeScript toolchain.
+Locally `next build` offers to install it; the workflow runs `npx --no-install next build`, so it
+cannot. Add it to the **app's own** `package.json` - a repo-root one does not count for an app in a
+subdirectory - and commit the updated lockfile:
+
+```bash
+npm install --save-dev typescript @types/node @types/react @types/react-dom
+```
+
 ## What you have now
 
 A live docs site on GitHub Pages that rebuilds and redeploys on every push to your default branch,

@@ -20,7 +20,10 @@ Then fill the placeholders (`<BRAND>`, `<your-pages-origin>`, the `tabs`/`groups
 corpus and the derived Pages origin, and add the two app-level files not carried here: a root
 `app/layout.tsx` that imports **both** `@daanvandenbergh/scribekit/styles.css` **and** `./globals.css`
 (the reset below), and `package.json` deps (`next`, `react`, `react-dom`, `next-mdx-remote`,
-`@daanvandenbergh/scribekit`).
+`@daanvandenbergh/scribekit`) plus devDeps (`typescript`, `@types/node`, `@types/react`,
+`@types/react-dom`) - these files are `.ts`/`.tsx`, and without those `next build` stops at *"It looks
+like you're trying to use TypeScript but do not have the required package(s) installed"*, which in CI
+(`npx --no-install next build`) is fatal.
 
 `globals.css` is a small base reset (`box-sizing: border-box`, `body { margin: 0 }`, a base font). It
 matters: the package stylesheet assumes border-box, so without it the index section cards' padding
