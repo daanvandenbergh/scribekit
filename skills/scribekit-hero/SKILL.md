@@ -70,7 +70,7 @@ Design, brand, and content are separated so a design change never means re-editi
   over one palette) and `brand` (font, badge/logo, eyebrow, texture, `css`, default byline). The **only**
   place a project customises how heroes look. Seeded from `assets/hero.settings.template.js`. Its location
   depends on the surface: blog = `<content-dir>/hero.settings.js`; docs =
-  `<docs-content-dir>/hero.settings.js`; README = `.agent/scribekit-hero/readme/hero.settings.js`.
+  `<docs-content-dir>/hero.settings.js`; README = `.agentstore/scribekit-hero/readme/hero.settings.js`.
 - **Params (one per hero)**: `hero.js` - pure data: `export default` the hero's params (gradient pick +
   title + subtitle, optional byline). Saved so any hero is reproducible.
 
@@ -150,7 +150,7 @@ Verify/refine a `hero.settings.js`'s gradient palette until it's **very smooth a
 in-brand**. **Target**: `tune-gradients` (or `tune-gradients blog`) tunes the **blog** palette
 `<content-dir>/hero.settings.js`; `tune-gradients docs` tunes the **docs** palette
 `<docs-content-dir>/hero.settings.js`; `tune-gradients readme` tunes the **README** palette
-`.agent/scribekit-hero/readme/hero.settings.js`. (The `readme-hero` flow also runs this on the README
+`.agentstore/scribekit-hero/readme/hero.settings.js`. (The `readme-hero` flow also runs this on the README
 settings when it first seeds them.) The steps below are identical for any target.
 1. Ensure the target `hero.settings.js` exists (auto-create first if not).
 2. **Render the gallery**: fill `assets/hero.gallery.html`'s two tokens (`{{HERO_COMPONENT}}` ->

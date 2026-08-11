@@ -1,6 +1,6 @@
 # @daanvandenbergh/scribekit
 
-![scribekit - a drop-in MDX blog and docs site for Next.js](.agent/scribekit-hero/readme/hero.png)
+![scribekit - a drop-in MDX blog and docs site for Next.js](.agentstore/scribekit-hero/readme/hero.png)
 
 Drop a fast, SEO-ready **blog** and **docs site** into any **Next.js** app - and write both with **Claude Code**.
 
