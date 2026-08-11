@@ -72,7 +72,7 @@ const fade = (t) => `rgba(${t}, 0)`;
  */
 export const brand = {
     font: { family: "Space Grotesk", url: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" },
-    badge: "◆",
+    badge: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.2 5.2 7.7 4.5 4.8 4.5A1.8 1.8 0 003 6.3v9.4a1.8 1.8 0 001.8 1.8c2.9 0 5.4.7 7.2 2"/><path d="M12 6.5c1.8-1.3 4.3-2 7.2-2A1.8 1.8 0 0121 6.3v9.4a1.8 1.8 0 01-1.8 1.8c-2.9 0-5.4.7-7.2 2"/><path d="M12 6.5v13"/></svg>`,
     accent: "107, 75, 214",
     eyebrow: "SCRIBEKIT",
     byline: { name: "Author Name", role: "" },

@@ -1,5 +1,12 @@
 /* Base document reset for the docs site. The package stylesheet styles the docs UI itself (and now
    scopes box-sizing + the palette font); this just resets the document body the app sits in. */
+/* The brand accent, taken straight from the hero gradient palette's `violet` slot
+   (docs/content/hero.settings.js) so the docs UI, the hero backgrounds, the favicon tile and the
+   navbar mark are all the one colour. */
+:root {
+    --scribekit-primary: #6d5df6;
+}
+
 * {
     box-sizing: border-box;
 }

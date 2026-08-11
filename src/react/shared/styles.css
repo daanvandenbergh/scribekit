@@ -2006,10 +2006,12 @@
  * a padded plain hero is the tell-tale sign of a card whose background was merely removed.
  * The bottom padding is the gap to the next section, and is the one part both variants share.
  */
+/* NO bottom padding here: the plain hero's spacing to the next band is that band's own
+   `margin-top`. Padding here would stack on top of it and read as a hole in the page. The card
+   variant sets its own padding below, because there the space is the panel's inner inset. */
 .scribekit-docs-hero-body {
     position: relative;
     max-width: 780px;
-    padding-bottom: clamp(26px, 3.4vw, 44px);
 }
 
 .is-card > .scribekit-docs-hero-body {
@@ -2236,15 +2238,18 @@
 
 .scribekit-docs-topic-grid {
     display: grid;
-    /* auto-FIT so a corpus with one topic does not leave its card as a 288px orphan beside two
-       empty tracks - and capped at 420px rather than `1fr` so that card does not swing the other
-       way and span the full column. A card is a list of page rows with the chevron pinned to the
-       trailing edge, so a full-width one puts hundreds of pixels of dead space between each label
-       and its arrow. The cap is inert once there are enough topics to fill a row: three across a
-       1080px column already computes to ~350px each. */
-    grid-template-columns: repeat(auto-fit, minmax(288px, 420px));
+    /* auto-FIT + `1fr` so however many topics land on a row, they share the full column width
+       instead of leaving a ragged gap at the trailing edge. */
+    grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
     gap: 14px;
     margin-top: 18px;
+}
+
+/* The one case `1fr` gets wrong: a single topic would stretch to the whole column, and a card is a
+   list of page rows with the chevron pinned to the trailing edge - so a full-width one puts
+   hundreds of pixels of dead space between each label and its arrow. Cap that card alone. */
+.scribekit-docs-topic-grid:has(> :only-child) {
+    max-width: 420px;
 }
 
 /* Every tinted surface on a card derives from ONE custom property, set inline per topic, so a
