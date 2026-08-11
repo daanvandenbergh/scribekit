@@ -53,6 +53,16 @@ ln -s ../../node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github
 - **`scribekit-hero`** - all hero-image generation, rendered on-brand from HTML/CSS (never an AI image generator): blog/docs page heroes, regenerate-all after a design change, gradient tuning, and a README banner in the same family. Self-contained - you can install it with or without the others.
 - **`scribekit-docs-github-pages`** - publishes your docs site (the whole Next.js app) to **GitHub Pages** as a static export. It learns the project, adds `output: 'export'` to your Next config, writes the deploy workflow, points `siteUrl` at the Pages origin, and handles what static export changes in the routing layer (middleware clean-URLs and renamed-slug redirects). See [Deploy to GitHub Pages](#deploy-to-github-pages).
 
+### The CLAUDE.md rule
+
+The package also ships one CLAUDE.md rule snippet. Claude Code inlines any `@path` reference in `CLAUDE.md` at load time, so point it straight at the file in `node_modules` and it auto-updates with the package:
+
+```md
+@node_modules/@daanvandenbergh/scribekit/rules/docs_parity.md
+```
+
+- **`rules/docs_parity.md`** - docs and `README.md` are updated in the same change as the code, never deferred. Keeps your docs site true to the code between `scribekit-docs` runs.
+
 ---
 
 ## Demo

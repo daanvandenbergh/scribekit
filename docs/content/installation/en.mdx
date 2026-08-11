@@ -90,6 +90,16 @@ Link only what you need. `scribekit-hero` and `scribekit-docs-github-pages` each
 
 `scribekit-hero` is self-contained and depends on nothing, but `scribekit-blog` and `scribekit-docs` hand off to it to render hero images. Without it, they skip the hero and leave `image:` unset.
 
+## Add the CLAUDE.md rule
+
+The package also ships one CLAUDE.md rule snippet, `rules/docs_parity.md`: docs and `README.md` are updated in the same change as the code, never deferred. Claude Code inlines any `@path` reference in `CLAUDE.md` at load time, so point it straight at the file in `node_modules` and the text auto-updates with the package:
+
+```md
+@node_modules/@daanvandenbergh/scribekit/rules/docs_parity.md
+```
+
+The path is relative to `CLAUDE.md`, so keep `CLAUDE.md` at the project root, next to `node_modules`. Unlike the skills, a rule needs no symlink.
+
 ## Create the content directory
 
 Each surface reads one directory, with one subfolder per page:

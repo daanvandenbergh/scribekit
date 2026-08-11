@@ -10,6 +10,7 @@ skills/                             # The agent skills
   scribekit-docs/                     # Writing and verifying docs pages
   scribekit-docs-github-pages/        # Publishing a docs site to GitHub Pages
   scribekit-hero/                     # Generating hero images
+rules/                              # CLAUDE.md rule snippets shipped for consumers to @-import
 src/
   index.ts                          # Package root entry ("."), re-exports shared + blog + docs
   shared/                           # Framework-free primitives (dates, slugs, locales, SEO, types) - fs-free
@@ -31,6 +32,7 @@ that rule is enforced by a test in `src/content-store/tests/`.
 @node_modules/@daanvandenbergh/claudekit/rules/core_principles.md
 @node_modules/@daanvandenbergh/claudekit/rules/workflow.md
 @node_modules/@daanvandenbergh/claudekit/rules/todo.md
+@rules/docs_parity.md
 @node_modules/@daanvandenbergh/claudekit/rules/ts_modular_coding.md
 @node_modules/@daanvandenbergh/claudekit/skills/ts/audit-tests/claude-rules.md
 @node_modules/@daanvandenbergh/claudekit/rules/active_sessions.md
@@ -48,7 +50,5 @@ that rule is enforced by a test in `src/content-store/tests/`.
 - Never create new git branches unless asked, if you really feel it is needed, ask for permission first.
 
 ## Maintained Docs
-When changing `src/` or `skills/`, update the matching docs in `docs/content/` in the same change.
-
-## Maintained README.md
-When making changes to the library, ensure the README.md instructions for how to use the library are still up to date.
+The docs pages for this project live in `docs/content/` - that is where the Docs Stay In Sync
+rule applies when you change `src/` or `skills/`.

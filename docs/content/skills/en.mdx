@@ -132,3 +132,12 @@ can be re-rendered from its `hero.js` at any time.
 The skills ship inside the npm package, so you already have all four after `npm install`. Claude
 Code finds a skill by looking in `.claude/skills/`, so each one needs a symlink from there into
 `node_modules`. The exact commands are in [Installation](/installation).
+
+## The rule that ships with them
+
+A skill only binds on the runs where you invoke it. Between those runs, ordinary code changes are
+what make docs go stale, so the package also ships one CLAUDE.md rule, `rules/docs_parity.md`: docs and
+`README.md` are updated in the same change as the code, never deferred to a `TODO.md` item. It is a
+standing obligation rather than a skill because there is nothing to invoke - it applies to every
+change that alters something a reader could notice. Add it with one `@`-import; see
+[Installation](/installation).
