@@ -66,4 +66,17 @@ describe("localePath", () => {
             "/fr/docs/quickstart",
         );
     });
+
+    it("mounts at the site root when the base path is empty", () => {
+        for (const basePath of ["", "/"]) {
+            expect(localePath({ basePath, defaultLocale: "en", lang: "en", slug: "quickstart" })).toBe("/quickstart");
+            // The index must be "/", not "" - an empty href would resolve to the current page.
+            expect(localePath({ basePath, defaultLocale: "en", lang: "en" })).toBe("/");
+            expect(localePath({ basePath, defaultLocale: "en", lang: "fr", slug: "quickstart" })).toBe(
+                "/fr/quickstart",
+            );
+            expect(localePath({ basePath, defaultLocale: "en", lang: "fr" })).toBe("/fr");
+            expect(localePath({ basePath, defaultLocale: "en", lang: "en", prefixDefaultLocale: true })).toBe("/en");
+        }
+    });
 });

@@ -1,12 +1,12 @@
-# Deploy scribekit's own docs site (self-contained under site/) to GitHub Pages.
+# Deploy scribekit's own docs site (self-contained under docs/) to GitHub Pages.
 #
 # This is the in-repo (dogfood) variant of skills/scribekit-docs-github-pages/assets/deploy.yml:
-# site/ imports the built package from ../dist, so this builds the package first, then the static
+# docs/ imports the built package from ../dist, so this builds the package first, then the static
 # export. A consumer project (where @daanvandenbergh/scribekit is an npm dep) uses the plain template.
 #
 # The Configure Pages step below sets `enablement: true`, so Pages is turned on automatically on the
 # first run (fallback if an org blocks it: Settings -> Pages -> Source: "GitHub Actions").
-# The corpus (site/docs) and heroes (site/public/assets) must be committed.
+# The corpus (docs/content) and heroes (docs/public/assets) must be committed.
 
 name: Deploy docs to GitHub Pages
 
@@ -54,7 +54,7 @@ jobs:
                   enablement: true
 
             - name: Build the docs site (static export)
-              working-directory: site
+              working-directory: docs
               env:
                   # next.config + the hero <img> both read this; empty (root hosting) resolves fine too.
                   NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
@@ -65,7 +65,7 @@ jobs:
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v5
               with:
-                  path: site/out
+                  path: docs/out
 
     deploy:
         needs: build

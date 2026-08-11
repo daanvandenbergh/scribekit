@@ -1,13 +1,13 @@
 # To Do list
 
 - [ ] **Commit and publish the `scribekit-docs-github-pages` skill - the docs already claim it ships,
-  and that is currently false.** The caveat-removal half of this item is DONE: `site/docs` was rewritten
+  and that is currently false.** The caveat-removal half of this item is DONE: `docs/content` was rewritten
   on 2026-07-16 to describe the skill as a shipped, installable, fourth skill
-  (`site/docs/installation/en.mdx` now prints the fourth `ln -s` line and says "Link only what you need";
-  `site/docs/skills/en.mdx` says "you already have all four after `npm install`";
-  `site/docs/getting-started/en.mdx` says "four portable Claude Code skills";
-  `site/docs/scribekit-docs-github-pages/en.mdx` leads with "Not using Claude Code?" instead of the caveat;
-  `site/docs/publish-to-github-pages/en.mdx` says the skill "ships in the package"). `README.md` says
+  (`docs/content/installation/en.mdx` now prints the fourth `ln -s` line and says "Link only what you need";
+  `docs/content/skills/en.mdx` says "you already have all four after `npm install`";
+  `docs/content/getting-started/en.mdx` says "four portable Claude Code skills";
+  `docs/content/scribekit-docs-github-pages/en.mdx` leads with "Not using Claude Code?" instead of the caveat;
+  `docs/content/publish-to-github-pages/en.mdx` says the skill "ships in the package"). `README.md` says
   "four" too. **None of that is true yet**: the skill is still untracked
   (`git status --short skills/` -> `?? skills/scribekit-docs-github-pages/`), so it is absent from
   published npm 1.1.1, and a reader following the docs today gets a dangling symlink. Publishing is
@@ -16,11 +16,11 @@
   clean, and `npm test` is green (371/371 when this was written; 407/407 since the `content-store`
   extraction added its suite). To finish: `git add` the skill
   (`skills/scribekit-docs-github-pages/`), its symlink (`.claude/skills/scribekit-docs-github-pages`),
-  and `site/` (the whole docs site is untracked, so the docs edits above are NOT in git yet) plus
+  and `docs/` (the whole docs site is untracked, so the docs edits above are NOT in git yet) plus
   `README.md`, `CLAUDE.md`, `package.json`, `TODO.md`; then `npm version minor` (1.1.1 -> 1.2.0; a new
   skill is a feature, matching 1.1.0's precedent - note `package.json`'s `push-and-publish` script
   hardcodes `npm version patch`, so do not blindly run it) and `npm publish`. Decide separately whether
-  to commit `.github/workflows/deploy.yml` (also untracked): it deploys scribekit's own `site/` to
+  to commit `.github/workflows/deploy.yml` (also untracked): it deploys scribekit's own `docs/` to
   GitHub Pages on every push to `main` and only works once repo Settings -> Pages -> Source is set to
   "GitHub Actions". Done when `npm view @daanvandenbergh/scribekit version` reports the new version and
   `npm view @daanvandenbergh/scribekit files` (or a fresh install) shows `skills/scribekit-docs-github-pages`.
@@ -42,11 +42,11 @@
   Pages" section tell users to prefer a custom domain / user-org site (empty base path), where this
   does not arise.
 
-- [ ] Reconcile `site/docs/publish-to-github-pages/en.mdx` (the manual tutorial) with what the
+- [ ] Reconcile `docs/content/publish-to-github-pages/en.mdx` (the manual tutorial) with what the
   `scribekit-docs-github-pages` skill actually ships - they now diverge, and the tutorial's path
   **404s every hero image on a project site**. The docs present the two as equivalent ("The
   `/scribekit-docs-github-pages` skill does every step below for you"), but the tutorial's workflow
-  snippet (`site/docs/publish-to-github-pages/en.mdx:71-147`) uses
+  snippet (`docs/content/publish-to-github-pages/en.mdx:71-147`) uses
   `configure-pages@v5` `with: static_site_generator: next` and tells the reader that is what injects
   `basePath`/`assetPrefix` (line 147). The shipped asset
   (`skills/scribekit-docs-github-pages/assets/deploy.yml:55-65`) **deliberately does not** use
@@ -106,7 +106,7 @@
   `src/docs/tests/navigation.test.ts` (it covers the tied-finite-order case at :125-134 but never two
   unordered pages, which is why this survived). Verify with `npm test`.
 
-- [ ] Correct the false rationale in the two `errors.ts` docstrings and in `site/docs/api-reference/en.mdx:332`.
+- [ ] Correct the false rationale in the two `errors.ts` docstrings and in `docs/content/api-reference/en.mdx:332`.
   `src/blog/errors.ts:2-4` and `src/docs/errors.ts:2-4` both say the file is kept fs-free "so the React
   components can import `PostNotFoundError` for an `instanceof` check without pulling the Node-only backend
   into the client import graph", and `api-reference:332` repeats it ("All four are declared in fs-free
@@ -170,7 +170,7 @@
   this by caching `ContentStore.entries()`** - its docstring records three reasons that is unsafe (a
   `contentDir`-mtime key misses a translation added to an existing folder; callers require it to throw on
   *every* call, see `blog.test.ts:413-431`; and memoizing the empty result for a missing directory breaks
-  the documented promise at `site/docs/installation/en.mdx:101` that pages appear once the folder exists).
+  the documented promise at `docs/content/installation/en.mdx:101` that pages appear once the folder exists).
   The memo needs the same discipline as the store's: validate rather than trust, so `next dev` stays live.
   Only worth doing past ~500 pages - at the 16-page scale of this repo's own site the whole build is ~150ms.
   Verify by re-running the build simulation (generate corpora of 25/50/100/200 pages, drive

@@ -48,7 +48,7 @@ that rule is enforced by a test in `src/content-store/tests/`.
 - Never create new git branches unless asked, if you really feel it is needed, ask for permission first.
 
 ## Maintained Docs
-When changing `src/` or `skills/`, update the matching docs in `site/docs/` in the same change.
+When changing `src/` or `skills/`, update the matching docs in `docs/content/` in the same change.
 
 ## Maintained README.md
 When making changes to the library, ensure the README.md instructions for how to use the library are still up to date.

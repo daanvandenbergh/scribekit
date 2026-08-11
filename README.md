@@ -672,7 +672,7 @@ Same flattened site attributes as [`new Blog(config)`](#new-blogconfig) (`siteUr
 | Config | Default | Description |
 | --- | --- | --- |
 | `contentDir` | *(required)* | Folder of `<slug>/<lang>.mdx` docs (one folder per page; default `en.mdx`). Relative to `process.cwd()`, or absolute. |
-| `basePath` | `/docs` | Route the docs are mounted at (used to build URLs). |
+| `basePath` | `/docs` | Route the docs are mounted at (used to build URLs). Set `""` to mount at the site root, so pages are `/<slug>` and the index is `/`. |
 | `tabs` | - | Display order + labels for the top-level tabs. Each entry is a tab id (matching a page's `tab`) or `{ id, label }`. Purely presentational. |
 | `groups` | - | Display order + labels for the sidebar group headings, same semantics as `tabs`. |
 | `redirects` | - | Old slug → new slug for [renamed pages](#renaming-a-page-redirects), e.g. `{ "getting-started": "quickstart" }`. A real page always wins over an entry with the same slug; chains resolve in one hop; a cycle 404s instead of looping. |

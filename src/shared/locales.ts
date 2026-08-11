@@ -72,7 +72,9 @@ export function normalizeBasePath(basePath: string | undefined): string {
  * (`<base>/<slug>`) unless `prefixDefaultLocale` is set - useful when every locale should route
  * through a single `[lang]` segment (`/en/docs/...`, `/fr/docs/...`).
  *
- * @param opts.basePath - the section base path; defaults to `/blog`.
+ * A section mounted at the site root passes `basePath: ""`, giving `/<slug>` and `/` for the index.
+ *
+ * @param opts.basePath - the section base path; defaults to `/blog`. Pass `""` to mount at the root.
  * @param opts.defaultLocale - the locale code served without a prefix (unless prefixed below).
  * @param opts.lang - the target locale code.
  * @param opts.slug - the page slug; omit for the locale's index URL.
@@ -89,5 +91,7 @@ export function localePath(opts: {
     const base = normalizeBasePath(opts.basePath);
     const prefix = localePrefix(opts.lang, opts.defaultLocale, opts.prefixDefaultLocale ?? false);
     const path = `${prefix}${base}`;
-    return opts.slug ? `${path}/${opts.slug}` : path;
+    // A root-mounted section (basePath `""`) in its unprefixed default locale leaves `path` empty;
+    // the index URL is `/`, never the empty string (which an `href` would read as "this page").
+    return opts.slug ? `${path}/${opts.slug}` : path || "/";
 }
