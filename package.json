@@ -41,7 +41,7 @@
         "push-and-publish": "git add -A && git commit -m 'Updates' && npm version patch && npm publish && git push -u origin main"
     },
     "dependencies": {
-        "@daanvandenbergh/i18nkit": "^1.0.2",
+        "@daanvandenbergh/i18nkit": "^1.0.3",
         "fuse.js": "^7.4.2",
         "gray-matter": "^4.0.3",
         "remark-gfm": "^4.0.1"
@@ -67,7 +67,7 @@
         }
     },
     "devDependencies": {
-        "@daanvandenbergh/claudekit": "^1.0.6",
+        "@daanvandenbergh/claudekit": "^1.2.0",
         "@types/node": "^22.20.1",
         "@types/react": "^19",
         "@types/react-dom": "^19",

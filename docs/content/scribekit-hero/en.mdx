@@ -50,7 +50,7 @@ Settings are seeded from `assets/hero.settings.template.js`, which exports `bran
 | --- | --- |
 | Blog | `<content-dir>/hero.settings.js` |
 | Docs | `<docs-content-dir>/hero.settings.js` |
-| README | `claude/scribekit-hero/readme/hero.settings.js` |
+| README | `.agent/scribekit-hero/readme/hero.settings.js` |
 
 A params file carries the gradient name plus the text, and nothing else. The eyebrow comes from `hero.settings.js` and is never repeated per hero:
 
@@ -104,7 +104,7 @@ The README PNG is downscaled with a plain `sips -z H W` resize, which keeps the 
 | --- | --- |
 | Blog | `<assets>/blog/<slug>/hero.<code>.jpg` |
 | Docs | `<assets>/docs/<slug>/hero.<code>.jpg` |
-| README | `claude/scribekit-hero/readme/hero.png` |
+| README | `.agent/scribekit-hero/readme/hero.png` |
 
 Every language is named by its code, the default included: `hero.en.jpg`, `hero.fr.jpg`, matching the page files `en.mdx` and `fr.mdx`.
 

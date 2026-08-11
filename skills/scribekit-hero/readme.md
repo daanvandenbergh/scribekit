@@ -7,13 +7,13 @@ slugs, frontmatter, rotation, or i18n. Read **[SKILL.md](./SKILL.md)** first - t
 auto-create settings, the 6 gradients, tune-gradients, and the render pipeline all live there; this file
 adds only the README specifics (a single image, size/radius, rounded transparent PNG, README wiring).
 
-Everything for this hero lives in **one directory**, `claude/scribekit-hero/readme/` (relative to the
+Everything for this hero lives in **one directory**, `.agent/scribekit-hero/readme/` (relative to the
 project root; created if absent):
 
-- **Settings (this project's brand):** `claude/scribekit-hero/readme/hero.settings.js` - seeded and
+- **Settings (this project's brand):** `.agent/scribekit-hero/readme/hero.settings.js` - seeded and
   recoloured per SKILL.md's "Auto-create `hero.settings.js`". **Optionally** also exports `size` and
   `radius` (see [Size & corner radius](#size--corner-radius)).
-- **Params (this hero's text):** `claude/scribekit-hero/readme/hero.js` - a **plain object** (not a
+- **Params (this hero's text):** `.agent/scribekit-hero/readme/hero.js` - a **plain object** (not a
   `(locale) => …` function - this hero is single-language):
   ```js
   export default {
@@ -23,7 +23,7 @@ project root; created if absent):
       // byline: { name: "…", role: "…" },  // OPTIONAL - omit for no byline (usual for a README)
   };
   ```
-- **Output:** `claude/scribekit-hero/readme/hero.png` - a **PNG** (so the rounded corners stay transparent
+- **Output:** `.agent/scribekit-hero/readme/hero.png` - a **PNG** (so the rounded corners stay transparent
   - a JPEG can't hold an alpha channel).
 
 There is **no rotation here** (rotation is a multi-post concern): a single hero uses its `gradient`
@@ -32,15 +32,15 @@ There is **no rotation here** (rotation is a multi-post concern): a single hero 
 ## Mode: readme-hero (generate / update)
 
 1. **Brand discovery** (SKILL.md Step 0 - just the brand & assets part; the blog-only discovery is N/A).
-2. **Ensure `claude/scribekit-hero/readme/hero.settings.js` exists.** If missing, auto-create it (copy
+2. **Ensure `.agent/scribekit-hero/readme/hero.settings.js` exists.** If missing, auto-create it (copy
    `assets/hero.settings.template.js` there, recolour the palette to the project's brand hues, set
    `brand.font` / `brand.badge` (logo) / `brand.eyebrow`, then run **tune-gradients** once - all per
    SKILL.md). Respect an existing file - don't overwrite the user's.
-3. **Ensure `claude/scribekit-hero/readme/hero.js` exists.** If missing, create it from the title +
+3. **Ensure `.agent/scribekit-hero/readme/hero.js` exists.** If missing, create it from the title +
    subtitle (ask the user if you don't have them), pick a `gradient` (default the first, or let the user
    choose), and add a `byline` only if the user wants one. Respect an existing file.
 4. **Render** the hero to a PNG (see [Render](#render)).
-5. **Downscale + save** the PNG to `claude/scribekit-hero/readme/hero.png` (see [Render](#render)).
+5. **Downscale + save** the PNG to `.agent/scribekit-hero/readme/hero.png` (see [Render](#render)).
 6. **Verify** at full size and scaled down: gradient smooth, corners cleanly rounded (and transparent,
    not dark), brand correct, title legible, matches the post-hero family.
 7. **Offer README wiring** (see [Wire into the README](#wire-into-the-readme)).
@@ -80,9 +80,9 @@ render (no `?lang=` - this hero is single-language):
 
 1. **Fill the host** (SKILL.md render step 1) with:
    - `{{HERO_COMPONENT}}` -> `file://<skill>/assets/hero.js`, or
-     `file://<project>/claude/scribekit-hero/readme/hero.component.js` when that file exists
-   - `{{HERO_SETTINGS}}`  -> `file://<project>/claude/scribekit-hero/readme/hero.settings.js`
-   - `{{HERO_PARAMS}}`    -> `file://<project>/claude/scribekit-hero/readme/hero.js`
+     `file://<project>/.agent/scribekit-hero/readme/hero.component.js` when that file exists
+   - `{{HERO_SETTINGS}}`  -> `file://<project>/.agent/scribekit-hero/readme/hero.settings.js`
+   - `{{HERO_PARAMS}}`    -> `file://<project>/.agent/scribekit-hero/readme/hero.js`
 2. **Apply size + rounded corners.** Read `W,H` from settings `size` (default `1200,630` when absent) and
    `R` from settings `radius` (default `10` when absent; `0` = square). Inject one style block into the
    scratchpad host's `<head>` (just before `</head>`):
@@ -106,7 +106,7 @@ render (no `?lang=` - this hero is single-language):
 4. **Downscale + save** the 2×-DPR PNG to the final PNG with `sips`, sized `H W` (a plain resize keeps the
    format PNG and preserves the transparent corners - no ImageMagick, no JPEG re-encode):
    ```
-   sips -z H W <out>.png --out claude/scribekit-hero/readme/hero.png
+   sips -z H W <out>.png --out .agent/scribekit-hero/readme/hero.png
    ```
 
 ## Wire into the README
@@ -114,12 +114,12 @@ render (no `?lang=` - this hero is single-language):
 After `hero.png` is written, **always print** the ready-to-paste Markdown so the user can embed it:
 
 ```md
-![](claude/scribekit-hero/readme/hero.png)
+![](.agent/scribekit-hero/readme/hero.png)
 ```
 
 Then **offer** to wire it into `README.md` (only edit it on the user's OK - it's their document):
 - If `README.md` already contains an image (Markdown `![...](…)` or `<img src="…">`) pointing at
-  `claude/scribekit-hero/readme/hero.png` (or a stale `hero.jpg` / old path), **replace that tag in place**
+  `.agent/scribekit-hero/readme/hero.png` (or a stale `hero.jpg` / old path), **replace that tag in place**
   (keeps its position/alt text, and swaps a `.jpg` reference to `.png`).
 - Otherwise, offer to **insert** the snippet near the top (typically right under the H1 title).
 
