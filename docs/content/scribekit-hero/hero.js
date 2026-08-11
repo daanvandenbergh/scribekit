@@ -2,6 +2,6 @@
 // `regenerate-docs-heroes`. Single-language docs, so a plain params object (no locale function).
 export default {
     gradient: "soft-sweep",
-    title: "scribekit-hero",
+    title: "/scribekit-hero",
     subtitle: "Six modes, three files, six gradients. Rendered from HTML, never generated.",
 };
