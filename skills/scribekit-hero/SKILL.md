@@ -204,8 +204,36 @@ the three tokens with absolute `file://` paths:
   kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null
   ```
 
-**3. Optimise + save** - per mode (blog/docs → 1200×630 JPEG via `sips`; README → downscaled PNG keeping
-the transparent rounded corners). See each mode file.
+**3. Optimise + save** - downscale the 2×-DPR capture and encode it. See [Encode](#encode).
+
+## Encode
+
+The surface's `hero.settings.js` may export an optional **`format`**; it decides the encoder and the
+saved file's extension for every hero on that surface:
+
+```js
+export const format = "webp";   // "jpg" | "png" | "webp" | "avif"; omit -> "jpg" (blog/docs), "png" (README)
+```
+
+With `W,H` the target size (default `1200,630`) and `<out>.png` the capture:
+
+| `format` | Command | Notes |
+| --- | --- | --- |
+| `jpg` *(blog/docs default)* | `sips -z H W -s format jpeg -s formatOptions 82 <out>.png --out <dest>.jpg` | Opaque; no alpha. |
+| `png` *(README default)* | `sips -z H W <out>.png --out <dest>.png` | Keeps the transparent rounded corners. |
+| `webp` | `magick <out>.png -resize WxH -quality 82 <dest>.webp` | ~30-50% smaller than the JPEG; keeps alpha. |
+| `avif` | `magick <out>.png -resize WxH -quality 55 <dest>.avif` | Smallest; keeps alpha; slowest to encode. |
+
+- **`sips` cannot write WebP or AVIF** (it only reads them), so those two need ImageMagick. If `magick`
+  is missing (`command -v magick`), **fall back to the surface's default format, save, and tell the
+  user** they can get the requested one with `brew install imagemagick` (Linux: their package manager)
+  and re-run - never leave the surface without a hero.
+- **The `image:` frontmatter must carry the real extension** - it is wired from the file actually
+  written, so a fallback writes `.jpg` and the frontmatter says `.jpg`.
+- **Heroes double as OG/social cards.** Most crawlers handle WebP; **AVIF is still spotty** (some show
+  no preview at all). Pick `avif` only when the hero is not the social card, or accept that trade.
+- Changing `format` on a surface with existing heroes: re-run `regenerate-heroes` /
+  `regenerate-docs-heroes`, re-wire each `image:` to the new extension, and **delete the old files**.
 
 ## Guardrails (all modes)
 - Design is **HTML/CSS**, rendered deterministically - never an AI image generator or stock photo.
@@ -214,9 +242,11 @@ the transparent rounded corners). See each mode file.
   edit that file through `node_modules`, and copy the component into a project only as the documented
   last-resort fork. See [Customising the component](#customising-the-component).
 - **Output shape per surface (never conflate them)**: a **blog** or **docs** hero is a full **opaque
-  rectangle** JPEG - the site rounds/borders it in CSS, so never bake rounding into it. A **README**
-  hero is a **PNG with rounding baked into transparent corners** (GitHub strips README CSS, so it can't
-  round the `<img>`). Every hero is a **local asset**, never a remote URL.
+  rectangle** (JPEG by default) - the site rounds/borders it in CSS, so never bake rounding into it. A
+  **README** hero has **rounding baked into transparent corners** (GitHub strips README CSS, so it can't
+  round the `<img>`), so it needs an alpha-capable format - PNG by default, or WebP/AVIF, **never JPEG**.
+  The file format itself is the surface's `format` setting ([Encode](#encode)). Every hero is a **local
+  asset**, never a remote URL.
 - Never start a dev server (ask the user). Never create git branches. Touch only hero assets, the
   surface's `hero.settings.js` / `hero.js` params, and (blog/docs) the post/page `image:`/`updated:`
   frontmatter, or (README, on the user's OK) `README.md`.

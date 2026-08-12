@@ -4,7 +4,7 @@ Create, update, or regenerate **blog post** hero images. A post's hero wires int
 frontmatter and appears full-width on the post page and scaled-down on the overview grid, so every
 hero must share **one cohesive family**. Read **[SKILL.md](./SKILL.md)** first - Step 0, the
 three-files model, auto-create settings, the 6 gradients, tune-gradients, and the render pipeline all
-live there; this file adds only the blog specifics (rotation, i18n, JPEG output, frontmatter wiring).
+live there; this file adds only the blog specifics (rotation, i18n, encoded output, frontmatter wiring).
 
 The blog surface's settings file is **`<content-dir>/hero.settings.js`**; a post's params are
 **`<content-dir>/<slug>/hero.js`** (one file per post, covering every language).
@@ -40,19 +40,18 @@ language (one params file), so translations always match.
    byline. For a multi-language post, use the `(locale) => params` form (see i18n below) instead.
 5. **Render** each configured locale (single-language blog = just the default) via the render pipeline
    (SKILL.md), passing `?lang=<code>`.
-6. **Optimise + save**: downsample each render to 1200×630 and encode a JPEG (~80 KB), one per locale,
-   to `<assets>/blog/<slug>/hero.<code>.jpg` - every language named by its code, default included
-   (e.g. `hero.en.jpg`, `hero.fr.jpg`), matching the post files (`en.mdx`, `fr.mdx`):
-   ```
-   sips -z 630 1200 -s format jpeg -s formatOptions 82 <out>.png --out <assets>/blog/<slug>/hero.<code>.jpg
-   ```
-7. **Wire** `image: "/<assets>/blog/<slug>/hero.<code>.jpg"` into each language's post. **Updating an
+6. **Optimise + save**: downsample each render to 1200×630 and encode it per SKILL.md's
+   **[Encode](./SKILL.md#encode)** (JPEG ~80 KB unless the settings export a `format` - `webp`/`avif`
+   are the smaller alternatives), one per locale, to `<assets>/blog/<slug>/hero.<code>.<ext>` - every
+   language named by its code, default included (e.g. `hero.en.jpg`, `hero.fr.jpg`), matching the post
+   files (`en.mdx`, `fr.mdx`).
+7. **Wire** `image: "/<assets>/blog/<slug>/hero.<code>.<ext>"` into each language's post. **Updating an
    existing hero**: also bump `updated:` (`date +%F`, quoted) on the posts.
 8. **Verify** at full size **and** ~320px card scale: title legible, on-brand, matches sibling heroes.
 
 ### Localised heroes (multi-language blogs)
 
-The hero bakes in the post's text, so **every translation gets its own rendered JPEG** - a translation's
+The hero bakes in the post's text, so **every translation gets its own rendered image** - a translation's
 `image:` must never point at another language's file. But there is **one params file per post**, not one
 per language: `<slug>/hero.js` exports a `(locale) => params` function that returns each language's text.
 
@@ -70,8 +69,8 @@ export default (locale = "en") => ({ gradient: "aurora-glow", ...text[locale] })
 
 - **Same gradient across languages** - it is the one `gradient` value in the shared file, so no
   re-rotation is possible or needed.
-- **Render loops the configured locales** (from Step 0), one JPEG each, into the post's folder as
-  `<assets>/blog/<slug>/hero.<code>.jpg` - every language named by its code (e.g. `hero.en.jpg`, `hero.fr.jpg`).
+- **Render loops the configured locales** (from Step 0), one image each, into the post's folder as
+  `<assets>/blog/<slug>/hero.<code>.<ext>` - every language named by its code (e.g. `hero.en.jpg`, `hero.fr.jpg`).
 - **Completeness**: if a configured locale returns no text (`params(locale)` empty), stop and fix the
   params file - that language would render a blank title.
 
@@ -82,6 +81,6 @@ Re-render **every** blog hero from its saved params - run this after changing th
 heroes with zero per-post edits.
 1. Glob `<content-dir>/*/hero.js` (each post folder has exactly one).
 2. For each, render **all configured locales** via the pipeline (SKILL.md) and overwrite
-   `<assets>/blog/<slug>/hero.<code>.jpg`.
+   `<assets>/blog/<slug>/hero.<code>.<ext>`.
 3. **Report** the count rendered (posts × locales). Do not touch the posts' frontmatter (the `image:`
    paths are unchanged).

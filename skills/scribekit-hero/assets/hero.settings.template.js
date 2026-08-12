@@ -155,3 +155,14 @@ export const gradients = [
         ].join(", "),
     },
 ];
+
+/**
+ * OPTIONAL - the image format every hero on this surface is saved as, which also decides the saved
+ * file's extension (and so the `image:` front-matter). Omit this export for the surface default:
+ * "jpg" for blog and docs, "png" for the README (its baked-in rounded corners need an alpha channel,
+ * so "jpg" is invalid there). "webp" and "avif" are smaller and keep alpha, but are encoded with
+ * ImageMagick (`brew install imagemagick`) because `sips` can only read them - and AVIF is still
+ * poorly supported by social-card crawlers. Changing this on a surface that already has heroes means
+ * re-running `regenerate-heroes` / `regenerate-docs-heroes` and re-wiring each `image:`.
+ */
+// export const format = "webp";

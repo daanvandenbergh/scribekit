@@ -2,10 +2,10 @@
 
 Make **one** hero/banner image for a project's **README** (or any single banner slot) in the shared
 scribekit-hero style - white text on a full-bleed **gradient**, badge + eyebrow, auto-fit **H1**,
-subtitle, optional byline - rendered deterministically to a **PNG**. It touches **no blog**: no posts,
+subtitle, optional byline - rendered deterministically to an image. It touches **no blog**: no posts,
 slugs, frontmatter, rotation, or i18n. Read **[SKILL.md](./SKILL.md)** first - the three-files model,
 auto-create settings, the 6 gradients, tune-gradients, and the render pipeline all live there; this file
-adds only the README specifics (a single image, size/radius, rounded transparent PNG, README wiring).
+adds only the README specifics (a single image, size/radius, rounded transparent output, README wiring).
 
 Everything for this hero lives in **one directory**, `.agentstore/scribekit-hero/readme/` (relative to the
 project root; created if absent):
@@ -23,8 +23,9 @@ project root; created if absent):
       // byline: { name: "…", role: "…" },  // OPTIONAL - omit for no byline (usual for a README)
   };
   ```
-- **Output:** `.agentstore/scribekit-hero/readme/hero.png` - a **PNG** (so the rounded corners stay transparent
-  - a JPEG can't hold an alpha channel).
+- **Output:** `.agentstore/scribekit-hero/readme/hero.<ext>` - **PNG by default**, or WebP/AVIF when the
+  settings export a `format` (SKILL.md's [Encode](./SKILL.md#encode)). It must hold an alpha channel so
+  the rounded corners stay transparent, so **`format: "jpg"` is invalid here** - JPEG has no alpha.
 
 There is **no rotation here** (rotation is a multi-post concern): a single hero uses its `gradient`
 (default: the first gradient).
@@ -39,14 +40,14 @@ There is **no rotation here** (rotation is a multi-post concern): a single hero 
 3. **Ensure `.agentstore/scribekit-hero/readme/hero.js` exists.** If missing, create it from the title +
    subtitle (ask the user if you don't have them), pick a `gradient` (default the first, or let the user
    choose), and add a `byline` only if the user wants one. Respect an existing file.
-4. **Render** the hero to a PNG (see [Render](#render)).
-5. **Downscale + save** the PNG to `.agentstore/scribekit-hero/readme/hero.png` (see [Render](#render)).
+4. **Render** the hero to a PNG capture (see [Render](#render)).
+5. **Downscale + encode** it to `.agentstore/scribekit-hero/readme/hero.<ext>` (see [Render](#render)).
 6. **Verify** at full size and scaled down: gradient smooth, corners cleanly rounded (and transparent,
    not dark), brand correct, title legible, matches the post-hero family.
 7. **Offer README wiring** (see [Wire into the README](#wire-into-the-readme)).
 
 Re-running over an existing hero is the **update** path: edit `hero.js` (or `hero.settings.js`),
-re-render, overwrite `hero.png`.
+re-render, overwrite `hero.<ext>`.
 
 ## Size & corner radius
 
@@ -103,15 +104,14 @@ render (no `?lang=` - this hero is single-language):
    `file://` URL. `--default-background-color=00000000` (already in the flags) screenshots on a
    transparent canvas, so the rounded corners come out transparent. Run it backgrounded and poll for the
    PNG exactly as SKILL.md's snippet shows.
-4. **Downscale + save** the 2×-DPR PNG to the final PNG with `sips`, sized `H W` (a plain resize keeps the
-   format PNG and preserves the transparent corners - no ImageMagick, no JPEG re-encode):
-   ```
-   sips -z H W <out>.png --out .agentstore/scribekit-hero/readme/hero.png
-   ```
+4. **Downscale + encode** the 2×-DPR capture to `.agentstore/scribekit-hero/readme/hero.<ext>` per
+   SKILL.md's **[Encode](./SKILL.md#encode)**, sized `W,H`. The default is a plain `sips` resize to PNG
+   (no re-encode, transparent corners preserved); `webp` / `avif` also keep the alpha, at a fraction of
+   the bytes - but check the corners really are transparent after the first render.
 
 ## Wire into the README
 
-After `hero.png` is written, **always print** the ready-to-paste Markdown so the user can embed it:
+After `hero.<ext>` is written, **always print** the ready-to-paste Markdown so the user can embed it:
 
 ```md
 ![](.agentstore/scribekit-hero/readme/hero.png)
@@ -119,8 +119,9 @@ After `hero.png` is written, **always print** the ready-to-paste Markdown so the
 
 Then **offer** to wire it into `README.md` (only edit it on the user's OK - it's their document):
 - If `README.md` already contains an image (Markdown `![...](…)` or `<img src="…">`) pointing at
-  `.agentstore/scribekit-hero/readme/hero.png` (or a stale `hero.jpg` / old path), **replace that tag in place**
-  (keeps its position/alt text, and swaps a `.jpg` reference to `.png`).
+  `.agentstore/scribekit-hero/readme/hero.*` (or an old path), **replace that tag in place** (keeps its
+  position/alt text, and swaps a stale extension for the one just written). GitHub renders PNG and WebP;
+  **AVIF is not reliably rendered in READMEs or social previews** - warn the user if they picked it.
 - Otherwise, offer to **insert** the snippet near the top (typically right under the H1 title).
 
 (The guardrails - HTML/CSS render, `hero.settings.js`-only brand/size/radius, baked-in rounding, local

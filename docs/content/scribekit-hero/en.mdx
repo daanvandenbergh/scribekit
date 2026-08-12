@@ -5,7 +5,7 @@ tab: "Skills"
 group: "Skills"
 order: 4
 icon: "grid"
-updated: "2026-08-11"
+updated: "2026-08-12"
 image: "/assets/docs/scribekit-hero/hero.en.jpg"
 ---
 
@@ -98,32 +98,51 @@ A README hero has no rotation: it uses its own `gradient` value, defaulting to t
 
 The two shapes are never conflated.
 
-| Surface | Format | Size | Rounding |
-| --- | --- | --- | --- |
-| Blog, docs | Opaque rectangle **JPEG**, ~80 KB | 1200x630 | **Never baked in.** The site rounds and borders it in CSS. |
-| README | **PNG** with rounding baked into transparent corners | 1200x630 by default | Baked in at 10px by default. GitHub strips README CSS, so the `<img>` cannot be rounded there, and a JPEG cannot hold an alpha channel. |
+| Surface | Shape | Default format | Size | Rounding |
+| --- | --- | --- | --- | --- |
+| Blog, docs | Opaque rectangle | **JPEG**, ~80 KB | 1200x630 | **Never baked in.** The site rounds and borders it in CSS. |
+| README | Rounding baked into transparent corners | **PNG** | 1200x630 by default | Baked in at 10px by default. GitHub strips README CSS, so the `<img>` cannot be rounded there. The format must hold an alpha channel, so JPEG is invalid for this surface. |
 
-Blog and docs heroes are encoded with:
+The README image is downscaled with a plain `sips -z H W` resize, which keeps the format PNG and preserves the transparent corners. Its size and radius are optional exports on the README `hero.settings.js` (`export const size = { w: 1200, h: 400 }`, `export const radius = 10`), never edits to the shared component. Keep `h` no smaller than about 420 so the auto-fit title does not clip.
 
-```bash
-sips -z 630 1200 -s format jpeg -s formatOptions 82 <out>.png --out <assets>/docs/<slug>/hero.<code>.jpg
+## Choosing the file format
+
+Each surface's `hero.settings.js` may export an optional `format`, which decides the encoder and the saved file's extension for every hero on that surface:
+
+```js
+export const format = "webp";   // "jpg" | "png" | "webp" | "avif"
 ```
 
-The README PNG is downscaled with a plain `sips -z H W` resize, which keeps the format PNG and preserves the transparent corners. Its size and radius are optional exports on the README `hero.settings.js` (`export const size = { w: 1200, h: 400 }`, `export const radius = 10`), never edits to the shared component. Keep `h` no smaller than about 420 so the auto-fit title does not clip.
+Omit it for the surface default: `jpg` for blog and docs, `png` for the README.
+
+| `format` | Encoded with | Notes |
+| --- | --- | --- |
+| `jpg` | `sips -z 630 1200 -s format jpeg -s formatOptions 82 <out>.png --out <dest>.jpg` | Opaque; no alpha. |
+| `png` | `sips -z 630 1200 <out>.png --out <dest>.png` | Keeps the transparent rounded corners. |
+| `webp` | `magick <out>.png -resize 1200x630 -quality 82 <dest>.webp` | Roughly 30-50% smaller than the JPEG; keeps alpha. |
+| `avif` | `magick <out>.png -resize 1200x630 -quality 55 <dest>.avif` | Smallest; keeps alpha; slowest to encode. |
+
+`sips` only *reads* WebP and AVIF, so those two need ImageMagick (`brew install imagemagick`). When `magick` is missing, the skill falls back to the surface's default format, saves the hero anyway, and tells you. The `image:` front-matter always carries the extension of the file actually written.
+
+Heroes double as OG/social cards. Most crawlers handle WebP, but **AVIF support is still spotty** - some show no preview at all, and GitHub does not render it reliably in a README. Pick `avif` only when the hero is not also the social card.
+
+Changing `format` on a surface that already has heroes means re-running `regenerate-heroes` / `regenerate-docs-heroes`, re-wiring each `image:` to the new extension, and deleting the old files.
 
 ## Output paths
 
 | Surface | Rendered image |
 | --- | --- |
-| Blog | `<assets>/blog/<slug>/hero.<code>.jpg` |
-| Docs | `<assets>/docs/<slug>/hero.<code>.jpg` |
-| README | `.agentstore/scribekit-hero/readme/hero.png` |
+| Blog | `<assets>/blog/<slug>/hero.<code>.<ext>` |
+| Docs | `<assets>/docs/<slug>/hero.<code>.<ext>` |
+| README | `.agentstore/scribekit-hero/readme/hero.<ext>` |
+
+`<ext>` is the surface's `format` (see above): `jpg` unless it says otherwise, `png` for the README.
 
 Every language is named by its code, the default included: `hero.en.jpg`, `hero.fr.jpg`, matching the page files `en.mdx` and `fr.mdx`.
 
 ## Localised heroes
 
-The hero bakes in the page's text, so **every translation gets its own rendered JPEG**, and a translation's `image:` must never point at another language's file. There is still **one params file per page**, not one per language. `<slug>/hero.js` exports a `(locale) => params` function:
+The hero bakes in the page's text, so **every translation gets its own rendered image**, and a translation's `image:` must never point at another language's file. There is still **one params file per page**, not one per language. `<slug>/hero.js` exports a `(locale) => params` function:
 
 ```js
 // <docs-content-dir>/<slug>/hero.js - one file, all languages.
@@ -134,7 +153,7 @@ const text = {
 export default (locale = "en") => ({ gradient: "aurora-glow", ...text[locale] });
 ```
 
-The gradient is the single `gradient` value in the shared file, so it is the same across every language and no re-rotation is possible or needed. The render loops the configured locales, one JPEG each. If a configured locale returns no text, the run stops and the params file is fixed, because that language would render a blank title.
+The gradient is the single `gradient` value in the shared file, so it is the same across every language and no re-rotation is possible or needed. The render loops the configured locales, one image each. If a configured locale returns no text, the run stops and the params file is fixed, because that language would render a blank title.
 
 ## How `image:` is wired
 
@@ -153,7 +172,7 @@ For docs this is `DocMeta.image`, the page's OG/social-card image. The docs page
 | `SKILL.md` | The router and the shared design foundation: Step 0, the three-files model, customising the component, auto-create settings, the 6 gradients, `tune-gradients`, the render pipeline, guardrails. |
 | `blog.md` | `blog-hero` and `regenerate-heroes`. |
 | `docs.md` | `docs-hero` and `regenerate-docs-heroes`. |
-| `readme.md` | `readme-hero`: size and radius, the transparent rounded PNG, README wiring. |
+| `readme.md` | `readme-hero`: size and radius, the transparent rounded output, README wiring. |
 | `assets/hero.js` | The reusable hero component. Exports `renderHero` and `renderGallery`. |
 | `assets/hero.settings.template.js` | The seed copied to each surface as `hero.settings.js`. Exports `brand` and `gradients`. |
 | `assets/hero.host.html` | Single-hero render host. Tokens `{{HERO_COMPONENT}}`, `{{HERO_SETTINGS}}`, `{{HERO_PARAMS}}`. |

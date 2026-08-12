@@ -5,7 +5,7 @@ tab: "Skills"
 group: "Skills"
 order: 2
 icon: "document"
-updated: "2026-08-11"
+updated: "2026-08-12"
 image: "/assets/docs/scribekit-blog/hero.en.jpg"
 ---
 
@@ -64,7 +64,7 @@ in the content directory and asks which.
 | `<contentDir>/README.md` | Seeded once from `assets/content-dir-README.md`, verbatim. Never overwritten if it already exists. |
 | `<contentDir>/hero.settings.js` | Seeded once by `/scribekit-hero` on the first hero for the blog surface, from the project brand. Never re-seeded. |
 | `<contentDir>/<slug>/hero.js` | Hero parameters, written by `/scribekit-hero`. **One file per post, covering every language** - a `(locale) => params` map when the blog is multi-language. |
-| `<assets>/blog/<slug>/hero.<code>.jpg` | The rendered hero, wired into the post's `image:` frontmatter. One per locale, because the hero bakes the title text into the image - a translation never points `image:` at the default-language hero. |
+| `<assets>/blog/<slug>/hero.<code>.<ext>` | The rendered hero, wired into the post's `image:` frontmatter. One per locale, because the hero bakes the title text into the image - a translation never points `image:` at the default-language hero. |
 
 The language is the file's name, never a frontmatter field. `<slug>/post.<ext>` still resolves as a
 language-neutral fallback, but the locale-named form is preferred.

@@ -5,7 +5,7 @@ tab: "Skills"
 group: "Skills"
 order: 3
 icon: "book"
-updated: "2026-08-11"
+updated: "2026-08-12"
 image: "/assets/docs/scribekit-docs/hero.en.jpg"
 ---
 
@@ -124,7 +124,7 @@ is why that file is the definition of "verified" for the whole skill.
 | `<contentDir>/<slug>/<lang><ext>` | Once per non-default locale. |
 | `<contentDir>/README.md` | Seeded once, verbatim. Never overwritten if it already exists. |
 | `<contentDir>/hero.settings.js` | Seeded once, on the first hero for the docs surface. |
-| `<contentDir>/<slug>/hero.js` and `<assets>/docs/<slug>/hero.<code>.jpg` | Only when the hero runs (see below). |
+| `<contentDir>/<slug>/hero.js` and `<assets>/docs/<slug>/hero.<code>.<ext>` | Only when the hero runs (see below). |
 | A one-line deploy verdict | Every `deep-verify` run. Any unfixed Critical or High means not ready to deploy. |
 | `_docs.ts` `tabs` / `groups` arrays | **Only** when `write` introduces a brand-new tab or group, or wholesale under `reorganize`. |
 
