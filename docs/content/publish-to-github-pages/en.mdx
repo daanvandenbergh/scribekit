@@ -14,7 +14,7 @@ every push to your default branch. You patch one config file, add four files, wi
 your page route, and push. The workflow turns Pages on by itself the first time it runs.
 
 **Prerequisites.** A working scribekit docs site that renders locally - see
-[Build a docs site from scratch](/build-a-docs-site) - and a GitHub repository with a remote
+[Build a docs site from scratch](/build-a-docs-site/) - and a GitHub repository with a remote
 set up. Node 20.9 or newer (Next 16's floor; the workflow installs 22), and a committed
 `package-lock.json` (the workflow uses `npm ci`).
 
@@ -24,7 +24,7 @@ already ships `generateStaticParams` and `dynamicParams = false`. So this is alm
 with two real trade-offs called out where they bite.
 
 The `/scribekit-docs-github-pages` Claude Code skill does every step below for you, and it ships in
-the package - see [scribekit-docs-github-pages](/scribekit-docs-github-pages). This tutorial is
+the package - see [scribekit-docs-github-pages](/scribekit-docs-github-pages/). This tutorial is
 the manual path: take it if you are not using Claude Code, or if you want to know exactly what the
 skill changes before you let it.
 
@@ -43,6 +43,7 @@ const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: "export",
+    trailingSlash: true,
     images: { unoptimized: true },
     ...(base ? { basePath: base, assetPrefix: base } : {}),
 };
@@ -56,12 +57,22 @@ uses `next/image`. The `base` spread is what makes the site work under a project
 owns the base path, reading one environment variable that both this file and your hero `<img>`
 (step 4) resolve against.
 
-Two things **not** to do here:
+**`trailingSlash` has to agree with your `Docs`/`Blog` instance, and the two defaults do not
+match.** Next's own `trailingSlash` defaults to `false`; scribekit's defaults to `true`. So the line
+above is not decoration - without it, the export writes `docs/<slug>.html` while every URL scribekit
+builds ends in a slash, and the two disagree.
 
-- **Do not add `trailingSlash: true`.** The export writes `docs/<slug>.html`, which Pages already
-  serves at the extensionless `/docs/<slug>`, and that matches scribekit's no-trailing-slash
-  canonical URLs. Turn trailing slashes on and every canonical disagrees with the URL it is served
-  at.
+The flag decides what the export writes. With `true` you get `docs/<slug>/index.html`, so Pages
+serves `/docs/<slug>/` and redirects `/docs/<slug>` to it - both forms resolve. With `false` you get
+`docs/<slug>.html`, so `/docs/<slug>` is served and `/docs/<slug>/` 404s.
+
+To use the bare form instead, turn **both** off together: `trailingSlash: false` here, and
+`trailingSlash: false` on your `Docs`/`Blog` instance. A mismatch is silent and site-wide - every
+canonical, hreflang, sitemap entry, and nav link is built by one helper, so the whole surface points
+at the form your host does not serve. Nothing throws; you just publish a sitemap of 404s.
+
+One more thing **not** to do:
+
 - **Do not hardcode a literal base path.** Derive it from `NEXT_PUBLIC_BASE_PATH`, as above. A
   hardcoded `basePath: "/my-repo"` breaks local builds and every other host you deploy to.
 
@@ -280,7 +291,7 @@ middleware and remove any `/en`-stripping your chrome did on `usePathname()`, si
 rewrite. URLs become `/<lang>/docs/...` across the board - the honest trade for static hosting.
 
 **A single-locale site has no middleware and nothing to do here.** If you followed
-[Build a docs site from scratch](/build-a-docs-site), skip this step: the flat `/docs/...`
+[Build a docs site from scratch](/build-a-docs-site/), skip this step: the flat `/docs/...`
 export just works.
 
 One more honesty note while you are here: if you use the `redirects` config for renamed slugs,

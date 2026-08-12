@@ -13,7 +13,7 @@ image: "/assets/docs/scribekit-docs-github-pages/hero.en.jpg"
 
 ## Not using Claude Code?
 
-There is an escape hatch that needs no agent at all: the deploy workflow is a plain file, copyable straight from `node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages/assets/deploy.yml` to `.github/workflows/deploy.yml`. It is not quite standalone, though - its own header names the prerequisite: `next.config.*` must read `NEXT_PUBLIC_BASE_PATH`, or a project site never receives its base path. [Publish your docs to GitHub Pages](/publish-to-github-pages) walks the whole thing by hand.
+There is an escape hatch that needs no agent at all: the deploy workflow is a plain file, copyable straight from `node_modules/@daanvandenbergh/scribekit/skills/scribekit-docs-github-pages/assets/deploy.yml` to `.github/workflows/deploy.yml`. It is not quite standalone, though - its own header names the prerequisite: `next.config.*` must read `NEXT_PUBLIC_BASE_PATH`, or a project site never receives its base path. [Publish your docs to GitHub Pages](/publish-to-github-pages/) walks the whole thing by hand.
 
 ## Invoke the skill
 
@@ -32,7 +32,7 @@ There is no mode argument. Step 0 picks one of two paths from what it finds:
 | **Deploy** | A `new Docs(...)` instance and route files already render the corpus | Nothing extra. Straight to the eight steps. |
 | **Create** | A `docs/<slug>/*.mdx` corpus exists but **no** `Docs` instance and no routes | Scaffolds the host app from `assets/app-template/` first, then runs the eight steps on it. |
 
-If there is **neither** a `Docs` instance nor a corpus, the skill stops and points you at [`/scribekit-docs`](/scribekit-docs). It never writes docs content itself.
+If there is **neither** a `Docs` instance nor a corpus, the skill stops and points you at [`/scribekit-docs`](/scribekit-docs/). It never writes docs content itself.
 
 ### What Create mode scaffolds
 
@@ -40,16 +40,16 @@ Copied from `assets/app-template/` and filled in from the corpus it just read: `
 
 ## What it is not
 
-This is not a content skill. Writing, rewriting, or reorganizing docs pages is [`/scribekit-docs`](/scribekit-docs). It **never edits MDX page bodies, front-matter, slugs, or the nav** in either mode. In Deploy mode it edits deploy config exclusively: `next.config.*`, the `_docs.ts` `siteUrl` and routing flags, `.github/`, and `public/`. Create mode additionally *creates* the host app - route files, layout, chrome, `_docs.ts`, `next.config.*`, `package.json` - but still stops at the content boundary.
+This is not a content skill. Writing, rewriting, or reorganizing docs pages is [`/scribekit-docs`](/scribekit-docs/). It **never edits MDX page bodies, front-matter, slugs, or the nav** in either mode. In Deploy mode it edits deploy config exclusively: `next.config.*`, the `_docs.ts` `siteUrl` and routing flags, `.github/`, and `public/`. Create mode additionally *creates* the host app - route files, layout, chrome, `_docs.ts`, `next.config.*`, `package.json` - but still stops at the content boundary.
 
-For the guided walkthrough, see [Publish to GitHub Pages](/publish-to-github-pages).
+For the guided walkthrough, see [Publish to GitHub Pages](/publish-to-github-pages/).
 
 ## The eight steps
 
 | Step | What it does |
 | --- | --- |
 | **Step 0** | Learn the project: find the `Docs` wiring (`contentDir`, `siteUrl`, `basePath`, `locales`, `defaultLocale`, `prefixDefaultLocale`, `redirects`), find the Next app root, derive the Pages origin and base path from `git remote get-url origin`, and detect the static-export blockers present. Picks Deploy or Create here; stops only if there is no corpus at all. |
-| **Step 1** | Patch `next.config.*`: merge in `output: "export"`, `images: { unoptimized: true }`, and a `basePath` / `assetPrefix` pair derived from `process.env.NEXT_PUBLIC_BASE_PATH`. |
+| **Step 1** | Patch `next.config.*`: merge in `output: "export"`, `trailingSlash: true`, `images: { unoptimized: true }`, and a `basePath` / `assetPrefix` pair derived from `process.env.NEXT_PUBLIC_BASE_PATH`. |
 | **Step 2** | Create an empty `public/.nojekyll` so the exported `_next/` folder is never treated as Jekyll source. |
 | **Step 3** | Copy `assets/deploy.yml` to `.github/workflows/deploy.yml` at the **git repo root**, not the app subdir. Workflows only run from the repo root's `.github/`. |
 | **Step 4** | Set `siteUrl` in `_docs.ts` to the derived Pages origin, so canonical, sitemap, `hreflang`, and OG URLs point at the real site. The domain is confirmed with the user first. |
@@ -148,7 +148,7 @@ Re-run the workflow after that and it deploys. With Pages already enabled, `enab
 
 - **Do not hardcode a literal base path** in `next.config.*`. Derive `basePath` / `assetPrefix` from `process.env.NEXT_PUBLIC_BASE_PATH`, which the workflow feeds from `configure-pages`'s `base_path` output. A literal `basePath: "/my-repo"` breaks local builds and every other host.
 - **Do not swap in a workflow that relies on `static_site_generator: next`.** The app has to own the base path, or the hero `<img>` cannot read it.
-- **Do not add `trailingSlash: true`.** The export writes `docs/<slug>.html`, which GitHub Pages already serves at the extensionless `/docs/<slug>`, and that matches Scribekit's no-trailing-slash canonical URLs. Turning trailing slashes on would make every canonical disagree with its served URL.
+- **Do not set `trailingSlash` on one side only.** Step 1 writes `trailingSlash: true`, matching Scribekit's own default: the export then emits `docs/<slug>/index.html`, so Pages serves `/docs/<slug>/` and redirects `/docs/<slug>` to it. A project that already runs `trailingSlash: false` keeps it and sets `trailingSlash: false` on its `Docs`/`Blog` instance instead. Flipping one without the other makes every canonical, `hreflang`, sitemap entry, and nav link disagree with the URL the host serves - silently, since nothing throws.
 
 ## Constraints
 

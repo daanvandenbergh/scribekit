@@ -209,14 +209,15 @@ describe("Blog.formatDate", () => {
 
 describe("Blog.site", () => {
     it("assembles the site config from the flat constructor attributes", () => {
-        expect(makeBlog({ siteUrl: SITE.siteUrl, brandName: SITE.brandName, basePath: "/articles" }).site).toEqual({
+        expect(makeBlog({ siteUrl: SITE.siteUrl, brandName: SITE.brandName, basePath: "/articles/" }).site).toEqual({
             siteUrl: SITE.siteUrl,
             brandName: SITE.brandName,
             defaultAuthor: undefined,
-            basePath: "/articles",
+            basePath: "/articles/",
             description: undefined,
             defaultLocale: "en",
             prefixDefaultLocale: false,
+            trailingSlash: true,
         });
     });
 
@@ -437,11 +438,11 @@ describe("Blog multi-language", () => {
         it("emit hreflang alternates + og:locale for a translated post", () => {
             const blog = seoBlog();
             const meta = blog.postMetadata(blog.getPost("getting-started"));
-            expect(meta.alternates?.canonical).toBe("/blog/getting-started");
+            expect(meta.alternates?.canonical).toBe("/blog/getting-started/");
             expect(meta.alternates?.languages).toEqual({
-                en: "/blog/getting-started",
-                fr: "/fr/blog/getting-started",
-                "x-default": "/blog/getting-started",
+                en: "/blog/getting-started/",
+                fr: "/fr/blog/getting-started/",
+                "x-default": "/blog/getting-started/",
             });
             expect(meta.openGraph?.locale).toBe("en_US");
             expect(meta.openGraph?.alternateLocale).toEqual(["fr_FR"]);
@@ -457,7 +458,7 @@ describe("Blog multi-language", () => {
         it("build a prefixed canonical + og:locale for a non-default language", () => {
             const blog = seoBlog();
             const meta = blog.postMetadata(blog.getPost("getting-started", "fr"));
-            expect(meta.alternates?.canonical).toBe("/fr/blog/getting-started");
+            expect(meta.alternates?.canonical).toBe("/fr/blog/getting-started/");
             expect(meta.openGraph?.locale).toBe("fr_FR");
         });
 
@@ -468,17 +469,17 @@ describe("Blog multi-language", () => {
                 unknown
             >[];
             expect(graph[0]!.inLanguage).toBe("fr");
-            expect(graph[0]!.url).toBe("https://example.com/fr/blog/getting-started");
+            expect(graph[0]!.url).toBe("https://example.com/fr/blog/getting-started/");
         });
 
         it("emit overview hreflang across locales", () => {
             const blog = seoBlog();
             const meta = blog.overviewMetadata("fr");
-            expect(meta.alternates?.canonical).toBe("/fr/blog");
+            expect(meta.alternates?.canonical).toBe("/fr/blog/");
             expect(meta.alternates?.languages).toEqual({
-                en: "/blog",
-                fr: "/fr/blog",
-                "x-default": "/blog",
+                en: "/blog/",
+                fr: "/fr/blog/",
+                "x-default": "/blog/",
             });
         });
 
@@ -488,16 +489,16 @@ describe("Blog multi-language", () => {
             expect(entries).toHaveLength(4);
 
             const translated = {
-                en: "https://example.com/blog/getting-started",
-                fr: "https://example.com/fr/blog/getting-started",
-                "x-default": "https://example.com/blog/getting-started",
+                en: "https://example.com/blog/getting-started/",
+                fr: "https://example.com/fr/blog/getting-started/",
+                "x-default": "https://example.com/blog/getting-started/",
             };
-            expect(byUrl("https://example.com/blog/getting-started")?.alternates?.languages).toEqual(translated);
-            expect(byUrl("https://example.com/fr/blog/getting-started")?.alternates?.languages).toEqual(translated);
+            expect(byUrl("https://example.com/blog/getting-started/")?.alternates?.languages).toEqual(translated);
+            expect(byUrl("https://example.com/fr/blog/getting-started/")?.alternates?.languages).toEqual(translated);
 
             // Untranslated posts carry no alternates.
-            expect(byUrl("https://example.com/blog/ops")?.alternates).toBeUndefined();
-            expect(byUrl("https://example.com/fr/blog/only-fr")?.alternates).toBeUndefined();
+            expect(byUrl("https://example.com/blog/ops/")?.alternates).toBeUndefined();
+            expect(byUrl("https://example.com/fr/blog/only-fr/")?.alternates).toBeUndefined();
         });
 
         it("throw a clear error from sitemapEntries when no site config was provided", () => {
@@ -507,12 +508,12 @@ describe("Blog multi-language", () => {
         it("build a per-locale RSS feed whose item URLs match the locale's page URLs", () => {
             const en = seoBlog().rssFeed();
             expect(en).toContain("<language>en</language>");
-            expect(en).toContain("<link>https://example.com/blog/getting-started</link>");
+            expect(en).toContain("<link>https://example.com/blog/getting-started/</link>");
             expect(en).not.toContain("/fr/blog/");
 
             const fr = seoBlog().rssFeed("fr");
             expect(fr).toContain("<language>fr</language>");
-            expect(fr).toContain("<link>https://example.com/fr/blog/getting-started</link>");
+            expect(fr).toContain("<link>https://example.com/fr/blog/getting-started/</link>");
             expect(fr).toContain(
                 '<atom:link href="https://example.com/fr/blog/rss.xml" rel="self" type="application/rss+xml"/>',
             );

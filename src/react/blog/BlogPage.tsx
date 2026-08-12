@@ -112,7 +112,7 @@ export function BlogPage({
     const article = (
         <article className="scribekit-post">
             {showBackLink ? (
-                <Link href={localePath({ basePath: resolvedBasePath, defaultLocale: blog.defaultLocale, prefixDefaultLocale: blog.prefixDefaultLocale,lang: resolvedLang })} className="scribekit-back">
+                <Link href={localePath({ basePath: resolvedBasePath, defaultLocale: blog.defaultLocale, prefixDefaultLocale: blog.prefixDefaultLocale, trailingSlash: blog.trailingSlash, lang: resolvedLang })} className="scribekit-back">
                     {backLabel ?? labels.back}
                 </Link>
             ) : null}
@@ -174,7 +174,7 @@ export function BlogPage({
                 {similar.map((related) => (
                     <Link
                         key={related.slug}
-                        href={localePath({ basePath: resolvedBasePath, defaultLocale: blog.defaultLocale, prefixDefaultLocale: blog.prefixDefaultLocale,lang: related.lang, slug: related.slug })}
+                        href={localePath({ basePath: resolvedBasePath, defaultLocale: blog.defaultLocale, prefixDefaultLocale: blog.prefixDefaultLocale, trailingSlash: blog.trailingSlash, lang: related.lang, slug: related.slug })}
                         className="scribekit-similar-card"
                     >
                         <span className="scribekit-similar-body">

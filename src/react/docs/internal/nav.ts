@@ -59,12 +59,18 @@ export function firstHrefOf(tab: NavTab | undefined): string | undefined {
  * @param opts.basePath - the docs section base (e.g. `/docs`); defaults to `/blog` via `normalizeBasePath`.
  * @param opts.defaultLocale - the locale served without a URL prefix (unless prefixed below).
  * @param opts.prefixDefaultLocale - when `true`, the default locale is prefixed too.
+ * @param opts.trailingSlash - when `false`, omit the trailing slash. Defaults to `true`.
  * @returns the root-relative URL of the same page in `targetLang`.
  */
 export function switchLocaleHref(
     pathname: string,
     targetLang: string,
-    opts: { basePath?: string | undefined; defaultLocale: string; prefixDefaultLocale?: boolean | undefined },
+    opts: {
+        basePath?: string | undefined;
+        defaultLocale: string;
+        prefixDefaultLocale?: boolean | undefined;
+        trailingSlash?: boolean | undefined;
+    },
 ): string {
     const base = normalizeBasePath(opts.basePath);
     const marker = `${base}/`;
@@ -74,6 +80,7 @@ export function switchLocaleHref(
         basePath: base,
         defaultLocale: opts.defaultLocale,
         prefixDefaultLocale: opts.prefixDefaultLocale,
+        trailingSlash: opts.trailingSlash,
         lang: targetLang,
         slug,
     });

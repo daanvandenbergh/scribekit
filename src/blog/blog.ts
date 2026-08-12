@@ -58,6 +58,12 @@ export class Blog {
      */
     readonly prefixDefaultLocale: boolean;
     /**
+     * Whether every built URL ends in a slash. Public so the components build links that match
+     * the SEO metadata. Must match the host app's `next.config` `trailingSlash`; see
+     * {@link SiteConfig.trailingSlash}.
+     */
+    readonly trailingSlash: boolean;
+    /**
      * Site config assembled from the flat site attributes passed to the constructor, or
      * `undefined` when `siteUrl`/`brandName` were not provided. Exposed as a public read-only
      * property; the components read it to build their SEO JSON-LD.
@@ -76,6 +82,7 @@ export class Blog {
         }));
         this.defaultLocale = config.defaultLocale ?? config.locales?.[0]?.code ?? this.locale.split("-")[0] ?? "en";
         this.prefixDefaultLocale = config.prefixDefaultLocale ?? false;
+        this.trailingSlash = config.trailingSlash ?? true;
         this.store = new ContentStore({
             contentDir: path.resolve(config.contentDir),
             extension: config.extension ?? ".mdx",
@@ -94,6 +101,7 @@ export class Blog {
                       description: config.description,
                       defaultLocale: this.defaultLocale,
                       prefixDefaultLocale: this.prefixDefaultLocale,
+                      trailingSlash: this.trailingSlash,
                       organizationId: config.organizationId,
                       authorId: config.authorId,
                       websiteId: config.websiteId,

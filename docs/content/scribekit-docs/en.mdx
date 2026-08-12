@@ -12,7 +12,7 @@ image: "/assets/docs/scribekit-docs/hero.en.jpg"
 A portable Claude Code skill that writes, rewrites, reorganizes, or deep-verifies a project's MDX
 docs site, sourced entirely from the project's own code so every documented fact, option, default,
 and code sample is true. It is not for a marketing or blog article; that is
-[`/scribekit-blog`](/scribekit-blog).
+[`/scribekit-blog`](/scribekit-blog/).
 
 ```text
 /scribekit-docs [write|rewrite|reorganize|deep-verify] [topic | slug-or-path] [--scan] [--no-hero]
@@ -163,7 +163,7 @@ approved. "**Findings the user did not approve are dropped.**"
 ## Its dependency on /scribekit-blog
 
 `scribekit-docs` does not carry its own voice craft or research protocol. It reads two files from the
-sibling [`/scribekit-blog`](/scribekit-blog) skill:
+sibling [`/scribekit-blog`](/scribekit-blog/) skill:
 
 | File | How docs uses it |
 | --- | --- |
@@ -189,7 +189,7 @@ leaves `image:` unset unless the user asks for one. `DocMeta.image` is an option
 the page never renders inline, and a lone hero no sibling has breaks consistency.
 
 If siblings do have heroes, or the user opts in, the page's hero goes to
-[`/scribekit-hero`](/scribekit-hero)'s `docs-hero` create flow. The skill is resolved at the
+[`/scribekit-hero`](/scribekit-hero/)'s `docs-hero` create flow. The skill is resolved at the
 first of three paths that exists:
 
 ```text

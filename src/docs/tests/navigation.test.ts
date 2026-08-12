@@ -3,7 +3,7 @@ import { adjacentFor, breadcrumbFor, buildNavTree, flattenNav, type NavBuildOpti
 import type { DocMeta, NavTree } from "../types.js";
 
 /** Default URL options: unprefixed `/docs`, default locale `en`. */
-const OPTS: NavBuildOptions = { basePath: "/docs", defaultLocale: "en", prefixDefaultLocale: false };
+const OPTS: NavBuildOptions = { basePath: "/docs/", defaultLocale: "en", prefixDefaultLocale: false };
 
 /**
  * Builds a {@link DocMeta} with sensible defaults, overriding only the fields a test cares about.
@@ -174,13 +174,13 @@ describe("buildNavTree - items", () => {
             OPTS,
         );
         const items = tree.tabs[0]!.groups[0]!.items;
-        expect(items.find((i) => i.slug === "a")!.href).toBe("/docs/a");
-        expect(items.find((i) => i.slug === "b")!.href).toBe("/fr/docs/b");
+        expect(items.find((i) => i.slug === "a")!.href).toBe("/docs/a/");
+        expect(items.find((i) => i.slug === "b")!.href).toBe("/fr/docs/b/");
     });
 
     it("prefixes the default locale when prefixDefaultLocale is set", () => {
         const tree = buildNavTree([meta("a", { tab: "Docs", lang: "en" })], { ...OPTS, prefixDefaultLocale: true });
-        expect(tree.tabs[0]!.groups[0]!.items[0]!.href).toBe("/en/docs/a");
+        expect(tree.tabs[0]!.groups[0]!.items[0]!.href).toBe("/en/docs/a/");
     });
 
     it("applies config labels to tabs and groups while keeping the ids", () => {

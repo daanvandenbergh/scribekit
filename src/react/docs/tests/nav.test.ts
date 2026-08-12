@@ -14,25 +14,25 @@ const NAV: NavTree = {
             id: "Documentation",
             label: "Documentation",
             groups: [
-                { id: "Get started", label: "Get started", items: [item("introduction", "/docs/introduction"), item("quickstart", "/docs/quickstart")] },
+                { id: "Get started", label: "Get started", items: [item("introduction", "/docs/introduction/"), item("quickstart", "/docs/quickstart/")] },
             ],
         },
         {
             id: "Guides",
             label: "Guides",
-            groups: [{ id: "Recipes", label: "Recipes", items: [item("writing-docs", "/docs/writing-docs")] }],
+            groups: [{ id: "Recipes", label: "Recipes", items: [item("writing-docs", "/docs/writing-docs/")] }],
         },
     ],
 };
 
 describe("tabIdForPath", () => {
     it("returns the id of the tab that owns the path", () => {
-        expect(tabIdForPath(NAV, "/docs/quickstart")).toBe("Documentation");
-        expect(tabIdForPath(NAV, "/docs/writing-docs")).toBe("Guides");
+        expect(tabIdForPath(NAV, "/docs/quickstart/")).toBe("Documentation");
+        expect(tabIdForPath(NAV, "/docs/writing-docs/")).toBe("Guides");
     });
 
     it("returns undefined for an unknown path or no path", () => {
-        expect(tabIdForPath(NAV, "/docs")).toBeUndefined();
+        expect(tabIdForPath(NAV, "/docs/")).toBeUndefined();
         expect(tabIdForPath(NAV, undefined)).toBeUndefined();
         expect(tabIdForPath(NAV, "")).toBeUndefined();
     });
@@ -40,8 +40,8 @@ describe("tabIdForPath", () => {
 
 describe("firstHrefOf", () => {
     it("returns the first page's href of the tab, in reading order", () => {
-        expect(firstHrefOf(NAV.tabs[0])).toBe("/docs/introduction");
-        expect(firstHrefOf(NAV.tabs[1])).toBe("/docs/writing-docs");
+        expect(firstHrefOf(NAV.tabs[0])).toBe("/docs/introduction/");
+        expect(firstHrefOf(NAV.tabs[1])).toBe("/docs/writing-docs/");
     });
 
     it("returns undefined for an empty or missing tab", () => {
@@ -51,24 +51,24 @@ describe("firstHrefOf", () => {
 });
 
 describe("switchLocaleHref", () => {
-    const opts = { basePath: "/docs", defaultLocale: "en", prefixDefaultLocale: false };
+    const opts = { basePath: "/docs/", defaultLocale: "en", prefixDefaultLocale: false };
 
     it("rebuilds the current page's URL in another locale (default served unprefixed)", () => {
-        expect(switchLocaleHref("/docs/greeting", "fr", opts)).toBe("/fr/docs/greeting");
-        expect(switchLocaleHref("/fr/docs/greeting", "en", opts)).toBe("/docs/greeting");
-        expect(switchLocaleHref("/fr/docs/greeting", "de", opts)).toBe("/de/docs/greeting");
+        expect(switchLocaleHref("/docs/greeting/", "fr", opts)).toBe("/fr/docs/greeting/");
+        expect(switchLocaleHref("/fr/docs/greeting/", "en", opts)).toBe("/docs/greeting/");
+        expect(switchLocaleHref("/fr/docs/greeting/", "de", opts)).toBe("/de/docs/greeting/");
     });
 
     it("handles the index (no slug in the path)", () => {
-        expect(switchLocaleHref("/docs", "fr", opts)).toBe("/fr/docs");
-        expect(switchLocaleHref("/fr/docs", "en", opts)).toBe("/docs");
+        expect(switchLocaleHref("/docs/", "fr", opts)).toBe("/fr/docs/");
+        expect(switchLocaleHref("/fr/docs/", "en", opts)).toBe("/docs/");
     });
 
     it("prefixes the default locale when prefixDefaultLocale is set", () => {
-        expect(switchLocaleHref("/en/docs/x", "en", { ...opts, prefixDefaultLocale: true })).toBe("/en/docs/x");
+        expect(switchLocaleHref("/en/docs/x/", "en", { ...opts, prefixDefaultLocale: true })).toBe("/en/docs/x/");
     });
 
     it("falls back to the locale index when the path carries no base", () => {
-        expect(switchLocaleHref("", "fr", opts)).toBe("/fr/docs");
+        expect(switchLocaleHref("", "fr", opts)).toBe("/fr/docs/");
     });
 });

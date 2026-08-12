@@ -130,14 +130,14 @@ describe("Docs.getNavTree", () => {
     it("uses the sidebar label and the unprefixed default-locale href", () => {
         const item = flattenNav(docs.getNavTree()).find((i) => i.slug === "greeting-and-voice")!;
         expect(item.label).toBe("Greeting");
-        expect(item.href).toBe("/docs/greeting-and-voice");
+        expect(item.href).toBe("/docs/greeting-and-voice/");
     });
 
     it("builds a per-language tree with prefixed hrefs (fr)", () => {
         const tree = docs.getNavTree("fr");
         expect(tree.multiTab).toBe(false); // only the Documentation tab has fr pages
         expect(flattenNav(tree).map((i) => i.slug)).toEqual(["introduction", "fr-guide", "greeting-and-voice"]);
-        expect(flattenNav(tree).find((i) => i.slug === "introduction")!.href).toBe("/fr/docs/introduction");
+        expect(flattenNav(tree).find((i) => i.slug === "introduction")!.href).toBe("/fr/docs/introduction/");
     });
 });
 
@@ -207,18 +207,18 @@ describe("Docs SEO methods", () => {
     it("builds page metadata with hreflang for a translated page", () => {
         const meta = docs.docMetadata(docs.getDoc("greeting-and-voice"));
         expect(meta.title).toBe("Greeting & voice | Example");
-        expect(meta.alternates?.canonical).toBe("/docs/greeting-and-voice");
+        expect(meta.alternates?.canonical).toBe("/docs/greeting-and-voice/");
         expect(meta.alternates?.languages).toEqual({
-            en: "/docs/greeting-and-voice",
-            fr: "/fr/docs/greeting-and-voice",
-            "x-default": "/docs/greeting-and-voice",
+            en: "/docs/greeting-and-voice/",
+            fr: "/fr/docs/greeting-and-voice/",
+            "x-default": "/docs/greeting-and-voice/",
         });
     });
 
     it("builds the docs index metadata", () => {
         const meta = docs.indexMetadata();
         expect(meta.title).toBe("Docs | Example");
-        expect(meta.alternates?.canonical).toBe("/docs");
+        expect(meta.alternates?.canonical).toBe("/docs/");
     });
 
     it("builds a TechArticle with the group in the breadcrumb, and translation cross-links", () => {
@@ -236,7 +236,7 @@ describe("Docs SEO methods", () => {
     it("builds the index JSON-LD ItemList in sidebar order", () => {
         const graph = docs.indexJsonLd()["@graph"] as Record<string, unknown>[];
         const items = graph[2]!.itemListElement as Record<string, unknown>[];
-        expect(items[0]!.url).toBe("https://example.com/docs/introduction");
+        expect(items[0]!.url).toBe("https://example.com/docs/introduction/");
         expect(items.map((i) => i.name)).toEqual([
             "Introduction",
             "Quickstart",
@@ -251,14 +251,14 @@ describe("Docs SEO methods", () => {
         const entries = docs.sitemapEntries();
         // 10 routes exist, but the hidden "draft" page is excluded from the sitemap.
         expect(entries).toHaveLength(9);
-        const intro = entries.find((e) => e.url === "https://example.com/docs/introduction")!;
+        const intro = entries.find((e) => e.url === "https://example.com/docs/introduction/")!;
         expect(intro.alternates?.languages).toEqual({
-            en: "https://example.com/docs/introduction",
-            fr: "https://example.com/fr/docs/introduction",
-            "x-default": "https://example.com/docs/introduction",
+            en: "https://example.com/docs/introduction/",
+            fr: "https://example.com/fr/docs/introduction/",
+            "x-default": "https://example.com/docs/introduction/",
         });
         // A hidden page stays routable (still in getDocRefs) but must never be in the sitemap.
-        expect(entries.some((e) => e.url === "https://example.com/docs/draft")).toBe(false);
+        expect(entries.some((e) => e.url === "https://example.com/docs/draft/")).toBe(false);
         expect(docs.getDocRefs()).toContainEqual({ slug: "draft", lang: "en" });
     });
 
@@ -281,7 +281,7 @@ describe("Docs - hidden translation", () => {
     it("keeps a hidden translation out of the sitemap and the sibling's hreflang alternates", () => {
         const entries = docs.sitemapEntries();
         // Only the visible en route is emitted; the hidden fr draft is dropped...
-        expect(entries.map((e) => e.url)).toEqual(["https://example.com/docs/guide"]);
+        expect(entries.map((e) => e.url)).toEqual(["https://example.com/docs/guide/"]);
         // ...and the en entry lists no fr alternate (it would otherwise advertise the draft).
         expect(entries[0]!.alternates).toBeUndefined();
     });
@@ -322,7 +322,7 @@ describe("Docs - edge cases", () => {
 
     it("defaults the base path to /docs so URLs never fall back to /blog", () => {
         const docs = new Docs({ contentDir: path.join(HERE, "fixtures/docs"), siteUrl: "https://example.com", brandName: "Example" });
-        expect(docs.docMetadata(docs.getDoc("quickstart")).alternates?.canonical).toBe("/docs/quickstart");
+        expect(docs.docMetadata(docs.getDoc("quickstart")).alternates?.canonical).toBe("/docs/quickstart/");
     });
 });
 
@@ -346,25 +346,25 @@ function makeRedirectingDocs(redirects: Record<string, string>, extra?: Partial<
 describe("Docs.getRedirect", () => {
     it("redirects a renamed slug to its new page, unprefixed for the default locale", () => {
         const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
-        expect(docs.getRedirect("getting-started")).toBe("/docs/quickstart");
-        expect(docs.getRedirect("getting-started", "en")).toBe("/docs/quickstart");
+        expect(docs.getRedirect("getting-started")).toBe("/docs/quickstart/");
+        expect(docs.getRedirect("getting-started", "en")).toBe("/docs/quickstart/");
     });
 
     it("prefixes the destination with a non-default locale", () => {
         const docs = makeRedirectingDocs({ "getting-started": "quickstart" });
-        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/docs/quickstart");
+        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/docs/quickstart/");
     });
 
     it("prefixes the default locale too when prefixDefaultLocale is set", () => {
         const docs = makeRedirectingDocs({ "getting-started": "quickstart" }, { prefixDefaultLocale: true });
-        expect(docs.getRedirect("getting-started")).toBe("/en/docs/quickstart");
-        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/docs/quickstart");
+        expect(docs.getRedirect("getting-started")).toBe("/en/docs/quickstart/");
+        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/docs/quickstart/");
     });
 
     it("honours a custom basePath", () => {
-        const docs = makeRedirectingDocs({ "getting-started": "quickstart" }, { basePath: "/handbook" });
-        expect(docs.getRedirect("getting-started")).toBe("/handbook/quickstart");
-        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/handbook/quickstart");
+        const docs = makeRedirectingDocs({ "getting-started": "quickstart" }, { basePath: "/handbook/" });
+        expect(docs.getRedirect("getting-started")).toBe("/handbook/quickstart/");
+        expect(docs.getRedirect("getting-started", "fr")).toBe("/fr/handbook/quickstart/");
     });
 
     it("returns undefined for a slug that is not redirected", () => {
@@ -390,15 +390,15 @@ describe("Docs.getRedirect", () => {
 
     it("follows a chain to its final destination in one hop", () => {
         const docs = makeRedirectingDocs({ a: "b", b: "quickstart" });
-        expect(docs.getRedirect("a")).toBe("/docs/quickstart");
-        expect(docs.getRedirect("b")).toBe("/docs/quickstart");
+        expect(docs.getRedirect("a")).toBe("/docs/quickstart/");
+        expect(docs.getRedirect("b")).toBe("/docs/quickstart/");
     });
 
     it("ends a chain at the first real page rather than redirecting onwards", () => {
         // `quickstart` exists, so `a -> quickstart` stops there even though `quickstart -> introduction`
         // is in the map (that entry is inert - a real page is never redirected).
         const docs = makeRedirectingDocs({ a: "quickstart", quickstart: "introduction" });
-        expect(docs.getRedirect("a")).toBe("/docs/quickstart");
+        expect(docs.getRedirect("a")).toBe("/docs/quickstart/");
     });
 
     it("returns undefined for a cycle rather than looping forever", () => {
@@ -414,7 +414,7 @@ describe("Docs.getRedirect", () => {
 
     it("still returns an href when the destination page does not exist, so a typo 404s loudly", () => {
         const docs = makeRedirectingDocs({ old: "typo-slug" });
-        expect(docs.getRedirect("old")).toBe("/docs/typo-slug");
+        expect(docs.getRedirect("old")).toBe("/docs/typo-slug/");
     });
 
     it("never resolves an Object.prototype key from the URL", () => {
@@ -470,7 +470,7 @@ describe("Docs.getRedirectRefs", () => {
             defaultLocale: "en",
             redirects: { old: "new" },
         });
-        expect(docs.getRedirect("old")).toBe("/docs/new");
+        expect(docs.getRedirect("old")).toBe("/docs/new/");
         expect(docs.getRedirectRefs()).toEqual([{ slug: "old", lang: "en" }]);
     });
 });

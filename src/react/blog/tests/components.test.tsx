@@ -94,7 +94,7 @@ function i18nFakeBlog(overrides: Partial<Blog> = {}): Blog {
             { code: "fr", label: "Français" },
         ],
         getTranslations: (_slug: string) => ["en", "fr"],
-        site: { ...SITE, basePath: "/blog", defaultLocale: "en" },
+        site: { ...SITE, basePath: "/blog/", defaultLocale: "en" },
         ...overrides,
     });
 }
@@ -165,7 +165,7 @@ describe("BlogPage", () => {
         expect(html).toContain('src="/assets/blog/hello-world.jpg"');
         expect(html).toContain("MDX_BODY_CONTENT");
         expect(html).toContain("← Blog");
-        expect(html).toContain('href="/blog"');
+        expect(html).toContain('href="/blog/"');
         expect(html).toContain("application/ld+json");
         expect(html).toContain("BlogPosting");
     });
@@ -247,8 +247,8 @@ describe("BlogPage", () => {
     });
 
     it("uses basePath for the back-link", () => {
-        const html = renderToStaticMarkup(<BlogPage blog={fakeBlog()} slug="hello-world" basePath="/articles" />);
-        expect(html).toContain('href="/articles"');
+        const html = renderToStaticMarkup(<BlogPage blog={fakeBlog()} slug="hello-world" basePath="/articles/" />);
+        expect(html).toContain('href="/articles/"');
     });
 
     it("propagates errors from blog.getPost (e.g. an unknown slug in dynamic rendering)", () => {
@@ -302,7 +302,7 @@ describe("BlogPage sidebar", () => {
         expect(html).toContain("Getting Started");
         expect(html).toContain("4 min read");
         expect(html).toContain("Similar pages");
-        expect(html).toContain('href="/blog/img-post"');
+        expect(html).toContain('href="/blog/img-post/"');
         expect(html).toContain("Img Post");
         // Similar cards are text rows (title + category · date + arrow), no thumbnail.
         expect(html).toContain("scribekit-similar-arrow");
@@ -337,7 +337,7 @@ describe("BlogPage sidebar", () => {
     it("shows similar posts but omits the minimap when there are no headings", () => {
         const html = renderToStaticMarkup(<BlogPage blog={sidebarBlog({ tableOfContents: () => [] })} slug="hello-world" />);
         expect(html).toContain("Similar pages");
-        expect(html).toContain('href="/blog/img-post"');
+        expect(html).toContain('href="/blog/img-post/"');
         expect(html).not.toContain("scribekit-toc");
     });
 
@@ -346,13 +346,13 @@ describe("BlogPage sidebar", () => {
             <BlogPage
                 blog={sidebarBlog()}
                 slug="hello-world"
-                basePath="/articles"
+                basePath="/articles/"
                 tocTitle="Contents"
                 similarTitle="Related"
                 readingLabel={(m) => `${m} minuten`}
             />,
         );
-        expect(html).toContain('href="/articles/img-post"');
+        expect(html).toContain('href="/articles/img-post/"');
         expect(html).toContain("Contents");
         expect(html).toContain("Related");
         expect(html).toContain("4 minuten");
@@ -370,14 +370,14 @@ describe("BlogPage sidebar", () => {
 // and mobile collapse (useEffect / useState toggle) are not exercised here - only structure.
 describe("BlogSidebar", () => {
     it("renders the minimap links and the similar slot, collapsed by default", () => {
-        const html = renderToStaticMarkup(<BlogSidebar toc={TOC} similar={<a href="/blog/x">X</a>} />);
+        const html = renderToStaticMarkup(<BlogSidebar toc={TOC} similar={<a href="/blog/x/">X</a>} />);
         expect(html).toContain("On this page");
         expect(html).toContain('aria-expanded="false"');
         expect(html).toContain('href="#getting-started"');
         expect(html).toContain('href="#install"');
         expect(html).toContain("scribekit-toc-sub"); // the ### entry is marked as a sub-heading
         expect(html).toContain("Similar pages");
-        expect(html).toContain('href="/blog/x"');
+        expect(html).toContain('href="/blog/x/"');
     });
 
     it("marks the first heading active by default so the minimap always shows a selection", () => {
@@ -405,8 +405,8 @@ describe("BlogSidebar", () => {
 describe("BlogOverview", () => {
     it("derives posts from blog.getAllPosts() and renders a card grid with JSON-LD", () => {
         const html = renderToStaticMarkup(<BlogOverview blog={fakeBlog()} />);
-        expect(html).toContain('href="/blog/hello-world"');
-        expect(html).toContain('href="/blog/second"');
+        expect(html).toContain('href="/blog/hello-world/"');
+        expect(html).toContain('href="/blog/second/"');
         expect(html).toContain("Hello World");
         expect(html).toContain("Second Post");
         expect(html).toContain('src="/assets/blog/hello-world.jpg"');
@@ -445,8 +445,8 @@ describe("BlogOverview", () => {
 
     it("uses the posts prop to override the derived posts", () => {
         const html = renderToStaticMarkup(<BlogOverview blog={fakeBlog()} posts={[POST.meta]} />);
-        expect(html).toContain('href="/blog/hello-world"');
-        expect(html).not.toContain('href="/blog/second"');
+        expect(html).toContain('href="/blog/hello-world/"');
+        expect(html).not.toContain('href="/blog/second/"');
     });
 
     it("renders the empty state and no grid/JSON-LD when there are no posts", () => {
@@ -457,8 +457,8 @@ describe("BlogOverview", () => {
     });
 
     it("uses a custom basePath for card links", () => {
-        const html = renderToStaticMarkup(<BlogOverview blog={fakeBlog()} posts={[POST.meta]} basePath="/articles" />);
-        expect(html).toContain('href="/articles/hello-world"');
+        const html = renderToStaticMarkup(<BlogOverview blog={fakeBlog()} posts={[POST.meta]} basePath="/articles/" />);
+        expect(html).toContain('href="/articles/hello-world/"');
     });
 
     it("uses custom link and img components", () => {
@@ -496,22 +496,22 @@ describe("BlogOverview", () => {
 
     it("defaults the card basePath from blog.site.basePath", () => {
         const html = renderToStaticMarkup(
-            <BlogOverview blog={fakeBlog({ site: { ...SITE, basePath: "/articles" } })} posts={[POST.meta]} />,
+            <BlogOverview blog={fakeBlog({ site: { ...SITE, basePath: "/articles/" } })} posts={[POST.meta]} />,
         );
-        expect(html).toContain('href="/articles/hello-world"');
+        expect(html).toContain('href="/articles/hello-world/"');
     });
 
     it("prefixes card links for a non-default language (front-locale scheme)", () => {
         const frPost: PostMeta = { ...POST.meta, lang: "fr" };
         const html = renderToStaticMarkup(<BlogOverview blog={i18nFakeBlog({ getAllPosts: () => [frPost] })} lang="fr" />);
-        expect(html).toContain('href="/fr/blog/hello-world"');
+        expect(html).toContain('href="/fr/blog/hello-world/"');
     });
 
     it("prefixes default-language card links when prefixDefaultLocale is set", () => {
         const html = renderToStaticMarkup(
             <BlogOverview blog={i18nFakeBlog({ prefixDefaultLocale: true, getAllPosts: () => [POST.meta] })} lang="en" />,
         );
-        expect(html).toContain('href="/en/blog/hello-world"');
+        expect(html).toContain('href="/en/blog/hello-world/"');
     });
 });
 
@@ -526,14 +526,14 @@ describe("BlogPage multi-language", () => {
         const html = renderToStaticMarkup(
             <BlogPage blog={i18nFakeBlog({ getPost: () => frPost })} slug="hello-world" lang="fr" />,
         );
-        expect(html).toContain('href="/fr/blog"'); // back-link to the fr overview
+        expect(html).toContain('href="/fr/blog/"'); // back-link to the fr overview
     });
 
     it("defaults basePath from blog.site.basePath", () => {
         const html = renderToStaticMarkup(
-            <BlogPage blog={fakeBlog({ site: { ...SITE, basePath: "/articles" } })} slug="hello-world" />,
+            <BlogPage blog={fakeBlog({ site: { ...SITE, basePath: "/articles/" } })} slug="hello-world" />,
         );
-        expect(html).toContain('href="/articles"'); // back-link uses site.basePath (default language)
+        expect(html).toContain('href="/articles/"'); // back-link uses site.basePath (default language)
     });
 
     it("localizes the post + sidebar UI copy to the lang prop", () => {

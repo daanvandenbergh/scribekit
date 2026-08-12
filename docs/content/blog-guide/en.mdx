@@ -11,7 +11,7 @@ image: "/assets/docs/blog-guide/hero.en.jpg"
 
 Recipes for the jobs you do once the blog exists: add a post, wire the routes, filter by category, tune the grid, rank similar posts, and swap the copy. Each one stands alone, so read the heading you need and stop.
 
-Prerequisites: the package installed, the stylesheet imported once, and a configured `Blog` instance. See [Installation](/installation) for that, [Build a blog](/build-a-blog) for the end-to-end walkthrough, and [API reference](/api-reference) for every option and default.
+Prerequisites: the package installed, the stylesheet imported once, and a configured `Blog` instance. See [Installation](/installation/) for that, [Build a blog](/build-a-blog/) for the end-to-end walkthrough, and [API reference](/api-reference/) for every option and default.
 
 ## Add a post
 
@@ -164,6 +164,8 @@ Where the tree lives depends on one config flag, and getting it wrong 404s the d
 
 Every rendered link - card links, the back link, similar posts - and every canonical, hreflang, and sitemap URL goes through the same `localePath` helper, so the routes have to match what it produces.
 
+That helper also ends every path in a slash (`/blog/<slug>/`), because **`trailingSlash` defaults to `true`** on the instance - and it has to agree with your `next.config` `trailingSlash`, whose own default is `false`. So either turn it on in `next.config`, or set `trailingSlash: false` on the `Blog`. Nothing throws on a mismatch; the whole surface simply points at the URL form your host does not serve. The RSS feed path is the one exception, and it is handled for you: `/blog/rss.xml` is a file, so it never takes a slash either way.
+
 **If you opt out of `dynamicParams = false`**, guard the unknown slug yourself. With it, an unknown slug 404s at the router and `getPost` only ever sees a valid one:
 
 ```tsx
@@ -230,7 +232,7 @@ const similar = blog.similarPosts(post, 3);
 
 ### What you can actually tune
 
-Two facts decide whether the list is any good. The full algorithm - the weights, the tokenizer, the stopword list - is in the [API reference](/api-reference).
+Two facts decide whether the list is any good. The full algorithm - the weights, the tokenizer, the stopword list - is in the [API reference](/api-reference/).
 
 - **Keywords are the only lever you control.** `categories` are not scored at all, so two posts in the same category that share no title, description, or keyword tokens never see each other.
 - **A score of exactly 0 is dropped**, so a short list is a real answer, not a bug. A post whose title, description, and keywords produce no tokens gets `[]` back.
@@ -309,7 +311,7 @@ image: "/assets/blog/hello-world/hero.en.jpg"
 
 That one value does three jobs: `BlogPage` renders it above the body at 1200x630, `BlogOverview` uses it as the card thumbnail, and `postMetadata` / `postJsonLd` use it for the OG and Twitter card. Nothing validates it, so a wrong path is a broken image rather than an error.
 
-To generate one on-brand, run the [/scribekit-hero](/scribekit-hero) skill, which renders the JPEG from HTML and CSS and writes it where the front-matter expects it.
+To generate one on-brand, run the [/scribekit-hero](/scribekit-hero/) skill, which renders the JPEG from HTML and CSS and writes it where the front-matter expects it.
 
 ## Serve an RSS feed
 

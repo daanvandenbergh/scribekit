@@ -30,8 +30,9 @@ not generic. Gather and keep as working notes for the run:
 - **Find the `Docs` wiring** - grep for `new Docs(` and pick the `_docs.ts` colocated with the route
   files (a project mirrors a `_blog.ts` = `export const docs = new Docs({...})`); **ignore matches in
   `dist/`, `node_modules/`, and tests**. From it read `contentDir`, `basePath` (default `/docs`),
-  `extension` (default `.mdx`), `defaultLocale`, `prefixDefaultLocale`, `locales`, and the
-  `tabs` / `groups` display config. Two resolution rules a naive read gets wrong:
+  `extension` (default `.mdx`), `defaultLocale`, `prefixDefaultLocale`, `trailingSlash` (default
+  `true`, which sets the internal-link form - see [docs-style.md](./docs-style.md)), `locales`, and
+  the `tabs` / `groups` display config. Two resolution rules a naive read gets wrong:
   - **`contentDir` is resolved against the app root that runs `Docs`** (`process.cwd()` at runtime =
     the nearest `package.json` / Next project root), **not** the repo root and **not** the `_docs.ts`
     file's own directory - so a relative `./docs` in `app/.../_docs.ts` means `<app-root>/docs`. After

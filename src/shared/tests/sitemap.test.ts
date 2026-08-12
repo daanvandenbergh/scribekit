@@ -7,7 +7,7 @@ const SITE_I18N: SiteConfig = { siteUrl: "https://example.com", brandName: "Exam
 
 describe("absoluteUrl", () => {
     it("resolves a root-relative path against the site origin", () => {
-        expect(absoluteUrl("https://example.com", "/docs/x")).toBe("https://example.com/docs/x");
+        expect(absoluteUrl("https://example.com", "/docs/x/")).toBe("https://example.com/docs/x/");
     });
 
     it("passes an already-absolute URL through", () => {
@@ -19,6 +19,8 @@ describe("absoluteUrl", () => {
     it("prepends a sub-path carried by the site origin instead of discarding it", () => {
         expect(absoluteUrl("https://user.github.io/repo", "/docs/x")).toBe("https://user.github.io/repo/docs/x");
         expect(absoluteUrl("https://user.github.io/repo/", "/docs/x")).toBe("https://user.github.io/repo/docs/x");
+        // A pure joiner: it preserves whatever shape the path has, trailing slash or not.
+        expect(absoluteUrl("https://user.github.io/repo", "/docs/x/")).toBe("https://user.github.io/repo/docs/x/");
         expect(absoluteUrl("https://user.github.io/repo", "/")).toBe("https://user.github.io/repo/");
     });
 
@@ -84,18 +86,18 @@ describe("buildSitemap", () => {
     it("emits one absolute-URL entry per (slug, lang), in order", () => {
         const entries = buildSitemap(REFS, SITE_I18N, translationsOf);
         expect(entries.map((e) => e.url)).toEqual([
-            "https://example.com/blog/a",
-            "https://example.com/fr/blog/a",
-            "https://example.com/blog/b",
+            "https://example.com/blog/a/",
+            "https://example.com/fr/blog/a/",
+            "https://example.com/blog/b/",
         ]);
     });
 
     it("attaches the full hreflang map (with x-default) to every translated page", () => {
         const [en, fr] = buildSitemap(REFS, SITE_I18N, translationsOf);
         const languages = {
-            en: "https://example.com/blog/a",
-            fr: "https://example.com/fr/blog/a",
-            "x-default": "https://example.com/blog/a",
+            en: "https://example.com/blog/a/",
+            fr: "https://example.com/fr/blog/a/",
+            "x-default": "https://example.com/blog/a/",
         };
         expect(en!.alternates?.languages).toEqual(languages);
         expect(fr!.alternates?.languages).toEqual(languages);
@@ -108,17 +110,17 @@ describe("buildSitemap", () => {
 
     it("falls back x-default to the first translation when the default locale is absent", () => {
         const entries = buildSitemap([{ slug: "a", lang: "fr" }], SITE_I18N, () => ["fr", "de"]);
-        expect(entries[0]!.alternates?.languages?.["x-default"]).toBe("https://example.com/fr/blog/a");
+        expect(entries[0]!.alternates?.languages?.["x-default"]).toBe("https://example.com/fr/blog/a/");
     });
 
     it("respects basePath and prefixDefaultLocale", () => {
         const site: SiteConfig = { ...SITE_I18N, basePath: "/articles/", prefixDefaultLocale: true };
         const entries = buildSitemap([{ slug: "a", lang: "en" }], site, translationsOf);
-        expect(entries[0]!.url).toBe("https://example.com/en/articles/a");
+        expect(entries[0]!.url).toBe("https://example.com/en/articles/a/");
         expect(entries[0]!.alternates?.languages).toEqual({
-            en: "https://example.com/en/articles/a",
-            fr: "https://example.com/fr/articles/a",
-            "x-default": "https://example.com/en/articles/a",
+            en: "https://example.com/en/articles/a/",
+            fr: "https://example.com/fr/articles/a/",
+            "x-default": "https://example.com/en/articles/a/",
         });
     });
 

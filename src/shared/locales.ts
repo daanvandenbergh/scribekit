@@ -74,11 +74,16 @@ export function normalizeBasePath(basePath: string | undefined): string {
  *
  * A section mounted at the site root passes `basePath: ""`, giving `/<slug>` and `/` for the index.
  *
+ * Paths end in a slash (`/docs/getting-started/`, `/docs/`) unless `trailingSlash: false` is passed
+ * - see {@link SiteConfig.trailingSlash} for why this must match the host app's `next.config`. The
+ * site root is always exactly `/`, under either setting.
+ *
  * @param opts.basePath - the section base path; defaults to `/blog`. Pass `""` to mount at the root.
  * @param opts.defaultLocale - the locale code served without a prefix (unless prefixed below).
  * @param opts.lang - the target locale code.
  * @param opts.slug - the page slug; omit for the locale's index URL.
  * @param opts.prefixDefaultLocale - when `true`, the default locale is prefixed too.
+ * @param opts.trailingSlash - when `false`, omit the trailing slash on a page URL. Defaults to `true`.
  * @returns the root-relative URL path (resolves against `metadataBase`, like the canonical).
  */
 export function localePath(opts: {
@@ -87,11 +92,17 @@ export function localePath(opts: {
     lang: string;
     slug?: string | undefined;
     prefixDefaultLocale?: boolean | undefined;
+    trailingSlash?: boolean | undefined;
 }): string {
     const base = normalizeBasePath(opts.basePath);
     const prefix = localePrefix(opts.lang, opts.defaultLocale, opts.prefixDefaultLocale ?? false);
     const path = `${prefix}${base}`;
-    // A root-mounted section (basePath `""`) in its unprefixed default locale leaves `path` empty;
+    const full = opts.slug ? `${path}/${opts.slug}` : path;
+    // A root-mounted section (basePath `""`) in its unprefixed default locale leaves `full` empty;
     // the index URL is `/`, never the empty string (which an `href` would read as "this page").
-    return opts.slug ? `${path}/${opts.slug}` : path || "/";
+    // That single slash is also already the trailing one, so it is returned before the flag applies.
+    if (full === "") {
+        return "/";
+    }
+    return (opts.trailingSlash ?? true) ? `${full}/` : full;
 }

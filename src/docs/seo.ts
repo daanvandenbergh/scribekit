@@ -57,7 +57,7 @@ function docLanguages(
     defaultLocale: string,
 ): Record<string, string> | undefined {
     return hreflangMap(translations, defaultLocale, (lang) =>
-        localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang, slug: meta.slug }));
+        localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang, slug: meta.slug }));
 }
 
 /**
@@ -80,9 +80,9 @@ function indexLanguages(
     }
     const languages: Record<string, string> = {};
     for (const lang of langs) {
-        languages[lang] = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang });
+        languages[lang] = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang });
     }
-    languages["x-default"] = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: defaultLocale });
+    languages["x-default"] = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: defaultLocale });
     return languages;
 }
 
@@ -110,7 +110,7 @@ export function buildDocMetadata(
 ): PageMetadata {
     const defaultLocale = site.defaultLocale ?? meta.lang;
     const author = authorOf(site);
-    const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: meta.lang, slug: meta.slug });
+    const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: meta.lang, slug: meta.slug });
     const languages = docLanguages(meta, site, translations, defaultLocale);
     const alternateLocale = translations.filter((lang) => lang !== meta.lang);
     return {
@@ -158,7 +158,7 @@ export function buildIndexMetadata(site: SiteConfig, lang?: string, langs: strin
     const resolvedLang = lang ?? site.defaultLocale ?? FALLBACK_LOCALE;
     const defaultLocale = site.defaultLocale ?? resolvedLang;
     const description = indexDescription(site);
-    const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: resolvedLang });
+    const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang });
     const languages = indexLanguages(site, langs, defaultLocale);
     return {
         metadataBase: new URL(site.siteUrl),
@@ -197,11 +197,11 @@ export function docJsonLd(meta: DocMeta, site: SiteConfig, translations: string[
     const defaultLocale = site.defaultLocale ?? meta.lang;
     const origin = new URL(site.siteUrl).origin;
     const author = authorOf(site);
-    const url = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: meta.lang, slug: meta.slug }));
-    const indexUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: meta.lang }));
+    const url = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: meta.lang, slug: meta.slug }));
+    const indexUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: meta.lang }));
     // A self-describing reference to one language's version of this slug.
     const refFor = (lang: string): JsonLd => {
-        const u = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang, slug: meta.slug }));
+        const u = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang, slug: meta.slug }));
         return { "@type": "TechArticle", "@id": u, url: u, inLanguage: lang };
     };
     // Original = default locale when translated, else the first translation (mirrors x-default).
@@ -262,7 +262,7 @@ export function indexJsonLd(items: NavItem[], site: SiteConfig, lang?: string): 
     const resolvedLang = lang ?? site.defaultLocale ?? FALLBACK_LOCALE;
     const defaultLocale = site.defaultLocale ?? resolvedLang;
     const origin = new URL(site.siteUrl).origin;
-    const indexUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: resolvedLang }));
+    const indexUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang }));
     const description = indexDescription(site);
     const graph: JsonLd[] = [
         {

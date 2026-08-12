@@ -157,6 +157,7 @@ merge the equivalent into the existing config (preserve every existing key; do n
 const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
 // inside the exported config object:
 output: "export",
+trailingSlash: true,
 images: { unoptimized: true },
 ...(base ? { basePath: base, assetPrefix: base } : {}),
 ```
@@ -164,10 +165,17 @@ images: { unoptimized: true },
 `output: "export"` emits a static `out/`; `images.unoptimized` is required for export (and lets a local
 `next build` succeed). The `base` line makes routes, `next/link`, and `_next/` assets pick up the Pages
 base path - the workflow feeds `NEXT_PUBLIC_BASE_PATH` from `configure-pages` (Step 3), and unset (local
-build) means root-served. **Idempotent:** if these are present, leave them. Do **not** add
-`trailingSlash: true`: the export writes `docs/<slug>.html`, which GitHub Pages already serves at the
-extensionless `/docs/<slug>`, and that matches scribekit's no-trailing-slash canonical URLs - turning
-trailing slashes on would make every canonical disagree with its served URL.
+build) means root-served. **Idempotent:** if these are present, leave them.
+
+**`trailingSlash` must match the project's `Docs`/`Blog` config, and THE TWO DEFAULTS DISAGREE:**
+Next's `trailingSlash` defaults to `false`, scribekit's to `true`. So adding this line is not
+optional tidying - omit it and a default-configured project is already mismatched. With `true` the
+export writes `docs/<slug>/index.html`, so Pages serves `/docs/<slug>/` and redirects `/docs/<slug>`
+to it - both forms resolve. With `false` it writes `docs/<slug>.html`, so only the bare form resolves.
+Every canonical, hreflang, sitemap entry, and nav link comes from one builder, so a mismatch is not
+one broken link: it aims the whole surface at the form the host does not serve, silently.
+If the existing config already sets `trailingSlash: false`, do **not** flip it - set `trailingSlash: false`
+on the `Docs`/`Blog` instance instead, and say which way you matched them.
 
 Handle whatever config shape exists: `next.config.mjs`/`.js` (a plain object or a function), or
 `next.config.ts`. If the config wraps the object in a plugin call, merge into the inner object.
@@ -300,7 +308,8 @@ Actions from enabling Pages), enable it once by hand and re-run:
   `output: "export"` is set once, `siteUrl` is the real origin. Re-reading the workflow: action versions
   and the artifact `path` are intact.
 - **Local export build** (with `--verify`, or offer it): from the Next app root, `npx next build`. Confirm
-  `out/` holds the docs HTML (e.g. `out/<lang>/docs/<slug>.html` or `out/docs/<slug>.html`), a
+  `out/` holds the docs HTML - under `trailingSlash: true` that is `out/docs/<slug>/index.html` (or
+  `out/<lang>/docs/<slug>/index.html`), NOT `out/docs/<slug>.html`, which is the `false` shape - a
   populated `_next/`, `.nojekyll`, and - if the app has an `app/sitemap.ts` - `sitemap.xml`. In CREATE
   mode, confirm **every** corpus slug produced a page and that the hero JPEGs landed in `out/assets/...`.
   **Never start the dev server** - only the one-shot build. **Never create a git branch.**

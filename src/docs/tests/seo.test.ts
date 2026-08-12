@@ -15,7 +15,7 @@ const DOC: DocMeta = {
 };
 
 /** Base site config; docs always carry a concrete `/docs` base path. */
-const SITE: SiteConfig = { siteUrl: "https://example.com", brandName: "Example", basePath: "/docs" };
+const SITE: SiteConfig = { siteUrl: "https://example.com", brandName: "Example", basePath: "/docs/" };
 
 /** Site config with a default locale, for the multi-language builders. */
 const SITE_I18N: SiteConfig = { ...SITE, defaultLocale: "en" };
@@ -35,7 +35,7 @@ describe("buildDocMetadata", () => {
         expect(meta.description).toBe("Configure how your assistant greets callers.");
         expect(meta.keywords).toEqual(["greeting", "voice"]);
         expect(meta.metadataBase?.toString()).toBe("https://example.com/");
-        expect(meta.alternates?.canonical).toBe("/docs/greeting-and-voice");
+        expect(meta.alternates?.canonical).toBe("/docs/greeting-and-voice/");
     });
 
     it("attributes to defaultAuthor then brandName (docs have no per-page author)", () => {
@@ -46,7 +46,7 @@ describe("buildDocMetadata", () => {
     it("builds article OpenGraph and summary_large_image Twitter tags with images", () => {
         const meta = buildDocMetadata(DOC, SITE);
         expect(meta.openGraph?.type).toBe("article");
-        expect(meta.openGraph?.url).toBe("/docs/greeting-and-voice");
+        expect(meta.openGraph?.url).toBe("/docs/greeting-and-voice/");
         expect(meta.openGraph?.modifiedTime).toBe("2026-07-03");
         expect(meta.openGraph?.images).toEqual([
             { url: "/assets/docs/greeting-and-voice/hero.jpg", alt: "Greeting & voice" },
@@ -86,16 +86,16 @@ describe("buildDocMetadata", () => {
 
     it("respects a custom basePath", () => {
         expect(buildDocMetadata(DOC, { ...SITE, basePath: "/handbook/" }).alternates?.canonical).toBe(
-            "/handbook/greeting-and-voice",
+            "/handbook/greeting-and-voice/",
         );
     });
 
     it("emits hreflang languages + x-default and og:locale for a translated page", () => {
         const meta = buildDocMetadata(DOC, SITE_I18N, ["en", "fr"]);
         expect(meta.alternates?.languages).toEqual({
-            en: "/docs/greeting-and-voice",
-            fr: "/fr/docs/greeting-and-voice",
-            "x-default": "/docs/greeting-and-voice",
+            en: "/docs/greeting-and-voice/",
+            fr: "/fr/docs/greeting-and-voice/",
+            "x-default": "/docs/greeting-and-voice/",
         });
         expect(meta.openGraph?.locale).toBe("en_US");
         expect(meta.openGraph?.alternateLocale).toEqual(["fr_FR"]);
@@ -103,7 +103,7 @@ describe("buildDocMetadata", () => {
 
     it("prefixes the canonical for a non-default language", () => {
         const meta = buildDocMetadata({ ...DOC, lang: "fr" }, SITE_I18N, ["en", "fr"]);
-        expect(meta.alternates?.canonical).toBe("/fr/docs/greeting-and-voice");
+        expect(meta.alternates?.canonical).toBe("/fr/docs/greeting-and-voice/");
         expect(meta.openGraph?.locale).toBe("fr_FR");
     });
 
@@ -122,7 +122,7 @@ describe("buildIndexMetadata", () => {
         const meta = buildIndexMetadata({ ...SITE, description: "Everything you need." });
         expect(meta.title).toBe("Docs | Example");
         expect(meta.description).toBe("Everything you need.");
-        expect(meta.alternates?.canonical).toBe("/docs");
+        expect(meta.alternates?.canonical).toBe("/docs/");
         expect(meta.openGraph?.type).toBe("website");
         expect(meta.openGraph?.title).toBe("Example Docs");
     });
@@ -133,8 +133,8 @@ describe("buildIndexMetadata", () => {
 
     it("emits per-locale hreflang for the index across locales", () => {
         const meta = buildIndexMetadata(SITE_I18N, "fr", ["en", "fr"]);
-        expect(meta.alternates?.canonical).toBe("/fr/docs");
-        expect(meta.alternates?.languages).toEqual({ en: "/docs", fr: "/fr/docs", "x-default": "/docs" });
+        expect(meta.alternates?.canonical).toBe("/fr/docs/");
+        expect(meta.alternates?.languages).toEqual({ en: "/docs/", fr: "/fr/docs/", "x-default": "/docs/" });
     });
 
     it("omits hreflang for a single-locale docs site", () => {
@@ -147,8 +147,8 @@ describe("docJsonLd", () => {
         const graph = docJsonLd(DOC, SITE)["@graph"] as Record<string, unknown>[];
         const article = graph[0]!;
         expect(article["@type"]).toBe("TechArticle");
-        expect(article["@id"]).toBe("https://example.com/docs/greeting-and-voice");
-        expect(article.url).toBe("https://example.com/docs/greeting-and-voice");
+        expect(article["@id"]).toBe("https://example.com/docs/greeting-and-voice/");
+        expect(article.url).toBe("https://example.com/docs/greeting-and-voice/");
         expect(article.image).toBe("https://example.com/assets/docs/greeting-and-voice/hero.jpg");
         expect(article.dateModified).toBe("2026-07-03");
         expect(article).not.toHaveProperty("datePublished");
@@ -162,7 +162,7 @@ describe("docJsonLd", () => {
         expect(items.map((i) => i.position)).toEqual([1, 2, 3, 4]);
         // The group has no URL of its own.
         expect(items[2]).not.toHaveProperty("item");
-        expect(items[3]!.item).toBe("https://example.com/docs/greeting-and-voice");
+        expect(items[3]!.item).toBe("https://example.com/docs/greeting-and-voice/");
     });
 
     it("omits the group crumb when the page has no group", () => {
@@ -183,16 +183,16 @@ describe("docJsonLd", () => {
         expect(original.workTranslation).toEqual([
             {
                 "@type": "TechArticle",
-                "@id": "https://example.com/fr/docs/greeting-and-voice",
-                url: "https://example.com/fr/docs/greeting-and-voice",
+                "@id": "https://example.com/fr/docs/greeting-and-voice/",
+                url: "https://example.com/fr/docs/greeting-and-voice/",
                 inLanguage: "fr",
             },
         ]);
         const translation = (docJsonLd({ ...DOC, lang: "fr" }, SITE_I18N, ["en", "fr"])["@graph"] as Record<string, unknown>[])[0]!;
         expect(translation.translationOfWork).toEqual({
             "@type": "TechArticle",
-            "@id": "https://example.com/docs/greeting-and-voice",
-            url: "https://example.com/docs/greeting-and-voice",
+            "@id": "https://example.com/docs/greeting-and-voice/",
+            url: "https://example.com/docs/greeting-and-voice/",
             inLanguage: "en",
         });
     });
@@ -206,8 +206,8 @@ describe("docJsonLd", () => {
 
 describe("indexJsonLd", () => {
     const ITEMS: NavItem[] = [
-        { slug: "introduction", title: "Introduction", label: "Introduction", href: "/docs/introduction", lang: "en" },
-        { slug: "quickstart", title: "Quickstart", label: "Quickstart", href: "/docs/quickstart", lang: "en" },
+        { slug: "introduction", title: "Introduction", label: "Introduction", href: "/docs/introduction/", lang: "en" },
+        { slug: "quickstart", title: "Quickstart", label: "Quickstart", href: "/docs/quickstart/", lang: "en" },
     ];
 
     it("includes a CollectionPage, BreadcrumbList, and an ItemList of pages in order", () => {
@@ -217,7 +217,7 @@ describe("indexJsonLd", () => {
         expect(items[0]).toEqual({
             "@type": "ListItem",
             position: 1,
-            url: "https://example.com/docs/introduction",
+            url: "https://example.com/docs/introduction/",
             name: "Introduction",
         });
         expect(items[1]!.position).toBe(2);
@@ -236,11 +236,11 @@ describe("indexJsonLd", () => {
 
     it("builds prefixed absolute URLs from each item's href", () => {
         const frItems: NavItem[] = [
-            { slug: "introduction", title: "Introduction", label: "Introduction", href: "/fr/docs/introduction", lang: "fr" },
+            { slug: "introduction", title: "Introduction", label: "Introduction", href: "/fr/docs/introduction/", lang: "fr" },
         ];
         const graph = indexJsonLd(frItems, SITE_I18N, "fr")["@graph"] as Record<string, unknown>[];
-        expect(graph[0]!.url).toBe("https://example.com/fr/docs");
+        expect(graph[0]!.url).toBe("https://example.com/fr/docs/");
         const items = graph[2]!.itemListElement as Record<string, unknown>[];
-        expect(items[0]!.url).toBe("https://example.com/fr/docs/introduction");
+        expect(items[0]!.url).toBe("https://example.com/fr/docs/introduction/");
     });
 });

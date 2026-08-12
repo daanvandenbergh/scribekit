@@ -80,11 +80,17 @@ inverted-pyramid (lead with the point); and "invent nothing - trace to source".
 ## Internal links
 
 Link another doc page the way the frontend does (`localePath`): a **default-locale** page links a
-sibling as **`<basePath>/<slug>`** (`basePath` from the `Docs` config, default `/docs` - e.g.
-`/docs/quickstart`). A **non-default locale's** pages link as **`/<lang><basePath>/<slug>`** (e.g.
-`/fr/docs/quickstart`); with `prefixDefaultLocale` the default locale is prefixed too. In a
+sibling as **`<basePath>/<slug>/`** (`basePath` from the `Docs` config, default `/docs` - e.g.
+`/docs/quickstart/`). A **non-default locale's** pages link as **`/<lang><basePath>/<slug>/`** (e.g.
+`/fr/docs/quickstart/`); with `prefixDefaultLocale` the default locale is prefixed too. In a
 translation, **re-localize every internal link to its own locale prefix** - never copy the
 default-locale path. Links to non-doc product routes use those routes verbatim (root-relative).
+
+**The trailing slash is the default form**, because `trailingSlash` defaults to `true` on `Docs` and
+`Blog` (the form Next serves under `trailingSlash: true`) - so every href the frontend builds ends in
+one, and a hand-written link should match. If the project sets `trailingSlash: false`, drop the final slash from
+every internal link instead; check the `Docs`/`Blog` config before you write them. An anchor hangs off
+the slash: `/docs/quickstart/#install`.
 
 ## Code-sample discipline (the sharpest docs-vs-blog difference)
 

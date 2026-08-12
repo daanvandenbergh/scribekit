@@ -27,7 +27,7 @@ that is the whole cost model of this mode. Assemble the brief, write it to a scr
 **absolute path** to every subagent:
 
 1. **The `Docs` wiring** from Step 0: resolved `contentDir`, `basePath`, `extension`, `defaultLocale`,
-   `prefixDefaultLocale`, `locales`, and the `tabs`/`groups` config.
+   `prefixDefaultLocale`, `trailingSlash` (default `true`), `locales`, and the `tabs`/`groups` config.
 2. **The project's whole public surface** - run [write.md](./write.md) **1a** exactly as written (package
    exports, public class methods and `readonly` fields, `*Config` options + their constructor defaults,
    components, routes, CLI flags only if there is a `bin`), each as `{ id, kind, source: file:line,

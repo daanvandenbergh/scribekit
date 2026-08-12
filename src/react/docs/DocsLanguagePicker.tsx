@@ -25,6 +25,8 @@ export interface DocsLanguagePickerProps {
     defaultLocale: string;
     /** When `true`, the default locale is URL-prefixed too. */
     prefixDefaultLocale?: boolean | undefined;
+    /** When `false`, built hrefs omit the trailing slash. Defaults to `true`. */
+    trailingSlash?: boolean | undefined;
     /** Element used for the language links. Defaults to `"a"`; pass `next/link` for client-side nav. */
     linkComponent?: ElementType;
     /**
@@ -87,6 +89,7 @@ export function DocsLanguagePicker({
     basePath,
     defaultLocale,
     prefixDefaultLocale,
+    trailingSlash,
     linkComponent: Link = "a",
     onSelect,
     renderFlag,
@@ -151,7 +154,7 @@ export function DocsLanguagePicker({
                     <div className="scribekit-docs-lang-heading">{heading}</div>
                     {locales.map((locale) => {
                         const active = locale.code === currentLang;
-                        const href = switchLocaleHref(activePath ?? "", locale.code, { basePath, defaultLocale, prefixDefaultLocale });
+                        const href = switchLocaleHref(activePath ?? "", locale.code, { basePath, defaultLocale, prefixDefaultLocale, trailingSlash });
                         return (
                             <Link
                                 key={locale.code}

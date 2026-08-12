@@ -54,6 +54,12 @@ export class Docs {
      * `/docs/<slug>`). Public so the components build links that match the SEO metadata.
      */
     readonly prefixDefaultLocale: boolean;
+    /**
+     * Whether every built URL ends in a slash. Public so the components build links that match
+     * the SEO metadata. Must match the host app's `next.config` `trailingSlash`; see
+     * {@link SiteConfig.trailingSlash}.
+     */
+    readonly trailingSlash: boolean;
     /** Optional tab display order + labels, passed through to the navigation builder. */
     readonly tabs: NavConfigEntry[];
     /** Optional group display order + labels, passed through to the navigation builder. */
@@ -84,6 +90,7 @@ export class Docs {
         }));
         this.defaultLocale = config.defaultLocale ?? config.locales?.[0]?.code ?? this.locale.split("-")[0] ?? "en";
         this.prefixDefaultLocale = config.prefixDefaultLocale ?? false;
+        this.trailingSlash = config.trailingSlash ?? true;
         this.tabs = config.tabs ?? [];
         this.groups = config.groups ?? [];
         this.redirects = new Map(Object.entries(config.redirects ?? {}));
@@ -105,6 +112,7 @@ export class Docs {
                       description: config.description,
                       defaultLocale: this.defaultLocale,
                       prefixDefaultLocale: this.prefixDefaultLocale,
+                      trailingSlash: this.trailingSlash,
                       organizationId: config.organizationId,
                       authorId: config.authorId,
                       websiteId: config.websiteId,
@@ -258,6 +266,7 @@ export class Docs {
             lang: lang ?? this.defaultLocale,
             slug: target,
             prefixDefaultLocale: this.prefixDefaultLocale,
+            trailingSlash: this.trailingSlash,
         });
     }
 
@@ -371,6 +380,7 @@ export class Docs {
             defaultLocale: this.defaultLocale,
             lang: resolved,
             prefixDefaultLocale: this.prefixDefaultLocale,
+            trailingSlash: this.trailingSlash,
             tabs: this.tabs,
             groups: this.groups,
         });

@@ -27,6 +27,8 @@ export interface NavBuildOptions {
     lang?: string | undefined;
     /** When `true`, the default locale is URL-prefixed too. */
     prefixDefaultLocale?: boolean | undefined;
+    /** When `false`, nav `href`s omit the trailing slash. Defaults to `true`; see `SiteConfig.trailingSlash`. */
+    trailingSlash?: boolean | undefined;
     /** Optional tab display order + labels. */
     tabs?: NavConfigEntry[] | undefined;
     /** Optional group display order + labels. */
@@ -150,6 +152,7 @@ function toNavItem(meta: DocMeta, opts: NavBuildOptions): NavItem {
             basePath: opts.basePath,
             defaultLocale: opts.defaultLocale,
             prefixDefaultLocale: opts.prefixDefaultLocale,
+            trailingSlash: opts.trailingSlash,
             lang: meta.lang,
             slug: meta.slug,
         }),

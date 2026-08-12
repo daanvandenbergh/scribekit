@@ -9,7 +9,7 @@ updated: "2026-08-11"
 image: "/assets/docs/getting-started/hero.en.jpg"
 ---
 
-Scribekit is a TypeScript package that turns folders of MDX files into a blog, a documentation site, or both, for the Next.js App Router. This page explains what the pieces are and why they fit together the way they do. To install it, read [Installation](/installation); to build your first page, read [Quickstart](/quickstart).
+Scribekit is a TypeScript package that turns folders of MDX files into a blog, a documentation site, or both, for the Next.js App Router. This page explains what the pieces are and why they fit together the way they do. To install it, read [Installation](/installation/); to build your first page, read [Quickstart](/quickstart/).
 
 ## What Scribekit gives you
 
@@ -84,7 +84,7 @@ MDX rendering has one fixed behaviour worth knowing up front: `remark-gfm` is al
 
 ## The skills that write the content
 
-Scribekit also ships four portable Claude Code skills, because the format is only half the problem: something has to write the pages. `scribekit-blog` researches and writes posts, `scribekit-docs` writes documentation sourced from your own code, `scribekit-hero` renders hero images deterministically from HTML and CSS, and `scribekit-docs-github-pages` takes the finished site live on GitHub Pages. See [Skills](/skills) for what each one does.
+Scribekit also ships four portable Claude Code skills, because the format is only half the problem: something has to write the pages. `scribekit-blog` researches and writes posts, `scribekit-docs` writes documentation sourced from your own code, `scribekit-hero` renders hero images deterministically from HTML and CSS, and `scribekit-docs-github-pages` takes the finished site live on GitHub Pages. See [Skills](/skills/) for what each one does.
 
 The skills are portable by design. They learn the project they are dropped into rather than imposing a house look, so they carry craft, not content.
 
@@ -98,4 +98,4 @@ Being clear about the edges is faster than discovering them:
 - **No block-level MDX components.** Scribekit registers none, so `<Callout>` or `<Note>` in a body renders nothing unless you pass your own via the `components` prop. The two exceptions are `h2` and `h3`, which are registered so they carry the anchor ids the minimap jumps to - override those and you have to inject your own ids.
 - **No CLI.** The package has no `bin`. The Claude Code skills below are the tooling.
 
-For the full option tables and method signatures, see the [API reference](/api-reference).
+For the full option tables and method signatures, see the [API reference](/api-reference/).

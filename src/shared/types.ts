@@ -63,6 +63,23 @@ export interface SiteConfig {
      */
     prefixDefaultLocale?: boolean | undefined;
     /**
+     * Whether every built URL ends in a slash (`/docs/getting-started/`). **Defaults to `true`**,
+     * matching Next's `trailingSlash: true`.
+     *
+     * THIS MUST MATCH THE HOST APP'S `next.config` `trailingSlash`, and a mismatch is silent. Under
+     * `output: "export"` the flag decides the emitted filename: `trailingSlash: true` writes
+     * `<slug>/index.html` (a static host then serves `/slug/`, and redirects `/slug` to it), while
+     * `false` writes `<slug>.html` (so `/slug` is served and `/slug/` 404s). Every URL this package
+     * builds - nav links, prev/next, breadcrumbs, canonical, hreflang, the sitemap, RSS - comes from
+     * one builder, so a mismatch does not break one link: it points the whole surface at the form
+     * the host does not serve. A canonical and a sitemap full of 404s is the failure mode, and
+     * nothing throws to tell you.
+     *
+     * Set `false` only for a host that serves bare paths (Next's own default). An index URL (`/`, or
+     * `/<lang>` / `<basePath>`) always keeps its slash either way - it addresses a directory.
+     */
+    trailingSlash?: boolean | undefined;
+    /**
      * `@id` of an `Organization` the host site already defines in its own site-wide JSON-LD
      * (e.g. `https://example.com/#organization`). When set, the content article's `publisher`
      * and the index `CollectionPage.publisher` reference it by `@id` (`{ "@id": organizationId }`)

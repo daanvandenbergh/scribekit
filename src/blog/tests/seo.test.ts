@@ -36,14 +36,14 @@ describe("buildPostMetadata", () => {
         expect(meta.description).toBe("A first post.");
         expect(meta.keywords).toEqual(["hello", "world"]);
         expect(meta.metadataBase?.toString()).toBe("https://example.com/");
-        expect(meta.alternates?.canonical).toBe("/blog/hello-world");
+        expect(meta.alternates?.canonical).toBe("/blog/hello-world/");
         expect(meta.authors).toEqual([{ name: "Jane Doe" }]);
     });
 
     it("builds article OpenGraph and summary_large_image Twitter tags with images", () => {
         const meta = buildPostMetadata(POST, SITE);
         expect(meta.openGraph?.type).toBe("article");
-        expect(meta.openGraph?.url).toBe("/blog/hello-world");
+        expect(meta.openGraph?.url).toBe("/blog/hello-world/");
         expect(meta.openGraph?.publishedTime).toBe("2026-06-28");
         expect(meta.openGraph?.modifiedTime).toBe("2026-07-07");
         expect(meta.openGraph?.images).toEqual([{ url: "/assets/blog/hello-world.jpg", alt: "Hello World" }]);
@@ -81,7 +81,7 @@ describe("buildPostMetadata", () => {
 
     it("respects a custom basePath (with trailing slash normalised)", () => {
         expect(buildPostMetadata(POST, { ...SITE, basePath: "/articles/" }).alternates?.canonical).toBe(
-            "/articles/hello-world",
+            "/articles/hello-world/",
         );
     });
 });
@@ -91,7 +91,7 @@ describe("buildOverviewMetadata", () => {
         const meta = buildOverviewMetadata({ ...SITE, description: "Our blog." });
         expect(meta.title).toBe("Blog | Example");
         expect(meta.description).toBe("Our blog.");
-        expect(meta.alternates?.canonical).toBe("/blog");
+        expect(meta.alternates?.canonical).toBe("/blog/");
         expect(meta.openGraph?.type).toBe("website");
         expect(meta.openGraph?.title).toBe("Example Blog");
         expect(meta.twitter?.card).toBe("summary_large_image");
@@ -105,8 +105,8 @@ describe("postJsonLd", () => {
         const posting = graph[0]!;
         expect(ld["@context"]).toBe("https://schema.org");
         expect(posting["@type"]).toBe("BlogPosting");
-        expect(posting["@id"]).toBe("https://example.com/blog/hello-world");
-        expect(posting.url).toBe("https://example.com/blog/hello-world");
+        expect(posting["@id"]).toBe("https://example.com/blog/hello-world/");
+        expect(posting.url).toBe("https://example.com/blog/hello-world/");
         expect(posting.image).toBe("https://example.com/assets/blog/hello-world.jpg");
         expect(posting.datePublished).toBe("2026-06-28");
         expect(posting.dateModified).toBe("2026-07-07");
@@ -117,8 +117,8 @@ describe("postJsonLd", () => {
         const items = breadcrumb.itemListElement as Record<string, unknown>[];
         expect(items.map((i) => i.item)).toEqual([
             "https://example.com",
-            "https://example.com/blog",
-            "https://example.com/blog/hello-world",
+            "https://example.com/blog/",
+            "https://example.com/blog/hello-world/",
         ]);
     });
 
@@ -165,7 +165,7 @@ describe("overviewJsonLd", () => {
         expect(items[0]).toEqual({
             "@type": "ListItem",
             position: 1,
-            url: "https://example.com/blog/hello-world",
+            url: "https://example.com/blog/hello-world/",
             name: "Hello World",
         });
     });
@@ -193,11 +193,11 @@ describe("overviewJsonLd (@id references)", () => {
 describe("buildPostMetadata (multi-language)", () => {
     it("emits hreflang languages + x-default and og:locale for a translated post", () => {
         const meta = buildPostMetadata({ ...POST, lang: "en" }, SITE_I18N, ["en", "fr"]);
-        expect(meta.alternates?.canonical).toBe("/blog/hello-world");
+        expect(meta.alternates?.canonical).toBe("/blog/hello-world/");
         expect(meta.alternates?.languages).toEqual({
-            en: "/blog/hello-world",
-            fr: "/fr/blog/hello-world",
-            "x-default": "/blog/hello-world",
+            en: "/blog/hello-world/",
+            fr: "/fr/blog/hello-world/",
+            "x-default": "/blog/hello-world/",
         });
         expect(meta.openGraph?.locale).toBe("en_US");
         expect(meta.openGraph?.alternateLocale).toEqual(["fr_FR"]);
@@ -205,7 +205,7 @@ describe("buildPostMetadata (multi-language)", () => {
 
     it("prefixes the canonical for a non-default language", () => {
         const meta = buildPostMetadata({ ...POST, lang: "fr" }, SITE_I18N, ["en", "fr"]);
-        expect(meta.alternates?.canonical).toBe("/fr/blog/hello-world");
+        expect(meta.alternates?.canonical).toBe("/fr/blog/hello-world/");
         expect(meta.openGraph?.locale).toBe("fr_FR");
         expect(meta.openGraph?.alternateLocale).toEqual(["en_US"]);
     });
@@ -213,9 +213,9 @@ describe("buildPostMetadata (multi-language)", () => {
     it("falls back x-default to the first translation when the default locale is absent", () => {
         const meta = buildPostMetadata({ ...POST, lang: "fr" }, SITE_I18N, ["fr", "de"]);
         expect(meta.alternates?.languages).toEqual({
-            fr: "/fr/blog/hello-world",
-            de: "/de/blog/hello-world",
-            "x-default": "/fr/blog/hello-world",
+            fr: "/fr/blog/hello-world/",
+            de: "/de/blog/hello-world/",
+            "x-default": "/fr/blog/hello-world/",
         });
     });
 
@@ -234,11 +234,11 @@ describe("buildPostMetadata (multi-language)", () => {
     it("prefixes the default locale too when site.prefixDefaultLocale is set", () => {
         const site: SiteConfig = { ...SITE_I18N, prefixDefaultLocale: true };
         const meta = buildPostMetadata({ ...POST, lang: "en" }, site, ["en", "fr"]);
-        expect(meta.alternates?.canonical).toBe("/en/blog/hello-world");
+        expect(meta.alternates?.canonical).toBe("/en/blog/hello-world/");
         expect(meta.alternates?.languages).toEqual({
-            en: "/en/blog/hello-world",
-            fr: "/fr/blog/hello-world",
-            "x-default": "/en/blog/hello-world",
+            en: "/en/blog/hello-world/",
+            fr: "/fr/blog/hello-world/",
+            "x-default": "/en/blog/hello-world/",
         });
     });
 });
@@ -246,11 +246,11 @@ describe("buildPostMetadata (multi-language)", () => {
 describe("buildOverviewMetadata (multi-language)", () => {
     it("emits per-locale hreflang for the index across locales", () => {
         const meta = buildOverviewMetadata(SITE_I18N, "fr", ["en", "fr"]);
-        expect(meta.alternates?.canonical).toBe("/fr/blog");
+        expect(meta.alternates?.canonical).toBe("/fr/blog/");
         expect(meta.alternates?.languages).toEqual({
-            en: "/blog",
-            fr: "/fr/blog",
-            "x-default": "/blog",
+            en: "/blog/",
+            fr: "/fr/blog/",
+            "x-default": "/blog/",
         });
         expect(meta.openGraph?.locale).toBe("fr_FR");
     });
@@ -265,9 +265,9 @@ describe("postJsonLd (multi-language)", () => {
     it("sets inLanguage and a prefixed URL for a non-default language", () => {
         const graph = postJsonLd({ ...POST, lang: "fr" }, SITE_I18N)["@graph"] as Record<string, unknown>[];
         expect(graph[0]!.inLanguage).toBe("fr");
-        expect(graph[0]!.url).toBe("https://example.com/fr/blog/hello-world");
+        expect(graph[0]!.url).toBe("https://example.com/fr/blog/hello-world/");
         const items = graph[1]!.itemListElement as Record<string, unknown>[];
-        expect(items[2]!.item).toBe("https://example.com/fr/blog/hello-world");
+        expect(items[2]!.item).toBe("https://example.com/fr/blog/hello-world/");
     });
 
     it("emits no translation cross-links for an untranslated post", () => {
@@ -285,8 +285,8 @@ describe("postJsonLd (multi-language)", () => {
         expect(posting.workTranslation).toEqual([
             {
                 "@type": "BlogPosting",
-                "@id": "https://example.com/fr/blog/hello-world",
-                url: "https://example.com/fr/blog/hello-world",
+                "@id": "https://example.com/fr/blog/hello-world/",
+                url: "https://example.com/fr/blog/hello-world/",
                 inLanguage: "fr",
             },
         ]);
@@ -300,8 +300,8 @@ describe("postJsonLd (multi-language)", () => {
         expect(posting).not.toHaveProperty("workTranslation");
         expect(posting.translationOfWork).toEqual({
             "@type": "BlogPosting",
-            "@id": "https://example.com/blog/hello-world",
-            url: "https://example.com/blog/hello-world",
+            "@id": "https://example.com/blog/hello-world/",
+            url: "https://example.com/blog/hello-world/",
             inLanguage: "en",
         });
     });
@@ -315,8 +315,8 @@ describe("postJsonLd (multi-language)", () => {
         expect(original.workTranslation).toEqual([
             {
                 "@type": "BlogPosting",
-                "@id": "https://example.com/de/blog/hello-world",
-                url: "https://example.com/de/blog/hello-world",
+                "@id": "https://example.com/de/blog/hello-world/",
+                url: "https://example.com/de/blog/hello-world/",
                 inLanguage: "de",
             },
         ]);
@@ -326,8 +326,8 @@ describe("postJsonLd (multi-language)", () => {
         >[])[0]!;
         expect(translation.translationOfWork).toEqual({
             "@type": "BlogPosting",
-            "@id": "https://example.com/fr/blog/hello-world",
-            url: "https://example.com/fr/blog/hello-world",
+            "@id": "https://example.com/fr/blog/hello-world/",
+            url: "https://example.com/fr/blog/hello-world/",
             inLanguage: "fr",
         });
     });
@@ -339,8 +339,8 @@ describe("overviewJsonLd (multi-language)", () => {
             string,
             unknown
         >[];
-        expect(graph[0]!.url).toBe("https://example.com/fr/blog");
+        expect(graph[0]!.url).toBe("https://example.com/fr/blog/");
         const items = graph[2]!.itemListElement as Record<string, unknown>[];
-        expect(items[0]!.url).toBe("https://example.com/fr/blog/hello-world");
+        expect(items[0]!.url).toBe("https://example.com/fr/blog/hello-world/");
     });
 });

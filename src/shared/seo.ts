@@ -109,7 +109,7 @@ export function buildSitemap(
 ): SitemapEntry[] {
     const defaultLocale = site.defaultLocale ?? FALLBACK_LOCALE;
     const urlFor = (lang: string, slug: string): string =>
-        absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang, slug }));
+        absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang, slug }));
     return refs.map((ref) => {
         const languages = hreflangMap(translationsOf(ref.slug), defaultLocale, (lang) => urlFor(lang, ref.slug));
         const entry: SitemapEntry = { url: urlFor(ref.lang, ref.slug) };

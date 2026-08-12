@@ -119,10 +119,10 @@ to bite on there, and `scribekit-docs-github-pages` writes config rather than pa
 
 | Skill | Modes | Flags | Reference |
 | --- | --- | --- | --- |
-| `scribekit-blog` | `write`, `rewrite` | `--scan`, `--no-hero`, `--no-translations` | [/scribekit-blog](/scribekit-blog) |
-| `scribekit-docs` | `write`, `rewrite`, `reorganize`, `deep-verify` | `--scan`, `--no-hero` | [/scribekit-docs](/scribekit-docs) |
-| `scribekit-hero` | `blog-hero`, `regenerate-heroes`, `docs-hero`, `regenerate-docs-heroes`, `readme-hero`, `tune-gradients` | none | [/scribekit-hero](/scribekit-hero) |
-| `scribekit-docs-github-pages` | auto: deploy or create (no mode argument) | `--verify` | [/scribekit-docs-github-pages](/scribekit-docs-github-pages) |
+| `scribekit-blog` | `write`, `rewrite` | `--scan`, `--no-hero`, `--no-translations` | [/scribekit-blog](/scribekit-blog/) |
+| `scribekit-docs` | `write`, `rewrite`, `reorganize`, `deep-verify` | `--scan`, `--no-hero` | [/scribekit-docs](/scribekit-docs/) |
+| `scribekit-hero` | `blog-hero`, `regenerate-heroes`, `docs-hero`, `regenerate-docs-heroes`, `readme-hero`, `tune-gradients` | none | [/scribekit-hero](/scribekit-hero/) |
+| `scribekit-docs-github-pages` | auto: deploy or create (no mode argument) | `--verify` | [/scribekit-docs-github-pages](/scribekit-docs-github-pages/) |
 
 `scribekit-hero` is worth one line of rationale: it renders heroes deterministically from HTML and
 CSS via headless Chrome, and explicitly never uses an AI image generator or stock photo. The reason
@@ -134,7 +134,7 @@ can be re-rendered from its `hero.js` at any time.
 
 The skills ship inside the npm package, so you already have all four after `npm install`. Claude
 Code finds a skill by looking in `.claude/skills/`, so each one needs a symlink from there into
-`node_modules`. The exact commands are in [Installation](/installation).
+`node_modules`. The exact commands are in [Installation](/installation/).
 
 ## The rule that ships with them
 
@@ -143,4 +143,4 @@ what make docs go stale, so the package also ships one CLAUDE.md rule, `rules/do
 `README.md` are updated in the same change as the code, never deferred to a `TODO.md` item. It is a
 standing obligation rather than a skill because there is nothing to invoke - it applies to every
 change that alters something a reader could notice. Add it with one `@`-import; see
-[Installation](/installation).
+[Installation](/installation/).

@@ -11,7 +11,7 @@ image: "/assets/docs/docs-guide/hero.en.jpg"
 
 Recipes for the jobs you do once the docs site exists: add a page, slot it into the sidebar, wire the chrome, add a language, rename a slug without breaking links, and theme it. Each one stands alone, so read the heading you need and stop.
 
-Prerequisites: the package installed, the stylesheet imported once, and a configured `Docs` instance. See [Installation](/installation) for that, [Build a docs site](/build-a-docs-site) for the end-to-end walkthrough, and [API reference](/api-reference) for every option, default, and token.
+Prerequisites: the package installed, the stylesheet imported once, and a configured `Docs` instance. See [Installation](/installation/) for that, [Build a docs site](/build-a-docs-site/) for the end-to-end walkthrough, and [API reference](/api-reference/) for every option, default, and token.
 
 ## Add a page
 
@@ -240,15 +240,17 @@ Then drop `fr.mdx` beside `en.mdx` in the same folder. The file name is the lang
 
 ### The URL shape
 
-The locale prefix comes **first**, then the base path: `/<lang><basePath>/<slug>`.
+The locale prefix comes **first**, then the base path: `/<lang><basePath>/<slug>/`.
 
 | Page | URL |
 | --- | --- |
-| `installation/en.mdx`, `defaultLocale: "en"` | `/docs/installation` |
-| `installation/fr.mdx` | `/fr/docs/installation` |
-| `installation/en.mdx` with `prefixDefaultLocale: true` | `/en/docs/installation` |
+| `installation/en.mdx`, `defaultLocale: "en"` | `/docs/installation/` |
+| `installation/fr.mdx` | `/fr/docs/installation/` |
+| `installation/en.mdx` with `prefixDefaultLocale: true` | `/en/docs/installation/` |
 
-It is `/fr/docs/installation`, never `/docs/fr/installation`. Move the route tree to `app/[lang]/docs/[slug]` and map both fields in `generateStaticParams`.
+It is `/fr/docs/installation/`, never `/docs/fr/installation/`. Move the route tree to `app/[lang]/docs/[slug]` and map both fields in `generateStaticParams`.
+
+**Every URL ends in a slash because `trailingSlash` defaults to `true`**, the form Next serves under `trailingSlash: true` - which is what the [GitHub Pages setup](/publish-to-github-pages/) turns on. The instance and your `next.config` must agree, and Next's own default is `false`: set `trailingSlash: true` in `next.config`, or `trailingSlash: false` on the `Docs`. Every canonical, hreflang, sitemap entry, and nav link comes from one path builder, so a mismatch silently aims the whole site at URLs your host does not serve.
 
 ### The language picker
 
@@ -260,6 +262,7 @@ import { DocsLanguagePicker } from "@daanvandenbergh/scribekit/react";
     currentLang={lang}
     defaultLocale={docs.defaultLocale}
     prefixDefaultLocale={docs.prefixDefaultLocale}
+    trailingSlash={docs.trailingSlash}
     activePath={activePath}
     basePath="/docs"
     linkComponent={Link}
@@ -340,7 +343,7 @@ Declare the `--scribekit-*` tokens yourself:
 }
 ```
 
-**There is no `:root` block in the stylesheet to override.** Every token you would theme exists only as an inline `var(--name, fallback)` at each call site, and that fallback is what you see when you declare nothing. Declaring the property anywhere it inherits from makes every call site pick it up. (The one exception is the internal `--scribekit-docs-chrome-top`, which the stylesheet assigns itself - see below.) [API reference](/api-reference) lists the tokens.
+**There is no `:root` block in the stylesheet to override.** Every token you would theme exists only as an inline `var(--name, fallback)` at each call site, and that fallback is what you see when you declare nothing. Declaring the property anywhere it inherits from makes every call site pick it up. (The one exception is the internal `--scribekit-docs-chrome-top`, which the stylesheet assigns itself - see below.) [API reference](/api-reference/) lists the tokens.
 
 **No dark mode ships.** The stylesheet has no `prefers-color-scheme` block and no `.dark` class. Dark theming is entirely yours, and the tokens are the whole mechanism:
 

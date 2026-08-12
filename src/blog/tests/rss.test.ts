@@ -48,7 +48,7 @@ describe("buildRssFeed", () => {
     it("builds a channel with title, index link, language, self link and the site description", () => {
         const xml = buildRssFeed([POST], SITE_PREFIXED, "en");
         expect(xml).toContain("<title>Example</title>");
-        expect(xml).toContain("<link>https://example.com/en</link>");
+        expect(xml).toContain("<link>https://example.com/en/</link>");
         expect(xml).toContain("<description>Posts about examples.</description>");
         expect(xml).toContain("<language>en</language>");
         expect(xml).toContain(
@@ -62,8 +62,8 @@ describe("buildRssFeed", () => {
 
     it("builds one item per post with permalink guid, categories and an RFC 1123 pubDate", () => {
         const xml = buildRssFeed([POST], SITE, "en");
-        expect(xml).toContain("<link>https://example.com/blog/hello-world</link>");
-        expect(xml).toContain('<guid isPermaLink="true">https://example.com/blog/hello-world</guid>');
+        expect(xml).toContain("<link>https://example.com/blog/hello-world/</link>");
+        expect(xml).toContain('<guid isPermaLink="true">https://example.com/blog/hello-world/</guid>');
         expect(xml).toContain("<description>A first post.</description>");
         expect(xml).toContain("<category>News</category>");
         expect(xml).toContain("<pubDate>Sun, 28 Jun 2026 00:00:00 GMT</pubDate>");
@@ -71,7 +71,7 @@ describe("buildRssFeed", () => {
 
     it("prefixes non-default locales in every item URL", () => {
         const xml = buildRssFeed([{ ...POST, lang: "nl" }], SITE, "nl");
-        expect(xml).toContain("<link>https://example.com/nl/blog/hello-world</link>");
+        expect(xml).toContain("<link>https://example.com/nl/blog/hello-world/</link>");
         expect(xml).toContain("<language>nl</language>");
     });
 
@@ -109,6 +109,6 @@ describe("buildRssFeed", () => {
     it("defaults the feed locale to the site's default locale", () => {
         const xml = buildRssFeed([POST], SITE);
         expect(xml).toContain("<language>en</language>");
-        expect(xml).toContain("<link>https://example.com/blog</link>");
+        expect(xml).toContain("<link>https://example.com/blog/</link>");
     });
 });

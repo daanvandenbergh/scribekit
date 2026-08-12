@@ -21,6 +21,8 @@ export interface BlogOverviewGridProps {
     defaultLocale: string;
     /** Whether the default locale is URL-prefixed too; forwarded to `localePath`. */
     prefixDefaultLocale: boolean;
+    /** When `false`, built hrefs omit the trailing slash. Defaults to `true`. */
+    trailingSlash?: boolean | undefined;
     /** BCP 47 locale used to format each card's date. */
     locale: string;
     /** The render language, used to localize the built-in labels and the per-card reading time. */
@@ -62,6 +64,7 @@ export function BlogOverviewGrid({
     basePath,
     defaultLocale,
     prefixDefaultLocale,
+    trailingSlash,
     locale,
     lang,
     pageSize,
@@ -164,7 +167,7 @@ export function BlogOverviewGrid({
                     {visible.map((post, index) => (
                         <Link
                             key={post.slug}
-                            href={localePath({ basePath, defaultLocale, prefixDefaultLocale, lang: post.lang, slug: post.slug })}
+                            href={localePath({ basePath, defaultLocale, prefixDefaultLocale, trailingSlash, lang: post.lang, slug: post.slug })}
                             className="scribekit-card"
                         >
                             {post.image ? (

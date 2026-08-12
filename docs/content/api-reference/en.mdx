@@ -9,7 +9,7 @@ updated: "2026-08-11"
 image: "/assets/docs/api-reference/hero.en.jpg"
 ---
 
-`@daanvandenbergh/scribekit` publishes three entry points: the root (the `Blog` and `Docs` classes plus the framework-free helpers), `/react` (the components), and `/styles.css` (the stylesheet). This page lists every public export, its signature, and its default. To learn the wiring, read [Getting started](/getting-started); for task steps, read [the blog guide](/blog-guide) or [the docs guide](/docs-guide).
+`@daanvandenbergh/scribekit` publishes three entry points: the root (the `Blog` and `Docs` classes plus the framework-free helpers), `/react` (the components), and `/styles.css` (the stylesheet). This page lists every public export, its signature, and its default. To learn the wiring, read [Getting started](/getting-started/); for task steps, read [the blog guide](/blog-guide/) or [the docs guide](/docs-guide/).
 
 ## The entry points
 
@@ -52,6 +52,7 @@ new Docs(config: DocsConfig)
 | `locales` | `LocaleConfig[]` | `[]` | Languages published. Each `label` defaults to its `code`. Unset means single-language |
 | `defaultLocale` | `string` | `config.defaultLocale`, else `locales[0].code`, else `locale.split("-")[0]`, else `"en"` | Locale served without a URL prefix, and the `x-default` target |
 | `prefixDefaultLocale` | `boolean` | `false` | When `true`, the default locale is URL-prefixed too |
+| `trailingSlash` | `boolean` | `true` | When `true`, every built URL ends in a slash (`/docs/quickstart/`). Must match the host app's `next.config` `trailingSlash` |
 | `tabs` | `NavConfigEntry[]` | `[]` | Display order and labels for top-level tabs. Purely presentational |
 | `groups` | `NavConfigEntry[]` | `[]` | Display order and labels for sidebar groups |
 | `redirects` | `Record<string, string>` | `{}` | Old slug to new slug, for renamed pages |
@@ -73,6 +74,7 @@ new Docs(config: DocsConfig)
 | `readonly locales` | `LocaleConfig[]` |
 | `readonly defaultLocale` | `string` |
 | `readonly prefixDefaultLocale` | `boolean` |
+| `readonly trailingSlash` | `boolean` |
 | `readonly tabs` | `NavConfigEntry[]` |
 | `readonly groups` | `NavConfigEntry[]` |
 | `readonly site` | `SiteConfig \| undefined` |
@@ -206,6 +208,7 @@ new Blog(config: BlogConfig)
 | `locales` | `LocaleConfig[]` | `[]` | Languages published. Unset means single-language |
 | `defaultLocale` | `string` | `config.defaultLocale`, else `locales[0].code`, else `locale.split("-")[0]`, else `"en"` | Unprefixed locale and `x-default` target |
 | `prefixDefaultLocale` | `boolean` | `false` | Prefix the default locale too |
+| `trailingSlash` | `boolean` | `true` | End every built URL in a slash (`/blog/post/`). Must match the host app's `next.config` `trailingSlash` |
 | `basePath` | `string` | `"/blog"` | Mount route, run through `normalizeBasePath` |
 | `siteUrl` | `string` | `undefined` | Origin for `metadataBase` and absolute JSON-LD. Gates `site` |
 | `brandName` | `string` | `undefined` | Title suffix, `og:siteName`, publisher. Gates `site` |
@@ -225,6 +228,7 @@ new Blog(config: BlogConfig)
 | `readonly locales` | `LocaleConfig[]` |
 | `readonly defaultLocale` | `string` |
 | `readonly prefixDefaultLocale` | `boolean` |
+| `readonly trailingSlash` | `boolean` |
 | `readonly site` | `SiteConfig \| undefined` |
 
 Nothing else is exposed; `contentDir` and `extension` are not fields at all, only constructor arguments handed to the internal content store.
@@ -381,10 +385,11 @@ Pure and fs-free. They import no `next` and no `react`, and none of them throw.
 | `defaultLocale` | `string` | **yes** |
 | `lang` | `string?` | no |
 | `prefixDefaultLocale` | `boolean?` | no |
+| `trailingSlash` | `boolean?` | no |
 | `tabs` | `NavConfigEntry[]?` | no |
 | `groups` | `NavConfigEntry[]?` | no |
 
-An omitted `basePath` falls back to `"/blog"`, because `normalizeBasePath` supplies that default. `Docs` always passes its own `basePath`, so this only affects direct callers of `buildNavTree`.
+An omitted `basePath` falls back to `"/blog"`, because `normalizeBasePath` supplies that default. `Docs` always passes its own `basePath`, so this only affects direct callers of `buildNavTree`. `trailingSlash` is forwarded to `localePath` for every item `href` and defaults to `true` the same way, so a direct caller that omits it gets slash-terminated nav links.
 
 `lang` is the language the tree is built for, and it selects which entry of a per-locale tab or group `label` / `description` map is used. It defaults to `defaultLocale`. `Docs.getNavTree` always passes it.
 
@@ -433,7 +438,7 @@ The docs section name in breadcrumbs is the literal `"Docs"`.
 | `postJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `BlogPosting` and a `BreadcrumbList` of 3 items (Home, Blog, the title). A translated post also carries `workTranslation` / `translationOfWork`, as the docs builder does |
 | `overviewJsonLd(posts, site, lang?): JsonLd` | `CollectionPage`, a `BreadcrumbList` of 2 items, and an `ItemList` **only when `posts.length > 0`** |
 | `buildRssFeed(posts: PostMeta[], site: SiteConfig, lang?): string` | One locale's complete RSS 2.0 document, newest post first. This is what `Blog.rssFeed()` wraps |
-| `rssFeedPath(site: SiteConfig, lang: string): string` | The conventional mount path for that locale's feed: the locale's index path plus `/rss.xml`, so `/blog/rss.xml` by default, or `/en/rss.xml` under `prefixDefaultLocale` |
+| `rssFeedPath(site: SiteConfig, lang: string): string` | The conventional mount path for that locale's feed: the locale's index path plus `/rss.xml`, so `/blog/rss.xml` by default, or `/en/rss.xml` under `prefixDefaultLocale`. **`site.trailingSlash` never applies** - the feed is a file, so its path stays bare |
 
 ## Shared helpers
 
@@ -456,6 +461,7 @@ localePath(opts: {
     lang: string;
     slug?: string | undefined;
     prefixDefaultLocale?: boolean | undefined;
+    trailingSlash?: boolean | undefined;
 }): string
 ```
 
@@ -468,23 +474,27 @@ Builds the root-relative URL path for a page, or for a locale's index page when 
 | `lang` | `string` | **yes** | The target locale code |
 | `slug` | `string?` | no | Omit for the locale's index URL |
 | `prefixDefaultLocale` | `boolean?` | no | When `true`, the default locale is prefixed too |
+| `trailingSlash` | `boolean?` | no | Defaults to **`true`**. When `false`, the path is emitted bare |
 
-**The locale prefix comes first, then the base path.** The URL shape is `/<lang><basePath>/<slug>`.
+**The locale prefix comes first, then the base path.** The URL shape is `/<lang><basePath>/<slug>/`.
 
 | Case | Result |
 | --- | --- |
-| Default locale, `prefixDefaultLocale` false | `/blog/post` |
-| Non-default locale | `/fr/blog/post` |
-| Default locale, no slug | `/blog` |
-| Non-default locale, no slug | `/fr/blog` |
-| `prefixDefaultLocale: true`, default locale | `/en/blog/post` and `/en/blog` |
-| `prefixDefaultLocale: true`, non-default locale | `/fr/blog/post`, prefixed either way |
-| `basePath: "/docs"` | `/docs/quickstart` and `/fr/docs/quickstart` |
-| `basePath: ""` (or `"/"`) | `/quickstart`, `/fr/quickstart`, and `/` for the index |
+| Default locale, `prefixDefaultLocale` false | `/blog/post/` |
+| Non-default locale | `/fr/blog/post/` |
+| Default locale, no slug | `/blog/` |
+| Non-default locale, no slug | `/fr/blog/` |
+| `prefixDefaultLocale: true`, default locale | `/en/blog/post/` and `/en/blog/` |
+| `prefixDefaultLocale: true`, non-default locale | `/fr/blog/post/`, prefixed either way |
+| `basePath: "/docs"` | `/docs/quickstart/` and `/fr/docs/quickstart/` |
+| `basePath: ""` (or `"/"`) | `/quickstart/`, `/fr/quickstart/`, and `/` for the index |
+| `trailingSlash: false` | The same paths without the final slash: `/blog/post`, `/fr/blog`, `/quickstart`. The site root stays `/` |
 
-**Mounting a section at the site root** - for a site that is *only* docs, so `/getting-started` beats a redundant `/docs/getting-started` - is what `basePath: ""` is for. The default locale's index is `"/"`, never the empty string: an empty `href` resolves to the current page, so the index link would be dead. Scribekit's own docs site is mounted this way.
+**Mounting a section at the site root** - for a site that is *only* docs, so `/getting-started/` beats a redundant `/docs/getting-started/` - is what `basePath: ""` is for. The default locale's index is `"/"`, never the empty string: an empty `href` resolves to the current page, so the index link would be dead. Scribekit's own docs site is mounted this way.
 
 `prefixDefaultLocale` affects the default locale only. The slug is never escaped or slugified; it is the directory name verbatim. `localePath` takes plain serializable inputs rather than an instance, because it is called from a client component.
+
+`trailingSlash` defaults to `true` here and must match the host app's `next.config` `trailingSlash`, whose own default is `false` - so an app that never set it needs either `trailingSlash: true` in `next.config` or `trailingSlash: false` on the instance. Every canonical, hreflang, sitemap entry, and nav link comes from this one function, so a mismatch is not one broken link: it points the whole surface at the URL form the host does not serve, and nothing throws.
 
 The JSDoc on `blog.ts`, `blog/types.ts`, `docs/types.ts`, and `docs/docs.ts` claims a translation is served under `<basePath>/<code>/`, that is `/blog/fr/post`. **That comment is wrong.** The code and its tests produce `/fr/blog/post`.
 
@@ -494,7 +504,7 @@ The JSDoc on `blog.ts`, `blog/types.ts`, `docs/types.ts`, and `docs/docs.ts` cla
 | --- | --- |
 | `LocaleConfig` | `{ code: string; label?: string; dateLocale?: string }` |
 | `TocEntry` | `{ depth: 2 \| 3; text: string; id: string }` |
-| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?`, `defaultLocale?`, `prefixDefaultLocale?`, `organizationId?`, `authorId?`, `websiteId?` |
+| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?`, `defaultLocale?`, `prefixDefaultLocale?`, `trailingSlash?`, `organizationId?`, `authorId?`, `websiteId?` |
 | `SitemapEntry` | `{ url: string; alternates?: { languages?: Record<string, string> } }` |
 | `PageMetadata` | A structural subset of Next's `Metadata` with **no `next` type dependency**: `metadataBase?: URL`, `title?`, `description?`, `keywords?: string[]`, `robots?: { index?: boolean; follow?: boolean }`, `authors?: { name: string }[]`, `alternates?: { canonical?; languages? }`, `openGraph?`, `twitter?` |
 | `JsonLd` | `Record<string, unknown>` |
@@ -547,7 +557,7 @@ Import from `@daanvandenbergh/scribekit/react`.
 
 #### BlogOverviewGrid
 
-The interactive body rendered by `BlogOverview`: fuzzy search, category filters, and infinite scroll via `IntersectionObserver`. Category filters **render only when `categories.length > 1`**. Optional props are `lang` and the five label props.
+The interactive body rendered by `BlogOverview`: fuzzy search, category filters, and infinite scroll via `IntersectionObserver`. Category filters **render only when `categories.length > 1`**. Optional props are `trailingSlash` (defaults to `true`), `lang`, and the five label props.
 
 #### BlogPage
 
@@ -765,6 +775,7 @@ The navbar measures itself and **drops the whole `actions` group when the bar is
 | `activePath` | `string` | `""` |
 | `basePath` | `string` | `"/blog"` via `normalizeBasePath`. **Docs consumers must pass `basePath="/docs"`** |
 | `prefixDefaultLocale` | `boolean` | `false` |
+| `trailingSlash` | `boolean` | `true` |
 | `linkComponent` | `ElementType` | `"a"` |
 | `onSelect` | `(code: string) => void` | none |
 | `renderFlag` | `(code: string) => ReactNode` | i18nkit's `localeFlag` |

@@ -51,13 +51,18 @@ function rfc1123(isoDate: string): string {
  */
 export function rssFeedPath(site: SiteConfig, lang: string): string {
     const defaultLocale = site.defaultLocale ?? FALLBACK_LOCALE;
+    // `trailingSlash: false` whatever the site setting is: this index path is a PREFIX that
+    // `/rss.xml` is appended to, not a URL in its own right, and the feed is a file - it never
+    // takes a trailing slash. Threading the site's flag here would emit `/blog//rss.xml`.
     const index = localePath({
         basePath: site.basePath,
         defaultLocale,
         prefixDefaultLocale: site.prefixDefaultLocale,
+        trailingSlash: false,
         lang,
     });
-    return `${index}/rss.xml`;
+    // A root-mounted section in its unprefixed default locale gives `/`, which doubles the same way.
+    return `${index === "/" ? "" : index}/rss.xml`;
 }
 
 /**
@@ -80,13 +85,13 @@ export function buildRssFeed(posts: PostMeta[], site: SiteConfig, lang?: string)
     const resolved = lang ?? defaultLocale;
     const indexUrl = absoluteUrl(
         site.siteUrl,
-        localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: resolved }),
+        localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolved }),
     );
     const selfUrl = absoluteUrl(site.siteUrl, rssFeedPath(site, resolved));
     const urlFor = (slug: string): string =>
         absoluteUrl(
             site.siteUrl,
-            localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, lang: resolved, slug }),
+            localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolved, slug }),
         );
 
     const dated = posts.filter((post) => post.date !== "").map((post) => post.date);
