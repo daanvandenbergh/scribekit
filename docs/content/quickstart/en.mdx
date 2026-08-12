@@ -9,7 +9,7 @@ updated: "2026-08-11"
 image: "/assets/docs/quickstart/hero.en.jpg"
 ---
 
-By the end of this page you have a docs page rendering at `http://localhost:3000/docs/hello` and a docs index at `/docs`, built from four files. It is the shortest path that works: one language, one tab, no search palette. For the full shell, see [Build a docs site](/build-a-docs-site/); for individual recipes, see the [Docs guide](/docs-guide/).
+By the end of this page you have a docs page rendering at `http://localhost:3000/docs/hello/` and a docs index at `/docs/`, built from four files. It is the shortest path that works: one language, one tab, no search palette. For the full shell, see [Build a docs site](/build-a-docs-site/); for individual recipes, see the [Docs guide](/docs-guide/).
 
 **Prerequisites:** a Next.js App Router app on **Next 15 or newer** (the route files below use the awaited `params` shape), and `@daanvandenbergh/scribekit` plus `next-mdx-remote` installed with the stylesheet imported in your root layout, as described in [Installation](/installation/).
 
@@ -34,6 +34,15 @@ Three things this file decides:
 - `contentDir: "./docs"` resolves against `process.cwd()`, so it means `<project-root>/docs/`, alongside your `package.json` and not inside `app/`.
 - `siteUrl` and `brandName` are both required before any SEO method runs. Omit either and `docMetadata` throws.
 - `basePath` is unset, so it defaults to `/docs`. That is why the routes below live at `app/docs/`.
+
+One thing it decides that your `next.config` has to agree with: `trailingSlash` is unset here, so it defaults to `true` and every URL Scribekit builds ends in a slash. **Next's own `trailingSlash` defaults to `false`, so set it:**
+
+```js
+// next.config.mjs
+export default { trailingSlash: true };
+```
+
+Skip this and nothing breaks in dev - Next redirects `/docs/hello/` back to the bare path - but the canonical, hreflang, and sitemap URLs all point at a form your build does not emit. On a static export (`output: "export"`) that is a sitemap of 404s. To go the other way instead, pass `trailingSlash: false` to `new Docs({...})` and leave `next.config` alone. See [Publish to GitHub Pages](/publish-to-github-pages/).
 
 The leading underscore marks the file as internal. It is a convention, not a requirement: only `page`, `route`, and `layout` files (and the other reserved names) are ever routes, so `app/docs/docs.ts` would be just as safe.
 
@@ -119,7 +128,7 @@ return [...docs.getDocRefs(), ...docs.getRedirectRefs()].map((ref) => ({ slug: r
 
 An unrendered slug 404s at the router before the component could redirect it, so without that spread the redirect never fires. See the [Docs guide](/docs-guide/) for the matching route body.
 
-Run `npm run dev` and open `http://localhost:3000/docs/hello`. You see a breadcrumb reading "Get started / Hello", the title as an H1, the description as the lead, a reading-time pill, your `## What this page proves` heading, an "On this page" minimap on the right, and a "Was this page helpful?" widget at the bottom. There are no prev/next links yet, because there is nowhere to go: the corpus has one page. (The breadcrumb has no section segment of its own, because the page sets no `tab`.)
+Run `npm run dev` and open `http://localhost:3000/docs/hello/`. You see a breadcrumb reading "Get started / Hello", the title as an H1, the description as the lead, a reading-time pill, your `## What this page proves` heading, an "On this page" minimap on the right, and a "Was this page helpful?" widget at the bottom. There are no prev/next links yet, because there is nowhere to go: the corpus has one page. (The breadcrumb has no section segment of its own, because the page sets no `tab`.)
 
 ## 4. Add the docs index
 
@@ -143,7 +152,7 @@ export default function DocsIndexPage() {
 
 This route has no dynamic segment, so it needs no `generateStaticParams` and no `await`.
 
-Open `http://localhost:3000/docs`. You see a hero headed "Documentation" with a fact row reading "1 article · 1 topic", then a "Browse by topic" heading with a filter box, and under it one card for the "Get started" group, listing your Hello page and linking to `/docs/hello`. The card takes its icon from the group's first page, which is the `book` you set in step 2.
+Open `http://localhost:3000/docs/`. You see a hero headed "Documentation" with a fact row reading "1 article · 1 topic", then a "Browse by topic" heading with a filter box, and under it one card for the "Get started" group, listing your Hello page and linking to `/docs/hello/`. The card takes its icon from the group's first page, which is the `book` you set in step 2.
 
 The hero has no subtitle, because the `Docs` config in step 1 sets no `description`. There is no "Recently updated" section either: that section renders only once some page carries an `updated:` date.
 
@@ -165,4 +174,4 @@ icon: "check"
 The sidebar order, the index card, and the prev/next links all came from the front-matter above.
 ```
 
-Reload `http://localhost:3000/docs/hello`. A "Next" link to Second now appears at the foot of the page, and the index card lists both pages in `order`. You never touched a route file, a nav file, or a config: adding the file was the whole operation.
+Reload `http://localhost:3000/docs/hello/`. A "Next" link to Second now appears at the foot of the page, and the index card lists both pages in `order`. You never touched a route file, a nav file, or a config: adding the file was the whole operation.

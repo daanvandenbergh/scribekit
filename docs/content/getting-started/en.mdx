@@ -49,7 +49,7 @@ export const docs = new Docs({
 });
 ```
 
-`contentDir` resolves against `process.cwd()`. Each immediate subdirectory of it is one page, and the folder name is the slug, which is the URL. There is no recursion and no nesting: `docs/hello/en.mdx` is the page `/docs/hello`.
+`contentDir` resolves against `process.cwd()`. Each immediate subdirectory of it is one page, and the folder name is the slug, which is the URL. There is no recursion and no nesting: `docs/hello/en.mdx` is the page `/docs/hello/`.
 
 The trade-off this design accepts is that content is a build-time input, not runtime data. What it buys is that your content is files in git. It gets reviewed in pull requests, it diffs, it reverts, and it deploys as static HTML. There is no database to run, no migration to write, and no CMS to keep logged in. Renaming a folder changes a public URL, which is why `Docs` takes a `redirects` map instead of pretending slugs are stable.
 

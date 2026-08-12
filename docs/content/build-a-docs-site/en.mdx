@@ -9,7 +9,7 @@ updated: "2026-08-11"
 image: "/assets/docs/build-a-docs-site/hero.en.jpg"
 ---
 
-By the end of this tutorial you have a docs site at `/docs` with the whole shell running: a brand
+By the end of this tutorial you have a docs site at `/docs/` with the whole shell running: a brand
 navbar, a tab bar, a grouped sidebar, a ⌘K search palette, a breadcrumb, prev/next footer links,
 and a table-of-contents minimap. All of it is built from one `Docs` instance and a folder of MDX.
 
@@ -49,6 +49,19 @@ export const docs = new Docs({
 so `"./docs"` is a `docs/` folder next to your `package.json`, not inside `app/`. `siteUrl` and
 `brandName` must both be set or the SEO methods throw. `tabs` and `groups` are display order only -
 you extend them in step 8.
+
+`trailingSlash` is unset, so it defaults to `true`: every URL the instance builds ends in a slash.
+Next's own `trailingSlash` defaults to `false`, so the two disagree until you say otherwise. Set it
+in `next.config.mjs`:
+
+```js
+export default { trailingSlash: true };
+```
+
+Skip it and nothing breaks in dev - Next just redirects - but the canonical, hreflang, and sitemap
+URLs point at a form your build never emits, which on a static export is a sitemap of 404s. Prefer
+bare paths? Pass `trailingSlash: false` to `new Docs({...})` and leave `next.config` alone. Either
+way the two have to agree.
 
 ## 2. Build the chrome
 
@@ -245,10 +258,10 @@ page mysteriously sits last in its group, this is why. Within a group, keep `ord
 `2`, `3` - with no ties, because two pages at the same `order` tie-break alphabetically by title
 rather than by anything you chose.
 
-Start your dev server and open `http://localhost:3000/docs`.
+Start your dev server and open `http://localhost:3000/docs/`.
 
 The index shows a hero with a "2 articles · 1 topic" fact row and a "Get started" card listing both
-pages. Click through to `/docs/getting-started` and the shell is there: the navbar with your brand,
+pages. Click through to `/docs/getting-started/` and the shell is there: the navbar with your brand,
 a "Docs" pill beside it, and a search button; the sidebar with a "Get started" group and both pages
 under it, "Getting started" highlighted; a breadcrumb reading **"Documentation / Get started /
 Getting started"**; a reading-time pill; a "Next → Installation" link at the foot; a "Was this page
@@ -284,7 +297,7 @@ icon: "globe"
 A page in a second tab, which is what makes the tab bar render.
 ```
 
-Reload `/docs/getting-started`. A tab bar now sits under the navbar with "Documentation" and
+Reload `/docs/getting-started/`. A tab bar now sits under the navbar with "Documentation" and
 "Guides", and the sidebar shows only the active tab's groups. Click "Guides" and the sidebar swaps
 to "Hosting".
 

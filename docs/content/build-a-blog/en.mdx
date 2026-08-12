@@ -9,7 +9,7 @@ updated: "2026-08-11"
 image: "/assets/docs/build-a-blog/hero.en.jpg"
 ---
 
-By the end of this tutorial you have a working blog at `/blog`: a searchable grid of post cards, a
+By the end of this tutorial you have a working blog at `/blog/`: a searchable grid of post cards, a
 page per post, and a category filter, all built from a folder of MDX files. You write two route
 files, one shared module, and two posts, plus a one-line stylesheet import in your root layout.
 
@@ -45,6 +45,19 @@ convention, since only `page`, `route`, and `layout` files are ever routes.
 `siteUrl` and `brandName` are both required before any SEO method runs. Set only one of them and
 `blog.overviewMetadata()` throws with a message telling you to pass a site config. You use those
 methods in the next two steps, so set both now.
+
+`trailingSlash` is unset, so it defaults to `true`: every URL the instance builds ends in a slash.
+Next's own `trailingSlash` defaults to `false`, so the two disagree until you say otherwise. Set it
+in `next.config.mjs`:
+
+```js
+export default { trailingSlash: true };
+```
+
+Skip it and nothing breaks in dev - Next just redirects - but the canonical, hreflang, sitemap, and
+RSS URLs point at a form your build never emits, which on a static export is a feed and a sitemap of
+404s. Prefer bare paths? Pass `trailingSlash: false` to `new Blog({...})` and leave `next.config`
+alone. Either way the two have to agree. (The RSS feed path itself is never slashed - it is a file.)
 
 ## 2. Add the overview route
 
@@ -150,11 +163,11 @@ Import it once and only once. It is marked as a side effect, so bundlers keep it
 
 ## 6. See it render
 
-Start your dev server and open `http://localhost:3000/blog`.
+Start your dev server and open `http://localhost:3000/blog/`.
 
 You see a search box reading "Search posts…", and below it one card with the title "Hello world",
 its description, its date, a "1 min read" chip, and a "Read more →" link. Click the card and you land
-on `/blog/hello-world`: a "← Blog" back link, the post title, a meta line carrying the author name
+on `/blog/hello-world/`: a "← Blog" back link, the post title, a meta line carrying the author name
 and "1 min read", your `## Why this exists` heading, an "On this page" minimap on the right (it
 appears because the body has a `##`), and a "Written by / Your Name" bio closing the article.
 
@@ -182,10 +195,10 @@ author: "Your Name"
 
 ## The folder is the URL
 
-This post lives at `blog/writing-with-mdx/en.mdx`, so it is served at `/blog/writing-with-mdx`.
+This post lives at `blog/writing-with-mdx/en.mdx`, so it is served at `/blog/writing-with-mdx/`.
 ```
 
-Reload `/blog`. Both cards are there, "Hello world" first: posts sort by `date` descending. Type
+Reload `/blog/`. Both cards are there, "Hello world" first: posts sort by `date` descending. Type
 `mdx` into the search box and the grid narrows to one card as you type. The search runs entirely
 in the browser, so there is no round trip.
 
@@ -222,7 +235,7 @@ categories:
 ---
 ```
 
-Reload `/blog`. A filter row appears above the grid: "All", "Announcements", "Guides". Click
+Reload `/blog/`. A filter row appears above the grid: "All", "Announcements", "Guides". Click
 "Guides" and only the MDX post stays.
 
 The filter renders **only when there is more than one distinct category**. Give both posts the
@@ -231,7 +244,7 @@ step shows nothing.
 
 ## What you have now
 
-Two posts, a searchable and filterable card grid at `/blog`, a page per post at `/blog/<slug>`,
+Two posts, a searchable and filterable card grid at `/blog/`, a page per post at `/blog/<slug>/`,
 and canonical, OpenGraph, and Twitter metadata on both routes. Every new post is one more folder
 under `blog/`; no route file changes again.
 
