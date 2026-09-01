@@ -24,7 +24,18 @@ the requested language (a bare slug means the default locale). Read frontmatter 
 For every concrete claim, statistic, date, version, price, or named fact: `WebSearch`/`WebFetch` for
 a current authoritative source per [research-protocol.md](./research-protocol.md). Mark each:
 ✅ supported (cite source), ⚠️ stale/outdated (give the current figure + source), ❌ unsupported or
-contradicted (explain, with source). Flag any **invented named customer/case** as a hard fail.
+contradicted (explain, with source), and - the one people miss - 🔀 **MISATTRIBUTED: the number is
+real and the sentence it sits in is not.** Flag any **invented named customer/case** as a hard fail.
+
+**🔀 is the verdict this list existed without, and the reason a wrong post can audit clean.** A
+published post said "the 64% who say they'd rather not talk to AI were asked to choose between an AI
+and a person". Search for 64%, open the issuing body's press release, find 64% - ✅ supported, audit
+passes, post stays wrong. The survey asked whether people would *prefer companies didn't use AI in
+customer service*; nobody was offered anything. So ✅ requires more than finding the digits: open the
+source, read the sentence that carries the number, and check the post's sentence says the same thing
+about the same population - the scope, the question asked, the strength of the comparative. Run the
+full **Fidelity** section of the research protocol over every claim, and over the pull-quote first:
+it is the line most likely to have sharpened a qualifier away.
 
 ### 3. Anti-slop scan
 Flag every banned phrase/word and structural tell from [house-style.md](./house-style.md) - negative
@@ -68,7 +79,7 @@ gradients themselves look off (banding, off-brand hues) -> **/scribekit-hero** `
 Output, in this order:
 1. **Score** - the 100-pt rubric from [seo-checklist.md](./seo-checklist.md), broken down by
    category, each with a one-line justification, plus the hero verdict from step 7.
-2. **Fact-check results** - the ✅/⚠️/❌ list with sources.
+2. **Fact-check results** - the ✅/⚠️/❌/🔀 list with sources.
 3. **Prioritized fix list** - most impactful first, each concrete and actionable.
 4. **Sources used** - per the research protocol.
 

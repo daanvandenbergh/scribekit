@@ -28,7 +28,11 @@ never.
    depends on the project's domain - identify them from Step 0.)
 2. **Reputable secondary**: established trade press, well-known expert blogs - especially when they
    cite their own data.
-3. **Aggregators / listicles**: only to *find* a primary source, then cite the primary one.
+3. **Aggregators / listicles**: only to *find* a primary source, then cite the primary one. **Never
+   cite the aggregator itself** - not even when it is a real company with a real research page, if
+   the number on that page is somebody else's. A statistics round-up that re-reports a survey is a
+   secondary source wearing a primary source's clothes: open the study it is quoting and cite that,
+   or drop the number.
 
 Avoid: undated content-farm articles, SEO spam, AI-generated roundups, anything you can't trace to
 a real publisher and date.
@@ -38,8 +42,14 @@ a real publisher and date.
 1. **Frame the questions.** Before searching, list the 4-8 specific things the post must establish
    (each stat, claim, or comparison). Research answers them, not vibes.
 2. **Search -> fetch -> record.** For each claim: search, open the best source, extract the exact
-   figure and the source's date. Record `{claim, number, source URL, publisher, date}` in a running
-   sources list.
+   figure and the source's date. Record
+   `{claim, number, WHAT IT MEASURES, THE SOURCE'S OWN SENTENCE, source URL, publisher, date}` in a
+   running sources list.
+   **The last two fields are not bookkeeping - they are what the fidelity pass below runs against.**
+   *What it measures* is the population and the question actually asked ("adults in the US and UK who
+   had bought in the last 12 months, asked which they would prefer if offered both"), never just the
+   topic. *The source's own sentence* is copied verbatim, because by the time you are editing the
+   draft you will no longer remember what the number was attached to, and the draft will look right.
 3. **Corroborate load-bearing stats.** If a number carries the argument, confirm it in a second
    independent source. Note disagreement; prefer the more authoritative / more recent.
 4. **Check recency.** Reject stats older than ~3 years for fast-moving topics unless citing them as
@@ -47,6 +57,40 @@ a real publisher and date.
 5. **Find the information-gain angle.** Skim what already ranks for the target keyword and the
    "People Also Ask" box. The post must add something they don't have: a sharper opinion, a worked
    example, a counter-take, first-hand detail, or primary data. Don't rewrite the consensus.
+
+## Fidelity: a number is only as true as the sentence it sits in
+
+Getting the digits right is the easy half, and passing it feels like being finished. **The failure
+that actually ships is a REAL number attached to a claim its source never made** - and it survives
+every check that looks for invented statistics, because nothing about it is invented.
+
+A published post carried "the 64% who say they'd rather not talk to AI were asked to choose between
+an AI and a person". The 64% was real, correctly attributed, correctly dated, and linked to the
+issuing body's own press release. But that survey asked whether people would *prefer companies
+didn't use AI in customer service* - a preference question that offered no alternative at all. The
+number for people who chose a human *when offered both* was a different study's, and it was 59%. The
+post had both studies in its own sources list and welded one's figure to the other's finding.
+
+So, before a number goes in:
+
+- **THE SCOPE TRAVELS WITH THE NUMBER.** "AI in customer service" does not become "AI". "Buyers in
+  the US and UK" does not become "customers". Widening a scope makes a claim bigger than its
+  evidence; narrowing it ("asked whether they wanted an AI *answering the phone*") is worse, because
+  it asserts the study measured something specific that it did not.
+- **NEVER STATE HOW A QUESTION WAS WORDED, OR WHAT RESPONDENTS WERE OFFERED, UNLESS THE SOURCE SAYS
+  SO.** "They were asked to choose between X and Y", "every one of them was offered a human",
+  "respondents who had already tried it" are claims about an instrument, and they are checkable.
+  This is the single most common way a sourced post becomes a wrong one.
+- **A COMPARATIVE IS A CLAIM.** "More X than Y", "most", "fewer", "twice as likely", "the majority"
+  assert a measurement. Carrying no digits does not make one safe - it makes it harder to catch. Only
+  write a comparison the source actually drew.
+- **A QUANTIFIER TRAVELS WITH ITS OWN CLAIM AND NOTHING ELSE.** If the source says most people do A,
+  and separately that people who do A then do B, it has NOT said most people do B. Welding the two
+  manufactures a finding out of one measured half and one rhetorical half.
+- **YOUR OWN RHETORIC IS NOT A SOURCE EITHER.** A line you wrote to sharpen a point ("every survey on
+  this subject offers people a human") reads, three paragraphs later, exactly like something you
+  looked up. If you cannot point at the sentence that measured it, mark it as the opinion it is or
+  cut it.
 
 ## Citing in the post
 
@@ -67,9 +111,12 @@ Both tasks must surface the sources used (printed in chat, **not** in the post u
 
 ```
 Sources used:
-- <claim/stat> - <number> - <Publisher>, <date> - <URL>
+- <claim/stat> - <number> - measures: <population + the question actually asked> - <Publisher>, <date> - <URL>
 - ...
 ```
+
+The `measures:` field is the one that earns its keep. Without it the list proves only that the number
+exists somewhere, which is exactly the check the failure above passed.
 
 The **rewrite** task uses this same protocol in reverse: take each factual claim in an existing
 post, find a current source, and flag anything unsupported, stale, or contradicted.

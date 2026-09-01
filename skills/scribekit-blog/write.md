@@ -51,14 +51,40 @@ Re-read against [house-style.md](./house-style.md) and run, in order:
 7. **Skeptic test** - would a sharp member of the audience call this fluff? Add proof or delete.
 8. **CTA check** - exactly one, soft, a natural next step.
 
-### 6. Frontmatter
+### 6. Source-fidelity pass (AFTER the anti-slop pass, never before)
+**This pass exists because the previous one causes the damage it catches.** Step 5 sharpens and
+compresses on purpose - "replace every vague claim with a number", "cut 30-50%" - and sharpening a
+sentence is exactly what detaches a figure from the question it answered. A draft that was accurate
+before the editorial pass can be wrong after it, and it will read *better*, which is why nobody
+notices.
+
+Take every factual claim in the finished draft and put it beside the source's own sentence from your
+notes (see the `measures:` field in [research-protocol.md](./research-protocol.md)). For each, ask:
+
+1. **Same population?** The source's respondents, not a wider or narrower group.
+2. **Same question?** Have you said or implied what was asked, what was offered, or who was
+   excluded - and does the source actually say that?
+3. **Same scope?** No silent widening ("AI in customer service" -> "AI") or narrowing.
+4. **Same strength?** No "most"/"more than"/"twice as" the source never measured.
+5. **Still one claim?** You have not welded a quantifier from one finding onto another.
+
+**Check the PULL-QUOTE first and hardest.** It is the highest-risk line in the post by construction:
+its whole job is to distil the thesis, distilling means sharpening, and it is lifted out of the
+paragraph that carried the qualifier. A published post's pull-quote invented a survey's wording this
+exact way. **A pull-quote may not carry a claim the body has not already made and sourced** - if it
+says something new, it is unsourced by definition.
+
+Fix by returning the qualifier, not by softening the prose into mush: the accurate version is usually
+just as punchy, and often punchier, because it says something specific.
+
+### 7. Frontmatter
 Assemble per the contract in [house-style.md](./house-style.md), **matching the project's reader**:
 `title`, `description`, `keywords` (~3-6), `categories` (usually one, from a small reused taxonomy;
 always a list), `author` (project default or a named human), and `date` = today's real date from
 `date +%F` (**quoted**; do not guess). Slug = kebab-case of the title; verify unique against existing
 posts.
 
-### 7. Hero image (default ON) - via /scribekit-hero
+### 8. Hero image (default ON) - via /scribekit-hero
 Hand the post's hero to the **[/scribekit-hero](../scribekit-hero/SKILL.md)** skill's **blog-hero** create
 flow: on first use it seeds the project's `hero.settings.js` from the brand (its own Step 0 brand
 discovery); then it writes the post's `<slug>/hero.js` params, renders an on-brand hero, saves the JPEG
@@ -66,10 +92,10 @@ to the project's assets dir, and sets the `image:` frontmatter. Locate the insta
 exists): `<this-skill-dir>/../scribekit-hero/SKILL.md`, `.claude/skills/scribekit-hero/SKILL.md` (from the
 project root or `$HOME`), or `node_modules/@daanvandenbergh/scribekit/skills/scribekit-hero/SKILL.md`; then
 follow its `blog.md` create flow for this slug (single-language blog = one JPEG; multi-language =
-per-locale, see step 8). **If `/scribekit-hero` isn't installed**, skip the hero, leave `image:` unset, and
+per-locale, see step 9). **If `/scribekit-hero` isn't installed**, skip the hero, leave `image:` unset, and
 tell the user to install it to add one. **Skip on opt-out** too (`--no-hero` / "skip the image").
 
-### 8. Write the file
+### 9. Write the file
 **First, seed the content-dir README (once, never overwrite).** Ensure a `README.md` exists at the
 **root of the blog content dir** (`<contentDir>/README.md`, resolved in Step 0). If it is missing, copy
 this skill's template into it **verbatim** from the first path that exists:
@@ -110,7 +136,7 @@ frontmatter contract. **Render a language-specific hero** per the localised-hero
 hero, since the hero bakes in title/subtitle text. Keep internal links pointing to same-language
 routes.
 
-### 9. Verify
+### 10. Verify
 - Frontmatter parses; body has no stray/unclosed JSX and no extra `#` H1.
 - Every internal link points to a real route/post; external URLs are live.
 - The hero renders crisp at full size **and** legible when scaled to a card thumbnail.
@@ -120,11 +146,11 @@ routes.
 - Offer a browser check: **ask the user to start the dev server** (never start it yourself), then
   use Chrome MCP to load the post's route and verify rendering + clean console.
 
-### 10. Hand off
+### 11. Hand off
 Suggest an independent audit pass: invoke this skill in **rewrite --scan** mode on the new slug.
 
 ## Guardrails
 - Never fabricate statistics, quotes, sources, or named customers/cases. Unsupported -> cut or soften.
 - Never start a dev server (project rule). Never create git branches.
 - Keep changes scoped to the new post + its hero asset - **plus** the one-time content-dir `README.md`
-  (Step 8), seeded from `assets/content-dir-README.md` only when absent, never overwritten.
+  (Step 9), seeded from `assets/content-dir-README.md` only when absent, never overwritten.

@@ -49,7 +49,10 @@ Uniform sentence rhythm is the single biggest tell of machine writing. Vary it h
   the **question a reader (or an AI answer engine) would actually ask** where it's natural.
 - `**bold**` the key phrase in a line - sparingly, to anchor a scan. *Italics* for a single
   emphasised word, not whole sentences.
-- **One `>` blockquote per post**, a pull-quote that distils the thesis. Not more.
+- **One `>` blockquote per post**, a pull-quote that distils the thesis. Not more. **It may not carry
+  a claim the body has not already made and sourced** - a pull-quote says something new only by
+  inventing it. Distilling means sharpening, and a sharpened statistic is how a sourced post becomes
+  a wrong one; see the source-fidelity pass in [research-protocol.md](./research-protocol.md).
 - Tight bullet lists when enumerating concrete items; prose everywhere else. Lead each bullet with a
   **bolded label** when listing tactics.
 - **Comparison tables** (`| … |` Markdown) are encouraged where you're contrasting options: they
