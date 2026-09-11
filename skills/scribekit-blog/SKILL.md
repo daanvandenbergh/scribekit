@@ -7,6 +7,11 @@ argument-hint: "[write|rewrite] [topic | slug-or-path] [--scan]"
 
 # scribekit-blog
 
+<!-- protocol-version: 31 -->
+<!-- Bump the number above whenever the research/fidelity/verification contract changes materially.
+     Pipelines that spawn this skill headless pin the version they were written against and refuse
+     to run on an older install - a stale skill re-opens every hole the newer one closed. -->
+
 A portable skill - **one skill, two jobs**: write a post, and rewrite (or just audit) a post, for the
 blog of whatever project it is dropped into. **Nothing about any project is baked in.** It **learns the
 current project first** (Step 0), then writes and rewrites to match it. Each post's **hero image** is
@@ -22,7 +27,9 @@ generic. Gather and keep as working notes for the run:
   page (the site's home route) and its main marketing copy. What does this business do, for whom,
   in what register?
 - **Voice reference** - open the 1-2 strongest existing posts. That voice is your calibration
-  target for everything you write or judge.
+  target for everything you write or judge. ONE of them is the **calibration post** for
+  house-style.md's density caps: the one the caller designates when it names one, otherwise your
+  pick here, fixed before anything is counted (see house-style.md - never the pivot-heaviest sibling).
 - **Where posts live** - find the blog content dir and its reader (a `lib`/`content` module that
   parses MDX frontmatter; common dirs: `blog/`, `content/blog/`, `src/content/`, `posts/`). Note
   the file extension and the **public assets dir** heroes are served from (e.g. `public/`,
@@ -75,6 +82,18 @@ These are the spec every mode enforces - read them after Step 0, not as backgrou
 - **[research-protocol.md](./research-protocol.md)** - how to research and cite; never invent a fact.
 - **[seo-checklist.md](./seo-checklist.md)** - on-page SEO **and** GEO (AI-answer-engine)
   optimization, plus the 100-point scoring rubric.
+
+## Shipped assets (`assets/`) - the mechanical half of the protocol
+
+- `ledger-verdicts.mjs` - the ONLY way a ledger row's verdict is set (apply refuses rows the verifier
+  did not read), and `--check` - the run's closing gate: provenance, `--applied-after`,
+  `--post-dir` (proof freshness by hash, gate tokens, style hits, the final audit),
+  `--claim-table` (rewrite). Its printed output is the proof.
+- `style-tics.mjs` - the regex meter and the digit-gate extraction.
+- `fact-verifier-prompt.md`, `style-verifier-prompt.md`, `final-audit-prompt.md`,
+  `final-audit-followup.md`, `claim-table-prompt.md` - the verifier prompts, sent VERBATIM with
+  only their `<<PLACEHOLDERS>>` substituted; every verifier writes its own answer file. The
+  parent never authors a verifier prompt and never retypes a return.
 
 ## Non-negotiables (all modes)
 

@@ -77,7 +77,12 @@ Get quoted by the answer engines, not just ranked. Every item is evidence-backed
 - [ ] **Standalone-quotable passages.** One concept per section; don't fuse a definition with a
       how-to or bury a stat mid-narrative. Assume each passage is lifted out of context.
 - [ ] **Concrete statistics with named sources** (GEO study: ~+41% visibility) - numbers beat
-      adjectives.
+      adjectives. **But the lift comes from verified, well-attributed claims being present, not
+      from their count**: ~5-7 load-bearing data points per post, each verified per the research
+      protocol, beats a stat-stuffed page - and a wrong stat is strictly negative (an
+      easily-verified factual error is a search-quality demotion signal, and an answer engine that
+      repeats it propagates the error under your brand). Name the issuer and year in the sentence
+      ("Gartner's 2025 survey found ..."), link the issuing document, and date time-varying figures.
 - [ ] **Inline citations to credible external sources** (~+115% for mid-ranked pages) - the single
       biggest lever. Link them.
 - [ ] **A named-expert quotation** where one genuinely fits (~+28%).
@@ -106,8 +111,15 @@ Get quoted by the answer engines, not just ranked. Every item is evidence-backed
 Used by the **rewrite** task to score a post. The **write** task self-scores before finishing and
 does not ship below ~90 (a state-of-the-art bar, not a passing grade).
 
-- **Content & Research - 25** - every factual claim/stat sourced and current (−5 each unsourced or
-  stale load-bearing claim); clear information gain vs. what already ranks.
+- **Content & Research - 25** - every factual claim/stat sourced and current, **scored off the
+  claim table, not off impressions**: −5 each unsourced or stale load-bearing claim, and any ❌
+  (unsupported/contradicted) or 🔀 (misattributed) verdict still standing in the text caps this
+  category at 10/25 - a post with a known-wrong sentence cannot score well on research, whatever
+  else it does. A ❌/🔀 row escapes the cap ONLY when the post *reports* the broken claim without
+  asserting it (quoting a wrong number in order to debunk it) - and the justification must name
+  each such row and quote the post sentence that shows it asserts nothing; "the post discusses it"
+  is not an exemption, it is the dodge. The category's justification states the counts
+  (N claims: N✅/N⚠️/N❌/N🔀). Clear information gain vs. what already ranks.
 - **SEO & discoverability - 20** - intent matched to SERP format; title front-loads keyword;
   description benefit-led w/ keyword; natural placement (no stuffing); heading hierarchy; 3-5
   internal + 1-3 credible external links, descriptive/varied anchors, all resolving; frontmatter
