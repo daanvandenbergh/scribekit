@@ -344,3 +344,41 @@ describe("overviewJsonLd (multi-language)", () => {
         expect(items[0]!.url).toBe("https://example.com/fr/blog/hello-world/");
     });
 });
+
+describe("per-locale index copy", () => {
+    /** A site whose index name and description differ per locale. */
+    const LOCALIZED: SiteConfig = {
+        ...SITE_I18N,
+        indexName: { en: "Example Blog", nl: "Example-blog" },
+        description: { en: "Posts about examples.", nl: "Artikelen over voorbeelden." },
+    };
+
+    /** The `CollectionPage` node of one locale's overview graph. */
+    function collectionPage(lang: string): Record<string, unknown> {
+        const graph = overviewJsonLd([POST], LOCALIZED, lang)["@graph"] as Record<string, unknown>[];
+        const page = graph.find((node) => node["@type"] === "CollectionPage");
+        expect(page).toBeDefined();
+        return page as Record<string, unknown>;
+    }
+
+    it("names and describes the CollectionPage in the language it was built for", () => {
+        expect(collectionPage("en").name).toBe("Example Blog");
+        expect(collectionPage("en").description).toBe("Posts about examples.");
+        expect(collectionPage("nl").name).toBe("Example-blog");
+        expect(collectionPage("nl").description).toBe("Artikelen over voorbeelden.");
+    });
+
+    it("builds the same locale's overview metadata, so JSON-LD and meta agree", () => {
+        const nl = buildOverviewMetadata(LOCALIZED, "nl");
+        expect(nl.description).toBe("Artikelen over voorbeelden.");
+        expect(nl.openGraph?.title).toBe("Example-blog");
+        expect(nl.description).toBe(collectionPage("nl").description);
+    });
+
+    it("keeps the generic fallbacks when nothing is configured", () => {
+        const graph = overviewJsonLd([POST], SITE_I18N, "nl")["@graph"] as Record<string, unknown>[];
+        const page = graph.find((node) => node["@type"] === "CollectionPage");
+        expect(page?.name).toBe("Example Blog");
+        expect(page?.description).toBe("The Example blog.");
+    });
+});

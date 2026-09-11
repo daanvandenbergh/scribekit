@@ -16,7 +16,12 @@ export interface LocaleConfig {
     code: string;
     /** Human-readable name for the language switcher (e.g. `"Français"`). Defaults to `code`. */
     label?: string | undefined;
-    /** BCP 47 locale used to format this language's dates. Defaults to `code`, then the instance `locale`. */
+    /**
+     * This language's full BCP 47 tag (`en-GB` for the `en` code). Defaults to `code`, then the
+     * instance `locale`. It formats this language's dates AND it is the tag `og:locale` is derived
+     * from - a locale that declares `en-GB` publishes `og:locale` `en_GB`, not the `en_US` that
+     * maximizing the bare `en` subtag through CLDR would otherwise produce.
+     */
     dateLocale?: string | undefined;
 }
 
@@ -35,6 +40,21 @@ export interface TocEntry {
 }
 
 /**
+ * A piece of site-level copy that may differ per locale: either ONE string used in every locale,
+ * or a map keyed by locale code (`{ en: "...", nl: "..." }`).
+ *
+ * The map form exists because the index copy a multi-locale site renders is per-locale, while the
+ * SEO surfaces built from it here are not rendered by the consumer at all - the RSS channel header
+ * and the `CollectionPage` JSON-LD are emitted by this package. With only the string form, a Dutch
+ * feed announced its channel in English while every one of its items was Dutch, and the JSON-LD
+ * description contradicted the page's own `<meta name="description">`.
+ *
+ * A missing key falls back to the site's default locale, then to the builder's own generic text -
+ * never to another locale's copy.
+ */
+export type LocalizedText = string | Record<string, string>;
+
+/**
  * Site-level configuration used to build SEO metadata and JSON-LD. Passed once to a `Blog` or
  * `Docs` instance (or directly to the pure builders) so titles, canonical URLs, and structured
  * data resolve to the consumer's real domain and brand.
@@ -46,10 +66,27 @@ export interface SiteConfig {
     brandName: string;
     /** Author used when a page omits its own. Defaults to `brandName`. */
     defaultAuthor?: string | undefined;
+    /**
+     * The configured locales, so the SEO builders can read a locale's own BCP 47 tag rather than
+     * re-deriving a territory from its bare code - see {@link LocaleConfig.dateLocale}. The backend
+     * classes set it from their `locales`; a caller using the pure builders directly may omit it,
+     * and every locale then falls back to the CLDR-maximized bare code as before.
+     */
+    locales?: LocaleConfig[] | undefined;
     /** Route the section is mounted at, used to build page URLs. Defaults to `/blog` for a blog, `/docs` for docs. */
     basePath?: string | undefined;
-    /** Description for the index page's metadata and CollectionPage JSON-LD. */
-    description?: string | undefined;
+    /**
+     * Description for the index page's metadata, its CollectionPage JSON-LD and the RSS channel.
+     * A plain string is used in every locale; a {@link LocalizedText} map gives each locale its own.
+     */
+    description?: LocalizedText | undefined;
+    /**
+     * Human-readable name of the section's index, used for the RSS channel `<title>`, the
+     * `CollectionPage` `name` and the index page's OpenGraph title. Defaults to `<brandName> Blog`
+     * / `<brandName> Docs` (and to the bare `brandName` for the RSS channel, which is what it was
+     * before this field existed). A {@link LocalizedText} map gives each locale its own name.
+     */
+    indexName?: LocalizedText | undefined;
     /**
      * Default locale code: the locale whose pages are served without a URL prefix (and the
      * `x-default` hreflang target). The pure SEO builders need it to decide which locale omits

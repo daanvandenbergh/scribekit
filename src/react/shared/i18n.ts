@@ -692,6 +692,12 @@ export interface BlogLabels {
     writtenBy: string;
     /** Builds the "Published <date>" line of the author bio from the formatted date. */
     publishedLabel: (date: string) => string;
+    /**
+     * Builds the "Updated <date>" meta item from the formatted date. Shares the docs catalog entry
+     * with {@link DocsLabels.updatedLabel}: it is the same sentence in all 24 languages, and two
+     * copies of it could only ever drift apart.
+     */
+    updatedLabel: (date: string) => string;
     /** Builds the reading-time label from the estimated whole minutes. */
     readingLabel: (minutes: number) => string;
 }
@@ -718,6 +724,7 @@ export function blogLabels(lang: string): BlogLabels {
         filterByCategory: t(CATALOG.filterByCategory),
         writtenBy: t(CATALOG.writtenBy),
         publishedLabel: (date: string) => t(CATALOG.publishedOn, date),
+        updatedLabel: (date: string) => t(CATALOG.docsUpdatedOn, date),
         readingLabel: (minutes: number) => t(CATALOG.readingTime, minutes),
     };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { absoluteUrl, buildSitemap, hreflangMap, ogLocale } from "../seo.js";
+import { absoluteUrl, buildSitemap, hreflangMap, ogLocale, ogLocaleFor } from "../seo.js";
 import type { SiteConfig } from "../types.js";
 
 /** Site config with a default locale, exercising the i18n sitemap paths. */
@@ -28,6 +28,25 @@ describe("absoluteUrl", () => {
         expect(absoluteUrl("https://user.github.io/repo", "https://cdn.example.com/a.jpg")).toBe(
             "https://cdn.example.com/a.jpg",
         );
+    });
+});
+
+describe("ogLocaleFor", () => {
+    it("prefers the locale's own BCP 47 tag over maximizing its bare code", () => {
+        // The silent bug this exists for: `en` maximizes to `en_US`, so a site whose locale set says
+        // `en-GB` announced American English to every platform that reads og:locale.
+        const locales = [{ code: "en", dateLocale: "en-GB" }, { code: "nl", dateLocale: "nl-NL" }];
+        expect(ogLocaleFor(locales, "en")).toBe("en_GB");
+        expect(ogLocaleFor(locales, "nl")).toBe("nl_NL");
+        // Proves the assertion above is not vacuous - the bare code really does resolve elsewhere.
+        expect(ogLocale("en")).toBe("en_US");
+    });
+
+    it("falls back to the bare code when the locale declares no tag, or is not configured at all", () => {
+        expect(ogLocaleFor([{ code: "en" }], "en")).toBe("en_US");
+        expect(ogLocaleFor([{ code: "en", dateLocale: "en-GB" }], "fr")).toBe("fr_FR");
+        expect(ogLocaleFor(undefined, "en")).toBe("en_US");
+        expect(ogLocaleFor([], "de")).toBe("de_DE");
     });
 });
 

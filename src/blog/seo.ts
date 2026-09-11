@@ -5,7 +5,7 @@
  * returned as a plain object for the consumer to serialise into a
  * `<script type="application/ld+json">`.
  *
- * The generic SEO primitives (`absoluteUrl`, `ogLocale`, `hreflangMap`, the i18n `buildSitemap`)
+ * The generic SEO primitives (`absoluteUrl`, `ogLocaleFor`, `hreflangMap`, the i18n `buildSitemap`)
  * live in `../shared/seo.js` and are shared with the docs module; URLs are built exclusively via
  * {@link localePath}, the same helper the React components use, so the canonical/hreflang
  * metadata can never drift from the rendered links. For a single-language blog the output is
@@ -14,7 +14,7 @@
  */
 
 import { localePath } from "../shared/locales.js";
-import { absoluteUrl, ogLocale, hreflangMap, FALLBACK_LOCALE, type JsonLd } from "../shared/seo.js";
+import { absoluteUrl, localizedText, ogLocaleFor, hreflangMap, FALLBACK_LOCALE, type JsonLd } from "../shared/seo.js";
 import type { PageMetadata, PostMeta, SiteConfig } from "./types.js";
 
 export type { JsonLd };
@@ -31,14 +31,33 @@ function authorOf(meta: PostMeta, site: SiteConfig): string {
 }
 
 /**
- * The blog index description, falling back to a generic brand string. Exported so the RSS
- * builder's channel description is the same string as the index metadata's.
+ * The blog index description for one language, falling back to a generic brand string. Exported so
+ * the RSS builder's channel description is the same string as the index metadata's.
  *
  * @param site - the site configuration.
+ * @param lang - the language being built. Defaults to `site.defaultLocale`.
  * @returns the description used for the index metadata, CollectionPage, and RSS channel.
  */
-export function overviewDescription(site: SiteConfig): string {
-    return site.description ?? `The ${site.brandName} blog.`;
+export function overviewDescription(site: SiteConfig, lang?: string): string {
+    const defaultLocale = site.defaultLocale;
+    return (
+        localizedText(site.description, lang ?? defaultLocale, defaultLocale) ??
+        `The ${site.brandName} blog.`
+    );
+}
+
+/**
+ * The blog index's configured name for one language, or `undefined` when the site declares none -
+ * each caller keeps the fallback it had before `indexName` existed (the RSS channel falls back to
+ * the bare `brandName`, the CollectionPage and OpenGraph titles to `<brandName> Blog`).
+ *
+ * @param site - the site configuration.
+ * @param lang - the language being built. Defaults to `site.defaultLocale`.
+ * @returns the configured index name for that language, or `undefined`.
+ */
+export function overviewName(site: SiteConfig, lang?: string): string | undefined {
+    const defaultLocale = site.defaultLocale;
+    return localizedText(site.indexName, lang ?? defaultLocale, defaultLocale);
 }
 
 /**
@@ -129,8 +148,8 @@ export function buildPostMetadata(
             // `alt` is the entry's own title - the SAME string the rendered hero <img alt>
             // already carries, so it is grounded in visible content rather than invented.
             images: meta.image ? [{ url: meta.image, alt: meta.title }] : undefined,
-            locale: ogLocale(meta.lang),
-            alternateLocale: alternateLocale.length > 0 ? alternateLocale.map(ogLocale) : undefined,
+            locale: ogLocaleFor(site.locales, meta.lang),
+            alternateLocale: alternateLocale.length > 0 ? alternateLocale.map((lang) => ogLocaleFor(site.locales, lang)) : undefined,
         },
         twitter: {
             card: "summary_large_image",
@@ -153,7 +172,8 @@ export function buildPostMetadata(
 export function buildOverviewMetadata(site: SiteConfig, lang?: string, langs: string[] = []): PageMetadata {
     const resolvedLang = lang ?? site.defaultLocale ?? FALLBACK_LOCALE;
     const defaultLocale = site.defaultLocale ?? resolvedLang;
-    const description = overviewDescription(site);
+    const description = overviewDescription(site, resolvedLang);
+    const name = overviewName(site, resolvedLang) ?? `${site.brandName} Blog`;
     const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang });
     const languages = overviewLanguages(site, langs, defaultLocale);
     return {
@@ -165,9 +185,9 @@ export function buildOverviewMetadata(site: SiteConfig, lang?: string, langs: st
             type: "website",
             url,
             siteName: site.brandName,
-            title: `${site.brandName} Blog`,
+            title: name,
             description,
-            locale: ogLocale(resolvedLang),
+            locale: ogLocaleFor(site.locales, resolvedLang),
         },
         twitter: { card: "summary_large_image" },
     };
@@ -257,13 +277,13 @@ export function overviewJsonLd(posts: PostMeta[], site: SiteConfig, lang?: strin
     const defaultLocale = site.defaultLocale ?? resolvedLang;
     const origin = new URL(site.siteUrl).origin;
     const blogUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang }));
-    const description = overviewDescription(site);
+    const description = overviewDescription(site, resolvedLang);
     const graph: JsonLd[] = [
         {
             "@type": "CollectionPage",
             "@id": blogUrl,
             url: blogUrl,
-            name: `${site.brandName} Blog`,
+            name: overviewName(site, resolvedLang) ?? `${site.brandName} Blog`,
             description,
             ...(site.organizationId ? { publisher: { "@id": site.organizationId } } : {}),
             ...(site.websiteId ? { isPartOf: { "@id": site.websiteId } } : {}),

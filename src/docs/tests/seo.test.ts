@@ -244,3 +244,40 @@ describe("indexJsonLd", () => {
         expect(items[0]!.url).toBe("https://example.com/fr/docs/introduction/");
     });
 });
+
+describe("per-locale index copy", () => {
+    /** A docs site whose index name and description differ per locale. */
+    const LOCALIZED: SiteConfig = {
+        ...SITE_I18N,
+        indexName: { en: "Example Docs", nl: "Example-documentatie" },
+        description: { en: "How Example works.", nl: "Hoe Example werkt." },
+    };
+
+    /** The `CollectionPage` node of one locale's index graph. */
+    function collectionPage(lang: string): Record<string, unknown> {
+        const graph = indexJsonLd([], LOCALIZED, lang)["@graph"] as Record<string, unknown>[];
+        const page = graph.find((node) => node["@type"] === "CollectionPage");
+        expect(page).toBeDefined();
+        return page as Record<string, unknown>;
+    }
+
+    it("names and describes the CollectionPage in the language it was built for", () => {
+        expect(collectionPage("en").name).toBe("Example Docs");
+        expect(collectionPage("nl").name).toBe("Example-documentatie");
+        expect(collectionPage("nl").description).toBe("Hoe Example werkt.");
+    });
+
+    it("builds the same locale's index metadata, so JSON-LD and meta agree", () => {
+        const nl = buildIndexMetadata(LOCALIZED, "nl");
+        expect(nl.description).toBe("Hoe Example werkt.");
+        expect(nl.openGraph?.title).toBe("Example-documentatie");
+    });
+
+    it("keeps the generic fallbacks when nothing is configured", () => {
+        const page = (indexJsonLd([], SITE_I18N, "nl")["@graph"] as Record<string, unknown>[]).find(
+            (node) => node["@type"] === "CollectionPage",
+        );
+        expect(page?.name).toBe("Example Docs");
+        expect(page?.description).toBe("The Example documentation.");
+    });
+});

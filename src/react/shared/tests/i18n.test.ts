@@ -88,6 +88,12 @@ describe("blogLabels", () => {
     it("resolves regional variants via the primary subtag", () => {
         expect(blogLabels("es-MX").allCategories).toBe("Todos");
     });
+
+    it("builds the post's 'Updated <date>' label, in the same words the docs use", () => {
+        expect(blogLabels("en").updatedLabel("23 August 2026")).toBe("Updated 23 August 2026");
+        expect(blogLabels("nl").updatedLabel("23 augustus 2026")).toBe("Bijgewerkt op 23 augustus 2026");
+        expect(blogLabels("fr").updatedLabel("23 août 2026")).toBe(docsLabels("fr").updatedLabel("23 août 2026"));
+    });
 });
 
 describe("docsLabels", () => {

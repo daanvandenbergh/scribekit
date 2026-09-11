@@ -14,4 +14,4 @@ export { readingMinutes, slugify, tableOfContents } from "./content.js";
 export { formatDate, isoDateString } from "./format.js";
 export { localePath, normalizeBasePath } from "./locales.js";
 export { buildSitemap, type JsonLd } from "./seo.js";
-export type { LocaleConfig, PageMetadata, SiteConfig, SitemapEntry, TocEntry } from "./types.js";
+export type { LocaleConfig, LocalizedText, PageMetadata, SiteConfig, SitemapEntry, TocEntry } from "./types.js";

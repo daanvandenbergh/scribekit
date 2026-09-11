@@ -236,6 +236,42 @@ describe("BlogPage", () => {
         expect(html).not.toContain("Written by");
     });
 
+    it("renders the 'Updated <date>' meta item when the post was updated after it was published", () => {
+        const updated: Post = { ...POST, meta: { ...POST.meta, updated: "2026-08-23" } };
+        const html = renderToStaticMarkup(<BlogPage blog={fakeBlog({ getPost: () => updated })} slug="hello-world" />);
+        expect(html).toContain("28 June 2026");
+        expect(html).toContain("Updated 23 August 2026");
+    });
+
+    it("takes the updated label from the updatedLabel prop, and the date's locale from lang", () => {
+        const frPost: Post = { ...POST, meta: { ...POST.meta, lang: "fr", updated: "2026-08-23" } };
+        const html = renderToStaticMarkup(
+            <BlogPage blog={i18nFakeBlog({ getPost: () => frPost })} slug="hello-world" lang="fr" />,
+        );
+        expect(html).toContain("Mis à jour le 23 August 2026");
+        const overridden = renderToStaticMarkup(
+            <BlogPage
+                blog={fakeBlog({ getPost: () => ({ ...POST, meta: { ...POST.meta, updated: "2026-08-23" } }) })}
+                slug="hello-world"
+                updatedLabel={(date) => `Revised ${date}`}
+            />,
+        );
+        expect(overridden).toContain("Revised 23 August 2026");
+        expect(overridden).not.toContain("Updated 23 August 2026");
+    });
+
+    it("omits the updated item when the post has no updated date, or it is not later than the publish date", () => {
+        const none = renderToStaticMarkup(<BlogPage blog={fakeBlog()} slug="hello-world" />);
+        expect(none).not.toContain("Updated");
+        const sameDay: Post = { ...POST, meta: { ...POST.meta, updated: POST.meta.date } };
+        const same = renderToStaticMarkup(<BlogPage blog={fakeBlog({ getPost: () => sameDay })} slug="hello-world" />);
+        expect(same).not.toContain("Updated");
+        const backdated: Post = { ...POST, meta: { ...POST.meta, updated: "2026-01-01" } };
+        const older = renderToStaticMarkup(<BlogPage blog={fakeBlog({ getPost: () => backdated })} slug="hello-world" />);
+        expect(older).not.toContain("Updated");
+        expect(older).not.toContain("1 January 2026");
+    });
+
     it("omits the JSON-LD script when the blog has no site config", () => {
         const html = renderToStaticMarkup(<BlogPage blog={fakeBlog({ site: undefined })} slug="hello-world" />);
         expect(html).not.toContain("application/ld+json");

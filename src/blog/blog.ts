@@ -9,6 +9,7 @@ import { similarPosts } from "./similar.js";
 import { DuplicatePostError, PostNotFoundError } from "./errors.js";
 import { buildRssFeed } from "./rss.js";
 import { buildOverviewMetadata, buildPostMetadata, overviewJsonLd, postJsonLd } from "./seo.js";
+import { ogLocaleFor } from "../shared/seo.js";
 import type { BlogConfig, LocaleConfig, PageMetadata, Post, PostMeta, SiteConfig, SitemapEntry, TocEntry } from "./types.js";
 
 /**
@@ -99,7 +100,9 @@ export class Blog {
                       defaultAuthor: config.defaultAuthor,
                       basePath: config.basePath,
                       description: config.description,
+                      indexName: config.indexName,
                       defaultLocale: this.defaultLocale,
+                      locales: this.locales,
                       prefixDefaultLocale: this.prefixDefaultLocale,
                       trailingSlash: this.trailingSlash,
                       organizationId: config.organizationId,
@@ -277,6 +280,21 @@ export class Blog {
             return this.locale;
         }
         return found?.code ?? this.locale;
+    }
+
+    /**
+     * The `og:locale` tag for a language - the same value {@link Blog.postMetadata} and
+     * {@link Blog.overviewMetadata} put on their own OpenGraph blocks, exposed because a host app
+     * that hand-builds a metadata block (to guarantee some other property, e.g. that `og:url` is
+     * byte-for-byte its `alternates.canonical`) must be able to declare the SAME `og:locale` its
+     * posts do. Deriving it there instead means re-deriving a territory from a bare subtag, which is
+     * how an `en-GB` site ends up announcing `en_US` on one surface and `en_GB` on the next.
+     *
+     * @param lang - the language code. Defaults to the blog's default locale.
+     * @returns the `language_TERRITORY` string for `og:locale`.
+     */
+    ogLocale(lang?: string): string {
+        return ogLocaleFor(this.locales, lang ?? this.defaultLocale);
     }
 
     /**

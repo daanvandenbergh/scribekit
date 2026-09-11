@@ -11,13 +11,47 @@
  */
 
 import { localePath } from "./locales.js";
-import type { SiteConfig, SitemapEntry } from "./types.js";
+import type { LocaleConfig, LocalizedText, SiteConfig, SitemapEntry } from "./types.js";
 
 /** A schema.org JSON-LD document (a plain, JSON-serialisable object graph). */
 export type JsonLd = Record<string, unknown>;
 
 /** Fallback locale used only when neither `site.defaultLocale` nor a page language is known. */
 export const FALLBACK_LOCALE = "en";
+
+/**
+ * Resolves a {@link LocalizedText} for one language: a plain string is the same copy everywhere, a
+ * map is looked up by locale code (case-insensitively, so a lowercased URL segment finds a
+ * `pt-BR` key) and falls back to the site's default locale.
+ *
+ * Returns `undefined` when nothing is configured or the map covers neither language, leaving each
+ * caller to apply its own generic fallback. Never returns another locale's copy: showing Dutch to
+ * a French reader is a worse failure than showing the generic brand string.
+ *
+ * @param text - the configured copy, if any.
+ * @param lang - the language being built.
+ * @param defaultLocale - the site's default locale, used when the map has no entry for `lang`.
+ * @returns the copy for that language, or `undefined`.
+ */
+export function localizedText(
+    text: LocalizedText | undefined,
+    lang: string | undefined,
+    defaultLocale: string | undefined,
+): string | undefined {
+    if (text === undefined || typeof text === "string") {
+        return text;
+    }
+    for (const wanted of [lang, defaultLocale]) {
+        if (wanted === undefined) {
+            continue;
+        }
+        const key = Object.keys(text).find((k) => k.toLowerCase() === wanted.toLowerCase());
+        if (key !== undefined) {
+            return text[key];
+        }
+    }
+    return undefined;
+}
 
 /**
  * Resolves a root-relative path (or absolute URL) to an absolute URL against the site origin.
@@ -60,6 +94,25 @@ export function ogLocale(lang: string): string {
     } catch {
         return lang;
     }
+}
+
+/**
+ * The `og:locale` tag for one of a site's configured locales: {@link ogLocale} applied to that
+ * locale's own BCP 47 tag ({@link LocaleConfig.dateLocale}) when it declares one, else to the bare
+ * code.
+ *
+ * The distinction is the whole point. `ogLocale` maximizes a bare subtag through CLDR, so `en`
+ * becomes `en_US` - which is wrong, and silently so, for a site whose locale set says `en-GB`. The
+ * config already carries the answer; this is the chokepoint that reads it instead of guessing.
+ *
+ * @param locales - the configured locales (`SiteConfig.locales`), or `undefined` when a caller uses
+ *   the pure builders without one - every locale then falls back to the bare code as before.
+ * @param lang - the language code of the page being built.
+ * @returns the `language_TERRITORY` string for `og:locale`.
+ */
+export function ogLocaleFor(locales: LocaleConfig[] | undefined, lang: string): string {
+    const configured = locales?.find((l) => l.code === lang)?.dateLocale;
+    return ogLocale(configured ?? lang);
 }
 
 /**

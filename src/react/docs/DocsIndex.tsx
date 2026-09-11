@@ -1,5 +1,6 @@
 import { type ElementType, type ReactElement, type ReactNode } from "react";
 import type { Docs } from "../../docs/docs.js";
+import { localizedText } from "../../shared/seo.js";
 import type { NavItem } from "../../docs/types.js";
 import { docsLabels } from "../shared/i18n.js";
 import { JsonLd } from "../shared/JsonLd.js";
@@ -114,7 +115,9 @@ export function DocsIndex({
     const site = docs.site;
     const nav = docs.getNavTree(resolvedLang);
     const heroTitle = title ?? labels.title;
-    const heroDesc = description ?? site?.description;
+    // `site.description` may be per-locale (a {@link LocalizedText} map), so it is resolved for the
+    // language being rendered - a raw read would print `[object Object]` into the hero.
+    const heroDesc = description ?? localizedText(site?.description, resolvedLang, docs.defaultLocale);
     // The eyebrow is the localized "Documentation" word, which `heroTitle` also falls back to - so
     // it renders only when the consumer overrode the title, never above an identical H1.
     const eyebrow = heroTitle === labels.title ? undefined : labels.title;

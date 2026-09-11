@@ -47,12 +47,15 @@ export interface BlogPageProps {
     similarCount?: number;
     /** Formats the reading-time label from the estimated minutes. Defaults to the `lang` translation (e.g. ``(m) => `${m} min read` ``). */
     readingLabel?: (minutes: number) => string;
+    /** Formats the "Updated <date>" meta item from the formatted date. Defaults to the `lang` translation. */
+    updatedLabel?: (date: string) => string;
 }
 
 /**
  * Renders a single blog post: an optional back-link, the title, the formatted date, the hero
  * image, and the MDX body (compiled with `next-mdx-remote`, memoized per source+options - see `shared/mdx.ts`) inside a `.scribekit-prose`
- * container, alongside a right-side sidebar with a heading minimap (table of contents), the
+ * container, with an "Updated <date>" item beside the publish date whenever the post's `updated`
+ * front-matter is later than its `date`, alongside a right-side sidebar with a heading minimap (table of contents), the
  * estimated reading time, and "Similar pages". When the post declares an `author`, their name
  * appears in the meta row (with a small round avatar when `author-image` is set) and a plain
  * "Written by" author bio - a divider, the avatar (when set), the name, and the category /
@@ -93,6 +96,7 @@ export function BlogPage({
     similarTitle,
     similarCount,
     readingLabel,
+    updatedLabel,
 }: BlogPageProps): ReactElement {
     const resolvedLang = lang ?? blog.defaultLocale;
     const labels = blogLabels(resolvedLang);
@@ -121,6 +125,17 @@ export function BlogPage({
                 {meta.categories?.[0] ? <span className="scribekit-post-cat">{meta.categories[0]}</span> : null}
                 {meta.date ? (
                     <span className="scribekit-post-metaitem">{blog.formatDate(meta.date, resolvedLang)}</span>
+                ) : null}
+                {/* The publish date alone tells a reader a maintained post is as old as its first
+                    draft, while the JSON-LD, `article:modified_time` and the sitemap's `lastmod`
+                    have been telling every crawler the true `updated` date all along. Rendered only
+                    when it moves the story on - `updated` equal to (or, in a malformed
+                    front-matter, older than) `date` says nothing and would read as a second
+                    publish date. ISO `YYYY-MM-DD` compares correctly as a string. */}
+                {meta.updated && meta.date && meta.updated > meta.date ? (
+                    <span className="scribekit-post-metaitem">
+                        {(updatedLabel ?? labels.updatedLabel)(blog.formatDate(meta.updated, resolvedLang))}
+                    </span>
                 ) : null}
                 {meta.author ? (
                     <span className="scribekit-post-metaitem scribekit-post-author">

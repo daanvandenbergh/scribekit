@@ -112,3 +112,41 @@ describe("buildRssFeed", () => {
         expect(xml).toContain("<link>https://example.com/blog/</link>");
     });
 });
+
+describe("per-locale channel header", () => {
+    /** A site whose index copy differs per locale - the multi-locale shape. */
+    const LOCALIZED: SiteConfig = {
+        ...SITE_PREFIXED,
+        indexName: { en: "Example Blog", nl: "Example-blog" },
+        description: { en: "Posts about examples.", nl: "Artikelen over voorbeelden." },
+    };
+
+    it("writes each locale's own channel title and description", () => {
+        const en = buildRssFeed([POST], LOCALIZED, "en");
+        const nl = buildRssFeed([POST], LOCALIZED, "nl");
+        expect(en).toContain("<title>Example Blog</title>");
+        expect(en).toContain("<description>Posts about examples.</description>");
+        expect(nl).toContain("<title>Example-blog</title>");
+        expect(nl).toContain("<description>Artikelen over voorbeelden.</description>");
+    });
+
+    it("falls back to the default locale's copy for a locale the map does not cover", () => {
+        const fr = buildRssFeed([POST], LOCALIZED, "fr");
+        expect(fr).toContain("<title>Example Blog</title>");
+        expect(fr).toContain("<description>Posts about examples.</description>");
+    });
+
+    it("keeps the single-string form the same in every locale", () => {
+        const en = buildRssFeed([POST], SITE_PREFIXED, "en");
+        const nl = buildRssFeed([POST], SITE_PREFIXED, "nl");
+        // No `indexName`, so the channel title stays the bare brand name it always was.
+        expect(en).toContain("<title>Example</title>");
+        expect(nl).toContain("<title>Example</title>");
+        expect(en).toContain("<description>Posts about examples.</description>");
+        expect(nl).toContain("<description>Posts about examples.</description>");
+    });
+
+    it("falls back to the generic brand string when no description is configured", () => {
+        expect(buildRssFeed([POST], SITE, "en")).toContain("<description>The Example blog.</description>");
+    });
+});

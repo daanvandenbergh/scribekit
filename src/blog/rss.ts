@@ -12,7 +12,7 @@
 
 import { localePath } from "../shared/locales.js";
 import { absoluteUrl, FALLBACK_LOCALE } from "../shared/seo.js";
-import { overviewDescription } from "./seo.js";
+import { overviewDescription, overviewName } from "./seo.js";
 import type { PostMeta, SiteConfig } from "./types.js";
 
 /**
@@ -68,8 +68,9 @@ export function rssFeedPath(site: SiteConfig, lang: string): string {
 /**
  * Builds one locale's complete RSS 2.0 document from its posts' metadata.
  *
- * The channel is the locale's blog index (title from `brandName`, description from
- * `site.description` with the same fallback the overview metadata uses); each item carries the
+ * The channel is the locale's blog index (title from `site.indexName` falling back to `brandName`,
+ * description from `site.description` with the same fallback the overview metadata uses - both
+ * resolved for THIS locale, so a Dutch feed does not announce itself in English); each item carries the
  * post's absolute URL as both `link` and permalink `guid`, its description, its categories, and
  * a `pubDate` when the post declares a date. The channel's `lastBuildDate` is the newest post
  * date, so an unchanged blog produces a byte-identical feed - readers and crawlers see a new
@@ -117,9 +118,9 @@ export function buildRssFeed(posts: PostMeta[], site: SiteConfig, lang?: string)
     });
 
     const channel = [
-        `        <title>${escapeXml(site.brandName)}</title>`,
+        `        <title>${escapeXml(overviewName(site, resolved) ?? site.brandName)}</title>`,
         `        <link>${escapeXml(indexUrl)}</link>`,
-        `        <description>${escapeXml(overviewDescription(site))}</description>`,
+        `        <description>${escapeXml(overviewDescription(site, resolved))}</description>`,
         `        <language>${escapeXml(resolved.toLowerCase())}</language>`,
         ...(newest !== undefined ? [`        <lastBuildDate>${rfc1123(newest)}</lastBuildDate>`] : []),
         `        <atom:link href="${escapeXml(selfUrl)}" rel="self" type="application/rss+xml"/>`,

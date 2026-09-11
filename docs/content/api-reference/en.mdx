@@ -59,7 +59,8 @@ new Docs(config: DocsConfig)
 | `siteUrl` | `string` | `undefined` | Absolute origin. Sets `metadataBase` and absolute JSON-LD URLs |
 | `brandName` | `string` | `undefined` | Title suffix, `og:siteName`, JSON-LD publisher |
 | `defaultAuthor` | `string` | `undefined`, falls back to `brandName` | Author used when a page omits one |
-| `description` | `string` | `undefined`, falls back to `` `The ${brandName} documentation.` `` | Index page description |
+| `description` | `string \| Record<string, string>` | `undefined`, falls back to `` `The ${brandName} documentation.` `` | Index page description. A map is resolved per locale, falling back to `defaultLocale` |
+| `indexName` | `string \| Record<string, string>` | `undefined`, falls back to `` `${brandName} Docs` `` | Index name: `CollectionPage` name and index OpenGraph title. Resolved per locale like `description` |
 | `organizationId` | `string` | `undefined`, which inlines a standalone `Organization` publisher | `@id` of an existing `Organization` |
 | `authorId` | `string` | `undefined`, which inlines a name-only author | `@id` of a `Person` or `Organization` author |
 | `websiteId` | `string` | `undefined`, which omits `isPartOf` | `@id` of the host `WebSite` entity |
@@ -112,6 +113,8 @@ The five SEO methods route through a private `requireSite()`, which throws this 
 ```text
 This Docs was created without a `site` config; pass `siteUrl` and `brandName` to use the SEO helpers.
 ```
+
+A locale's `dateLocale` is its full BCP 47 tag, and it drives `og:locale` as well as date formatting: a locale declaring `en-GB` publishes `og:locale` `en_GB`, where the bare `en` code would maximize to `en_US`.
 
 `dateLocale(lang?)` resolves in this order: the matched locale's own `dateLocale`; then, if the code equals `defaultLocale`, the instance `locale`; then the matched `code`; then the instance `locale`. An unconfigured language returns the instance `locale`, not the code.
 
@@ -213,7 +216,8 @@ new Blog(config: BlogConfig)
 | `siteUrl` | `string` | `undefined` | Origin for `metadataBase` and absolute JSON-LD. Gates `site` |
 | `brandName` | `string` | `undefined` | Title suffix, `og:siteName`, publisher. Gates `site` |
 | `defaultAuthor` | `string` | `undefined` | Author fallback |
-| `description` | `string` | falls back to `` `The ${brandName} blog.` `` | Index description |
+| `description` | `string \| Record<string, string>` | falls back to `` `The ${brandName} blog.` `` | Index description, also the RSS channel description. A map is resolved per locale, falling back to `defaultLocale` |
+| `indexName` | `string \| Record<string, string>` | falls back to `` `${brandName} Blog` `` (bare `brandName` for the RSS `<title>`) | RSS channel title, `CollectionPage` name, index OpenGraph title |
 | `organizationId` | `string` | `undefined` | `@id` reference for the publisher |
 | `authorId` | `string` | `undefined` | `@id` reference for the author |
 | `websiteId` | `string` | `undefined` | `@id` reference for `isPartOf` |
@@ -244,6 +248,7 @@ Nothing else is exposed; `contentDir` and `extension` are not fields at all, onl
 | `getTranslations(slug)` | `string[]`, default first | `DuplicatePostError` |
 | `getAllCategories(lang?)` | `string[]`, distinct and sorted | `DuplicatePostError` |
 | `dateLocale(lang?)` | `string` | no |
+| `ogLocale(lang?)` | `string`, the `og:locale` tag (`en_GB`) for that language | no |
 | `formatDate(iso, lang?)` | `string` | no |
 | `readingMinutes(post)` | `number`, whole minutes, floored at 1 | no |
 | `tableOfContents(post)` | `TocEntry[]` | no |
@@ -504,7 +509,8 @@ The JSDoc on `blog.ts`, `blog/types.ts`, `docs/types.ts`, and `docs/docs.ts` cla
 | --- | --- |
 | `LocaleConfig` | `{ code: string; label?: string; dateLocale?: string }` |
 | `TocEntry` | `{ depth: 2 \| 3; text: string; id: string }` |
-| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?`, `defaultLocale?`, `prefixDefaultLocale?`, `trailingSlash?`, `organizationId?`, `authorId?`, `websiteId?` |
+| `LocalizedText` | `string \| Record<string, string>` - site-level copy that is either the same in every locale (a string) or given per locale code. A missing key falls back to `defaultLocale`, then to the builder's generic text, never to another locale's copy |
+| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?: LocalizedText`, `indexName?: LocalizedText`, `defaultLocale?`, `locales?`, `prefixDefaultLocale?`, `trailingSlash?`, `organizationId?`, `authorId?`, `websiteId?`. `locales` is what lets the SEO builders read a locale's own `dateLocale` for `og:locale`; the backend classes set it from their own `locales` |
 | `SitemapEntry` | `{ url: string; alternates?: { languages?: Record<string, string> } }` |
 | `PageMetadata` | A structural subset of Next's `Metadata` with **no `next` type dependency**: `metadataBase?: URL`, `title?`, `description?`, `keywords?: string[]`, `robots?: { index?: boolean; follow?: boolean }`, `authors?: { name: string }[]`, `alternates?: { canonical?; languages? }`, `openGraph?`, `twitter?` |
 | `JsonLd` | `Record<string, unknown>` |
@@ -578,6 +584,9 @@ The interactive body rendered by `BlogOverview`: fuzzy search, category filters,
 | `similarTitle` | `string` | translated (e.g. `"Similar pages"`) |
 | `similarCount` | `number` | passes `undefined` through, so the backend default `3` applies |
 | `readingLabel` | `(minutes: number) => string` | translated |
+| `updatedLabel` | `(date: string) => string` | translated |
+
+`BlogPage` shows an "Updated <date>" item beside the publish date whenever the post's `updated` front-matter is later than its `date`.
 
 #### BlogSidebar
 
@@ -643,7 +652,7 @@ The interactive body rendered by `BlogOverview`: fuzzy search, category filters,
 | `lang` | `string` | `docs.defaultLocale` |
 | `linkComponent` | `ElementType` | `"a"` |
 | `title` | `string` | the localized word **"Documentation"** (`docsLabels(lang).title`); the brand is not used |
-| `description` | `string` | `site?.description` |
+| `description` | `string` | `site?.description`, resolved for `lang` when it is a per-locale map |
 | `header` | `ReactNode` | the built-in hero |
 | `actions` | `DocsHeroAction[]` | none. The index does not invent a destination |
 | `heroVariant` | `DocsHeroVariant` | `"plain"` |
@@ -1068,7 +1077,7 @@ The last three are **templates with `{count}` / `{query}` placeholders**, not fu
 
 `back` is authored with `ui.uniform("← Blog")`, so it is one string for all 24 languages.
 
-`blogLabels(lang)` returns `BlogLabels`: `empty`, `readMore`, `searchPlaceholder`, `loadMore`, `allCategories`, `back`, `onThisPage`, `similarPages`, `filterByCategory`, `writtenBy`, `publishedLabel(date)`, `readingLabel(minutes)`.
+`blogLabels(lang)` returns `BlogLabels`: `empty`, `readMore`, `searchPlaceholder`, `loadMore`, `allCategories`, `back`, `onThisPage`, `similarPages`, `filterByCategory`, `writtenBy`, `publishedLabel(date)`, `updatedLabel(date)`, `readingLabel(minutes)`.
 
 `docsLabels(lang)` returns `DocsLabels`, 26 members: `title`, `onThisPage`, `previous`, `next`, `feedbackQuestion`, `feedbackYes`, `feedbackNo`, `feedbackThanks`, `searchPlaceholder`, `searchEmpty`, `language`, `changeLanguage`, `openNav`, `closeNav`, `browseByTopic`, `recentlyUpdated`, `filterPages`, `clearFilter`, `updatedLabel(date)`, `readingLabel(minutes)`, `pageCountLabel(count)`, `articleCountLabel(count)`, `topicCountLabel(count)`, `resultCountTemplate`, `resultCountOneTemplate`, `noMatchesTemplate`.
 

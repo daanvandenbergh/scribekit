@@ -216,6 +216,9 @@ describe("Blog.site", () => {
             basePath: "/articles/",
             description: undefined,
             defaultLocale: "en",
+            // The locale list rides along so the SEO builders can read each locale's own BCP 47 tag
+            // for og:locale instead of maximizing its bare code; `makeBlog` configures none.
+            locales: [],
             prefixDefaultLocale: false,
             trailingSlash: true,
         });
@@ -446,6 +449,39 @@ describe("Blog multi-language", () => {
             });
             expect(meta.openGraph?.locale).toBe("en_US");
             expect(meta.openGraph?.alternateLocale).toEqual(["fr_FR"]);
+        });
+
+        it("derive og:locale from a locale's declared tag, on posts AND the overview alike", () => {
+            // `en` maximizes to `en_US`; a site that declares `en-GB` must publish `en_GB` on EVERY
+            // surface. Nothing renders wrong when it does not - the two just disagree silently.
+            const blog = makeI18nBlog({
+                siteUrl: "https://example.com",
+                brandName: "Example",
+                locales: [
+                    { code: "en", label: "English", dateLocale: "en-GB" },
+                    { code: "fr", label: "Français", dateLocale: "fr-CA" },
+                ],
+            });
+            expect(blog.postMetadata(blog.getPost("getting-started")).openGraph?.locale).toBe("en_GB");
+            expect(blog.postMetadata(blog.getPost("getting-started")).openGraph?.alternateLocale).toEqual([
+                "fr_CA",
+            ]);
+            expect(blog.overviewMetadata("en").openGraph?.locale).toBe("en_GB");
+            expect(blog.overviewMetadata("fr").openGraph?.locale).toBe("fr_CA");
+        });
+
+        it("expose that same og:locale, so a hand-built metadata block cannot disagree with a post", () => {
+            const blog = makeI18nBlog({
+                siteUrl: "https://example.com",
+                brandName: "Example",
+                locales: [
+                    { code: "en", label: "English", dateLocale: "en-GB" },
+                    { code: "fr", label: "Français", dateLocale: "fr-CA" },
+                ],
+            });
+            expect(blog.ogLocale("en")).toBe(blog.postMetadata(blog.getPost("getting-started")).openGraph?.locale);
+            expect(blog.ogLocale("fr")).toBe("fr_CA");
+            expect(blog.ogLocale()).toBe("en_GB");
         });
 
         it("omit hreflang for an untranslated post", () => {

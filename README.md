@@ -174,6 +174,8 @@ The `title` above is your H1 - don't repeat it here.
 - The minimap needs anchor `id`s on `##`/`###` headings (injected for you). If you override `h2`/`h3` via `components`, add your own `id`s with the exported `slugify`.
 - Turn it off with `showSidebar={false}`; customise via `tocTitle`, `similarTitle`, `similarCount` (default 3), and `readingLabel`.
 
+A post whose `updated` front-matter is later than its `date` also carries an "Updated <date>" item in the meta row, in the post's own language; override the wording with `updatedLabel`.
+
 ```tsx
 <BlogPage blog={blog} slug={slug} similarCount={4} tocTitle="Contents" />
 ```
@@ -449,6 +451,9 @@ export const blog = new Blog({
     locales: [
         { code: "en", label: "English" },
         { code: "fr", label: "Français", dateLocale: "fr-FR" }, // label + dateLocale are optional
+        // `dateLocale` is the locale's full BCP 47 tag: it formats that language's dates AND is the
+        // tag `og:locale` is derived from, so an `en` locale declaring `en-GB` publishes `en_GB`
+        // rather than the `en_US` the bare subtag would maximize to.
     ],
     defaultLocale: "en",
 });
@@ -649,7 +654,8 @@ The site attributes are passed directly (flattened) into the config:
 | `siteUrl` / `brandName` | - | Site origin + brand name. Provide **both** to enable the SEO methods and JSON-LD. |
 | `defaultAuthor` | `brandName` | Author used when a post omits its own. |
 | `basePath` | `/blog` | Route the blog is mounted at (used to build URLs). |
-| `description` | - | Blog index meta description. |
+| `description` | - | Blog index meta description, also the RSS channel description and the `CollectionPage` description. A `string` is used in every locale; a `{ en: "...", nl: "..." }` map gives each locale its own. |
+| `indexName` | `` `${brandName} Blog` `` (bare `brandName` for the RSS channel `<title>`) | Human-readable index name: RSS channel title, `CollectionPage` name, index OpenGraph title. Takes the same per-locale map as `description`. |
 | `extension` | `.mdx` | Post file extension (each file is `<slug>/<lang><ext>`, e.g. `en.mdx` / `fr.mdx`). |
 | `locale` | `en-GB` | Locale for `formatDate` (default language). |
 | `locales` | - | Languages this blog is published in; see [Multiple locales](#multiple-locales). Leave unset for a single-language blog. |
@@ -662,7 +668,7 @@ The site attributes are passed directly (flattened) into the config:
 
 **Stitch into an existing site graph (better SEO).** If your app already emits site-wide schema.org JSON-LD with stable `@id`s, pass `organizationId` / `authorId` / `websiteId` so the blog references those entities by `@id` instead of inlining its own copies - search engines then merge the blog into your single knowledge-graph entity. Leave them unset to keep the self-contained default output.
 
-Methods: `getPostSlugs()`, `getPost(slug, lang?)` (throws `PostNotFoundError`), `getAllPosts(lang?)` (newest first), `getAllCategories(lang?)`, `formatDate(iso, lang?)`, `readingMinutes(post)`, `tableOfContents(post)`, `similarPosts(post, limit?)`, and - when `siteUrl`/`brandName` are set - `overviewMetadata(lang?)`, `postMetadata(post)`, `overviewJsonLd(posts, lang?)`, `postJsonLd(post)`, `sitemapEntries()`. Multi-language: `getPostRefs()` (every `(slug, lang)` pair, for `generateStaticParams`), `getTranslations(slug)`, `dateLocale(lang?)`. The assembled config is exposed as `blog.site` / `blog.locale` / `blog.locales` / `blog.defaultLocale` / `blog.prefixDefaultLocale` / `blog.trailingSlash`. The pure helpers behind the components (`readingMinutes`, `tableOfContents`, `similarPosts`, `slugify`, `collectCategories`, `localePath`) are also exported from the package root.
+Methods: `getPostSlugs()`, `getPost(slug, lang?)` (throws `PostNotFoundError`), `getAllPosts(lang?)` (newest first), `getAllCategories(lang?)`, `formatDate(iso, lang?)`, `readingMinutes(post)`, `tableOfContents(post)`, `similarPosts(post, limit?)`, and - when `siteUrl`/`brandName` are set - `overviewMetadata(lang?)`, `postMetadata(post)`, `overviewJsonLd(posts, lang?)`, `postJsonLd(post)`, `sitemapEntries()`. Multi-language: `getPostRefs()` (every `(slug, lang)` pair, for `generateStaticParams`), `getTranslations(slug)`, `dateLocale(lang?)`, `ogLocale(lang?)` (that language's `og:locale` tag - the same value the metadata builders emit, for a host app that hand-builds an OpenGraph block). The assembled config is exposed as `blog.site` / `blog.locale` / `blog.locales` / `blog.defaultLocale` / `blog.prefixDefaultLocale` / `blog.trailingSlash`. The pure helpers behind the components (`readingMinutes`, `tableOfContents`, `similarPosts`, `slugify`, `collectCategories`, `localePath`) are also exported from the package root.
 
 ### `<BlogOverview>` / `<BlogPage>`
 
@@ -680,7 +686,7 @@ Shared optional props: `basePath` (defaults to `blog.site.basePath`), `imgCompon
 
 ### `new Docs(config)`
 
-Same flattened site attributes as [`new Blog(config)`](#new-blogconfig) (`siteUrl` / `brandName` / `defaultAuthor` / `description` / `organizationId` / `authorId` / `websiteId` / `locale` / `locales` / `defaultLocale` / `prefixDefaultLocale` / `trailingSlash`), plus:
+Same flattened site attributes as [`new Blog(config)`](#new-blogconfig) (`siteUrl` / `brandName` / `defaultAuthor` / `description` / `indexName` / `organizationId` / `authorId` / `websiteId` / `locale` / `locales` / `defaultLocale` / `prefixDefaultLocale` / `trailingSlash`), plus:
 
 | Config | Default | Description |
 | --- | --- | --- |

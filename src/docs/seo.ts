@@ -5,13 +5,13 @@
  * plain object for the consumer to serialise into a `<script type="application/ld+json">`.
  *
  * A documentation page is modelled as a `TechArticle` (rather than a blog's `BlogPosting`). The
- * generic SEO primitives (`absoluteUrl`, `ogLocale`, `hreflangMap`) and the i18n sitemap builder
+ * generic SEO primitives (`absoluteUrl`, `ogLocaleFor`, `hreflangMap`) and the i18n sitemap builder
  * live in `../shared/seo.js` and are shared with the blog; URLs are built exclusively via
  * {@link localePath} so the canonical/hreflang metadata can never drift from the rendered links.
  */
 
 import { localePath } from "../shared/locales.js";
-import { absoluteUrl, ogLocale, hreflangMap, FALLBACK_LOCALE, type JsonLd } from "../shared/seo.js";
+import { absoluteUrl, localizedText, ogLocaleFor, hreflangMap, FALLBACK_LOCALE, type JsonLd } from "../shared/seo.js";
 import type { DocMeta, NavItem, PageMetadata, SiteConfig } from "./types.js";
 
 export type { JsonLd };
@@ -31,13 +31,33 @@ function authorOf(site: SiteConfig): string {
 }
 
 /**
- * The docs index description, falling back to a generic brand string.
+ * The docs index description for one language, falling back to a generic brand string.
  *
  * @param site - the site configuration.
+ * @param lang - the language being built. Defaults to `site.defaultLocale`.
  * @returns the description used for the index metadata and CollectionPage.
  */
-function indexDescription(site: SiteConfig): string {
-    return site.description ?? `The ${site.brandName} documentation.`;
+function indexDescription(site: SiteConfig, lang?: string): string {
+    const defaultLocale = site.defaultLocale;
+    return (
+        localizedText(site.description, lang ?? defaultLocale, defaultLocale) ??
+        `The ${site.brandName} documentation.`
+    );
+}
+
+/**
+ * The docs index's name for one language: the configured `indexName`, else `<brandName> Docs`.
+ *
+ * @param site - the site configuration.
+ * @param lang - the language being built. Defaults to `site.defaultLocale`.
+ * @returns the name used for the index metadata's OpenGraph title and the CollectionPage.
+ */
+function indexName(site: SiteConfig, lang?: string): string {
+    const defaultLocale = site.defaultLocale;
+    return (
+        localizedText(site.indexName, lang ?? defaultLocale, defaultLocale) ??
+        `${site.brandName} ${SECTION_NAME}`
+    );
 }
 
 /**
@@ -133,8 +153,8 @@ export function buildDocMetadata(
             // `alt` is the entry's own title - the SAME string the rendered hero <img alt>
             // already carries, so it is grounded in visible content rather than invented.
             images: meta.image ? [{ url: meta.image, alt: meta.title }] : undefined,
-            locale: ogLocale(meta.lang),
-            alternateLocale: alternateLocale.length > 0 ? alternateLocale.map(ogLocale) : undefined,
+            locale: ogLocaleFor(site.locales, meta.lang),
+            alternateLocale: alternateLocale.length > 0 ? alternateLocale.map((lang) => ogLocaleFor(site.locales, lang)) : undefined,
         },
         twitter: {
             card: "summary_large_image",
@@ -157,7 +177,7 @@ export function buildDocMetadata(
 export function buildIndexMetadata(site: SiteConfig, lang?: string, langs: string[] = []): PageMetadata {
     const resolvedLang = lang ?? site.defaultLocale ?? FALLBACK_LOCALE;
     const defaultLocale = site.defaultLocale ?? resolvedLang;
-    const description = indexDescription(site);
+    const description = indexDescription(site, resolvedLang);
     const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang });
     const languages = indexLanguages(site, langs, defaultLocale);
     return {
@@ -169,9 +189,9 @@ export function buildIndexMetadata(site: SiteConfig, lang?: string, langs: strin
             type: "website",
             url,
             siteName: site.brandName,
-            title: `${site.brandName} ${SECTION_NAME}`,
+            title: indexName(site, resolvedLang),
             description,
-            locale: ogLocale(resolvedLang),
+            locale: ogLocaleFor(site.locales, resolvedLang),
         },
         twitter: { card: "summary_large_image" },
     };
@@ -263,13 +283,13 @@ export function indexJsonLd(items: NavItem[], site: SiteConfig, lang?: string): 
     const defaultLocale = site.defaultLocale ?? resolvedLang;
     const origin = new URL(site.siteUrl).origin;
     const indexUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang }));
-    const description = indexDescription(site);
+    const description = indexDescription(site, resolvedLang);
     const graph: JsonLd[] = [
         {
             "@type": "CollectionPage",
             "@id": indexUrl,
             url: indexUrl,
-            name: `${site.brandName} ${SECTION_NAME}`,
+            name: indexName(site, resolvedLang),
             description,
             ...(site.organizationId ? { publisher: { "@id": site.organizationId } } : {}),
             ...(site.websiteId ? { isPartOf: { "@id": site.websiteId } } : {}),
