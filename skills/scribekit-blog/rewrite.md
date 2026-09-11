@@ -60,7 +60,9 @@ included.** Verifier rounds are built from the ledger by code, so a table row th
 a ledger row is a claim no verifier ever sees: a review tabled the description as `t2`, sent 28
 ledger rows to four rounds, and shipped the description stronger than every source with `t2`
 still `unverified` and the report saying "no-row claims: two". The final check's `--claim-table`
-fails UNJOINED for any table row with no verifier-judged ledger row.
+fails UNJOINED for any table row with no verifier-judged ledger row - and a claim you CUT from the
+post gets `"cut": true` on its table row (never a repoint to another claim): the check then greps
+the content files to confirm the sentence is gone.
 
 **The table comes FROM THE POST; the ledger comes second.** Extract your table by reading the
 post - BEFORE any read of the sources record, a `head` peek included (a run peeked at row c1
