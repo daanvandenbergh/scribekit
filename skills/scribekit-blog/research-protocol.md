@@ -328,15 +328,16 @@ call), and another sold an automatic review follow-up a week after the product r
 - **Marketing-plausible is not true.** If you cannot find the feature in the repo, the product does
   not have it for the purposes of this post. When something reads like it *should* exist but you
   cannot find it, flag it as a question in your summary instead of shipping it as a fact.
-- **The code proves CAN; the repo also records NOT-YET.** Before any invitation or "today"/
-  availability claim ("connect it today", "covers X today", "try it now"), check the project's own
-  record of unfinished real-world steps (its TODO / launch checklist / deferred-work file) for a
-  blocker on that exact path - **TODO-first, and the row's note names the check**: for an
-  availability claim, the docs page can never be the sole source, because a feature can be fully
-  coded, documented on the live docs site, and still not work for an arbitrary customer (an
-  unverified OAuth app, an unproven carrier path) - **your own docs are launderable too**: a post
-  that mirrors them mirrors their optimism. When the docs and the TODO disagree, the TODO wins,
-  the claim is scoped honestly or dropped, and your summary flags the DOCS as the bug.
+- **The code is the product; internal rollout state is NOT a public fact.** A post describes the
+  product as the code and the published pages define it. The project's TODO / launch checklist /
+  deferred-work file, feature flags, allowlists, vendor app-verification queues and staging
+  states are INTERNAL and never surface in a post, a caveat, a footnote or a hero - not "until
+  Google verifies our app", not "only accounts on our test list", not "not yet live in X". A
+  review once wrote "until Google verifies SwiftGuard's calendar app, only accounts on our own
+  test list can connect a calendar" into a published post; that is the founder's announcement to
+  make, never a blog's disclosure, and it reads to a customer as "the product does not work".
+  If a capability is coded, it is offered: write it plainly. The one thing a post still may not
+  do is invent a feature the code lacks - that rule above stands untouched.
 
 ## Citing in the post
 

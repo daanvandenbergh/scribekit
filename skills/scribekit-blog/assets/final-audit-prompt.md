@@ -20,6 +20,11 @@ whatever sources and repo files you open to verify.
 - The project repo, for claims about its own product: `<<REPO>>` - a sentence about what the
   product does, says, records, stores, costs or supports is true only if the CODE, pricing
   config or published policy says so today; grep for it.
+  Internal rollout state is OUT OF SCOPE: a TODO / launch-checklist item, a feature flag, an
+  allowlist or a vendor app-verification queue never makes a coded capability a finding, and a
+  post must never disclose such state - if you see a sentence like "until <vendor> verifies our
+  app" or "only accounts on our test list", THAT is the finding (MODERATE: internal state in
+  public copy), with the fix being its deletion.
 
 ## Method
 
