@@ -49,11 +49,28 @@ describe("buildDocMetadata", () => {
         expect(meta.openGraph?.url).toBe("/docs/greeting-and-voice/");
         expect(meta.openGraph?.modifiedTime).toBe("2026-07-03");
         expect(meta.openGraph?.images).toEqual([
-            { url: "/assets/docs/greeting-and-voice/hero.jpg", alt: "Greeting & voice" },
+            { url: "/assets/docs/greeting-and-voice/hero.jpg", alt: "Greeting & voice", width: 1200, height: 630 },
         ]);
         expect(meta.twitter?.images).toEqual([
-            { url: "/assets/docs/greeting-and-voice/hero.jpg", alt: "Greeting & voice" },
+            { url: "/assets/docs/greeting-and-voice/hero.jpg", alt: "Greeting & voice", width: 1200, height: 630 },
         ]);
+    });
+
+    it("declares the hero's 1200x630 on BOTH share-card images", () => {
+        // og:image:width/height let Facebook's crawler render the image on the first share instead
+        // of after its own async fetch; the pair is the size the kit's own <img> renders the hero at.
+        const meta = buildDocMetadata(DOC, SITE);
+        for (const image of [...(meta.openGraph?.images ?? []), ...(meta.twitter?.images ?? [])]) {
+            expect(image.width).toBe(1200);
+            expect(image.height).toBe(630);
+        }
+        expect(meta.openGraph?.images).toHaveLength(1);
+        expect(meta.twitter?.images).toHaveLength(1);
+    });
+
+    it("emits twitter:site from the site config and omits it when unset", () => {
+        expect(buildDocMetadata(DOC, { ...SITE, twitterSite: "@example" }).twitter?.site).toBe("@example");
+        expect(buildDocMetadata(DOC, SITE).twitter?.site).toBeUndefined();
     });
 
     it("gives every share-card image an `alt`, taken from the page's own title", () => {
@@ -142,7 +159,29 @@ describe("buildIndexMetadata", () => {
     });
 });
 
+describe("buildIndexMetadata (twitter:site)", () => {
+    it("emits twitter:site from the site config and omits it when unset", () => {
+        expect(buildIndexMetadata({ ...SITE, twitterSite: "@example" }).twitter?.site).toBe("@example");
+        expect(buildIndexMetadata(SITE).twitter?.site).toBeUndefined();
+    });
+});
+
 describe("docJsonLd", () => {
+    it("names the page as mainEntityOfPage with the same @id as the article", () => {
+        const article = (docJsonLd(DOC, SITE)["@graph"] as Record<string, unknown>[])[0]!;
+        expect(article.mainEntityOfPage).toEqual({ "@type": "WebPage", "@id": article["@id"] });
+        expect(article["@id"]).toBe("https://example.com/docs/greeting-and-voice/");
+    });
+
+    it("joins front-matter keywords into schema.org Text, and omits the field when there are none", () => {
+        const graph = (meta: Partial<DocMeta>): Record<string, unknown> =>
+            (docJsonLd({ ...DOC, ...meta }, SITE)["@graph"] as Record<string, unknown>[])[0]!;
+        expect(graph({}).keywords).toBe("greeting, voice");
+        // No empty string: an empty `keywords` is noise a validator flags, not a declaration.
+        expect(graph({ keywords: [] })).not.toHaveProperty("keywords");
+        expect(graph({ keywords: undefined })).not.toHaveProperty("keywords");
+    });
+
     it("builds a TechArticle + BreadcrumbList with fully-absolute URLs", () => {
         const graph = docJsonLd(DOC, SITE)["@graph"] as Record<string, unknown>[];
         const article = graph[0]!;
