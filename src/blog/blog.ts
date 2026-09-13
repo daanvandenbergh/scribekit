@@ -170,6 +170,7 @@ export class Blog {
                 readingTime: readingMinutes(content),
                 author: typeof data.author === "string" ? data.author : undefined,
                 authorImage: typeof data["author-image"] === "string" ? data["author-image"] : undefined,
+                authorUrl: typeof data["author-url"] === "string" ? data["author-url"] : undefined,
                 image: typeof data.image === "string" ? data.image : undefined,
                 updated: isoDateString(data.updated),
             },

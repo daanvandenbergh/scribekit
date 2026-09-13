@@ -59,7 +59,9 @@ export interface BlogPageProps {
  * estimated reading time, and "Similar pages". When the post declares an `author`, their name
  * appears in the meta row (with a small round avatar when `author-image` is set) and a plain
  * "Written by" author bio - a divider, the avatar (when set), the name, and the category /
- * publish date - closes the article.
+ * publish date - closes the article. With `author-url` set, the name in both places is a link
+ * rendered through `linkComponent` (so a Next `Link` prefetches it like any other internal link);
+ * without it the name stays plain text.
  *
  * A server component: pass your configured `Blog` instance and the slug (and, for a translated
  * post, the `lang`), and it loads the post (`blog.getPost(slug, lang)`), formats the date in that
@@ -113,6 +115,19 @@ export function BlogPage({
     // Inject anchor ids into headings so the minimap links resolve; caller's components win.
     const mergedComponents = { h2: withHeadingId("h2"), h3: withHeadingId("h3"), ...components };
 
+    // The author's name as it appears in BOTH the meta row and the closing bio: a link when the
+    // post says where the author lives (`author-url`), plain text otherwise. Built once so the two
+    // spots cannot disagree, and through `Link` so a consumer's router component is honoured.
+    const authorName = meta.author ? (
+        meta.authorUrl ? (
+            <Link href={meta.authorUrl} className="scribekit-author-link">
+                {meta.author}
+            </Link>
+        ) : (
+            meta.author
+        )
+    ) : null;
+
     const article = (
         <article className="scribekit-post">
             {showBackLink ? (
@@ -142,7 +157,7 @@ export function BlogPage({
                         {meta.authorImage ? (
                             <Img className="scribekit-post-author-avatar" src={meta.authorImage} alt={meta.author} width={24} height={24} />
                         ) : null}
-                        {meta.author}
+                        {authorName}
                     </span>
                 ) : null}
                 <span className="scribekit-post-metaitem">{readingText}</span>
@@ -163,7 +178,7 @@ export function BlogPage({
                     ) : null}
                     <div className="scribekit-author-bio-body">
                         <div className="scribekit-author-bio-label">{labels.writtenBy}</div>
-                        <div className="scribekit-author-bio-name">{meta.author}</div>
+                        <div className="scribekit-author-bio-name">{authorName}</div>
                         <div className="scribekit-author-bio-meta">
                             {meta.categories?.[0] ? <span className="scribekit-author-bio-cat">{meta.categories[0]}</span> : null}
                             {meta.date ? (

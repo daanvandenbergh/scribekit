@@ -67,6 +67,7 @@ describe("Blog.getPost", () => {
             readingTime: readingMinutes(content),
             author: "Jane Doe",
             authorImage: "/assets/blog/authors/jane-doe.svg",
+            authorUrl: "/about",
             date: "2026-06-28",
             image: "/assets/blog/how-many-calls/hero.en.jpg",
             updated: "2026-07-07",
@@ -96,6 +97,7 @@ describe("Blog.getPost", () => {
         expect(meta.readingTime).toBeGreaterThanOrEqual(1);
         expect(meta.author).toBeUndefined();
         expect(meta.authorImage).toBeUndefined();
+        expect(meta.authorUrl).toBeUndefined();
         expect(meta.image).toBeUndefined();
         expect(meta.updated).toBeUndefined();
     });
@@ -162,6 +164,11 @@ describe("Blog.getPost", () => {
     it("takes the author avatar from the author-image front-matter key, or undefined when omitted", () => {
         expect(makeBlog().getPost("how-many-calls").meta.authorImage).toBe("/assets/blog/authors/jane-doe.svg");
         expect(makeBlog().getPost("answering-service").meta.authorImage).toBeUndefined();
+    });
+
+    it("takes the author link from the author-url front-matter key, or undefined when omitted", () => {
+        expect(makeBlog().getPost("how-many-calls").meta.authorUrl).toBe("/about");
+        expect(makeBlog().getPost("answering-service").meta.authorUrl).toBeUndefined();
     });
 });
 

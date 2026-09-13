@@ -319,6 +319,7 @@ Returns `[...new Set(posts.flatMap((p) => p.categories ?? []))].sort()`: distinc
 | `readingTime` | `number?` | set in practice | `readingMinutes(content)` |
 | `author` | `string?` | no | `typeof === "string"`, strict |
 | `authorImage` | `string?` | no | `typeof === "string"`, strict. **The YAML key is `author-image`**, kebab-case |
+| `authorUrl` | `string?` | no | `typeof === "string"`, strict. **The YAML key is `author-url`**, kebab-case. When set, `BlogPage` renders the author name as a link |
 | `image` | `string?` | no | `typeof === "string"`, strict |
 | `updated` | `string?` | no | `isoDateString(data.updated)` |
 

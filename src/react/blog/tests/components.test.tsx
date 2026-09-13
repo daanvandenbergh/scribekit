@@ -13,7 +13,7 @@ vi.mock("../../shared/mdx.js", async () => {
     };
 });
 
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { BlogOverview } from "../BlogOverview.js";
 import { BlogPage } from "../BlogPage.js";
 import { BlogSidebar } from "../BlogSidebar.js";
@@ -218,6 +218,35 @@ describe("BlogPage", () => {
         const html = renderToStaticMarkup(<BlogPage blog={fakeBlog({ getPost: () => withAuthor })} slug="hello-world" />);
         expect(html).toContain("scribekit-author-bio");
         expect(html).not.toContain("scribekit-author-bio-avatar");
+    });
+
+    it("links the author's name in BOTH the meta row and the bio when author-url is set", () => {
+        const linked: Post = { ...POST, meta: { ...POST.meta, author: "Neil Kakkar", authorUrl: "/about" } };
+        const html = renderToStaticMarkup(<BlogPage blog={fakeBlog({ getPost: () => linked })} slug="hello-world" />);
+        const links = html.match(/<a [^>]*href="\/about"[^>]*>Neil Kakkar<\/a>/g) ?? [];
+        expect(links.every((link) => link.includes('class="scribekit-author-link"'))).toBe(true);
+        // One in the meta row, one in the closing bio - built from one expression, so two, never one.
+        expect(links).toHaveLength(2);
+    });
+
+    it("renders the author's name through linkComponent when author-url is set", () => {
+        // A consumer passes its router's Link; the byline must go through it like every other
+        // internal link, or it becomes the one anchor on the page that does not prefetch.
+        const linked: Post = { ...POST, meta: { ...POST.meta, author: "Neil Kakkar", authorUrl: "/about" } };
+        const Custom = ({ href, children }: { href: string; children: ReactNode }): ReactElement => (
+            <a data-custom-link href={href}>{children}</a>
+        );
+        const html = renderToStaticMarkup(
+            <BlogPage blog={fakeBlog({ getPost: () => linked })} slug="hello-world" linkComponent={Custom} />,
+        );
+        expect(html).toContain('data-custom-link="true" href="/about">Neil Kakkar</a>');
+    });
+
+    it("keeps the author's name plain text when author-url is unset", () => {
+        const plain: Post = { ...POST, meta: { ...POST.meta, author: "Neil Kakkar" } };
+        const html = renderToStaticMarkup(<BlogPage blog={fakeBlog({ getPost: () => plain })} slug="hello-world" />);
+        expect(html).toContain("Neil Kakkar");
+        expect(html).not.toContain("scribekit-author-link");
     });
 
     it("omits the author bio entirely when the post has no author", () => {

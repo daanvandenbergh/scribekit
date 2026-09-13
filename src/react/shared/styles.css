@@ -297,6 +297,18 @@
     margin-right: 2px;
 }
 
+/* The author's name as a link (`author-url`), in the meta row and the bio alike: inherits the
+   surrounding colour and weight so a linked byline reads exactly like a plain one until hovered. */
+.scribekit-author-link {
+    color: inherit;
+    font: inherit;
+    text-decoration: none;
+}
+
+.scribekit-author-link:hover {
+    text-decoration: underline;
+}
+
 .scribekit-post-author-avatar {
     display: block;
     flex: none;

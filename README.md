@@ -152,6 +152,7 @@ categories:                   # optional; usually one, from a small reused taxon
     - Guides
 author: "Jane Doe"            # optional; defaults to site.defaultAuthor, then brandName
 author-image: "/assets/blog/authors/jane-doe.jpg"   # optional; avatar for the author, see below
+author-url: "/about"          # optional; makes the author name a link, see below
 image: "/assets/blog/how-i-work/hero.en.jpg"   # optional; see below
 updated: "2026-07-08"         # optional
 ---
@@ -164,7 +165,7 @@ The `title` above is your H1 - don't repeat it here.
 - **Quote the date.** An unquoted YAML date parses as a `Date`, not a string, and is dropped.
 - **Categories** power the overview's filter buttons - reuse a small taxonomy; the bar hides when every post shares one category. Reading time is computed from the body (no front-matter needed).
 - **Hero images** live in `public/` and are referenced by `image` as a served path, one per language (`hero.en.jpg`, `hero.fr.jpg`). The `scribekit-hero` skill generates them and fills this field.
-- **Authors**: setting `author` shows the name in the meta row and a "Written by" bio closing the article; `author-image` is the avatar (a served path). Leave them unset and both spots render without a picture.
+- **Authors**: setting `author` shows the name in the meta row and a "Written by" bio closing the article; `author-image` is the avatar (a served path); `author-url` makes the name in both spots a link (through your `linkComponent`), e.g. to `/about`. Leave them unset and both spots render as plain text without a picture.
 
 ### Post sidebar
 

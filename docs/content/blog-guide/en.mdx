@@ -41,6 +41,7 @@ categories:
     - News
 author: "Ada Lovelace"
 author-image: "/assets/authors/ada.jpg"
+author-url: "/about"
 image: "/assets/blog/hello-world/hero.en.jpg"
 ---
 
@@ -51,7 +52,7 @@ The body starts at `##` - `title` already renders the H1.
 
 Those are the fields `PostMeta` parses. Anything else is dropped. Three details that bite:
 
-- **The author avatar key is `author-image`**, kebab-case, in the YAML. The parsed field on `PostMeta` is `authorImage`. Writing `authorImage:` in the front-matter gets you nothing.
+- **The author keys are `author-image` and `author-url`**, kebab-case, in the YAML. The parsed fields on `PostMeta` are `authorImage` and `authorUrl`. Writing `authorImage:` or `authorUrl:` in the front-matter gets you nothing. `author-url` turns the author name (meta row and bio) into a link through your `linkComponent`; leave it out and the name stays plain text.
 - **`slug` and `lang` are never front-matter fields.** They come from the folder name and the file name.
 - **`readingTime` is computed from the body**, so never author it.
 

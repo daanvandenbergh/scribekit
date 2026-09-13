@@ -41,6 +41,13 @@ export interface PostMeta {
      * meta row and in the author bio at the end of the post.
      */
     authorImage?: string | undefined;
+    /**
+     * Where the author's name links to (front-matter key `author-url`), e.g. `/about` or an
+     * absolute profile URL. When set, the name in the meta row and in the closing bio renders as a
+     * link through the page's `linkComponent`; when unset both stay plain text, exactly as before.
+     * Per language, like every other field: a translated post links its own locale's page.
+     */
+    authorUrl?: string | undefined;
     /** Hero / OG image path served from the site root, e.g. `/assets/blog/<slug>/hero.en.jpg`. */
     image?: string | undefined;
     /** Last-updated date as an ISO `YYYY-MM-DD` string. */
