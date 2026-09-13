@@ -140,6 +140,11 @@ export interface SiteConfig {
      * unset to omit `isPartOf`.
      */
     websiteId?: string | undefined;
+    /**
+     * The site's X (Twitter) handle, `@` included (e.g. `@example`), emitted as `twitter:site` on
+     * every page's card. Leave unset to emit no attribution.
+     */
+    twitterSite?: string | undefined;
 }
 
 /**
@@ -187,8 +192,10 @@ export interface PageMetadata {
                * Share-card images. `alt` is emitted as `og:image:alt`, which is what a screen reader
                * announces in place of the preview image when the link is shared - the picture itself
                * is unreachable to that reader, so without it the card is announced as nothing.
+               * `width`/`height` become `og:image:width`/`og:image:height`, which let Facebook's
+               * crawler render the image on the first share instead of after its own async fetch.
                */
-              images?: { url: string; alt?: string | undefined }[] | undefined;
+              images?: { url: string; alt?: string | undefined; width?: number | undefined; height?: number | undefined }[] | undefined;
               /** Language of this page's content (e.g. `"fr"`), emitted as `og:locale`. */
               locale?: string | undefined;
               /** Languages this page is also available in, emitted as `og:locale:alternate`. */
@@ -199,6 +206,8 @@ export interface PageMetadata {
     twitter?:
         | {
               card?: string | undefined;
+              /** The site's X handle (`twitter:site`), from {@link SiteConfig.twitterSite}. */
+              site?: string | undefined;
               title?: string | undefined;
               description?: string | undefined;
               /**
@@ -207,7 +216,7 @@ export interface PageMetadata {
                * put the alt text - the two must stay the same shape or the next person adds the alt
                * to one card and not the other.
                */
-              images?: { url: string; alt?: string | undefined }[] | undefined;
+              images?: { url: string; alt?: string | undefined; width?: number | undefined; height?: number | undefined }[] | undefined;
           }
         | undefined;
 }

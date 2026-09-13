@@ -14,7 +14,7 @@
  */
 
 import { localePath } from "../shared/locales.js";
-import { absoluteUrl, localizedText, ogLocaleFor, hreflangMap, FALLBACK_LOCALE, type JsonLd } from "../shared/seo.js";
+import { absoluteUrl, localizedText, ogLocaleFor, hreflangMap, FALLBACK_LOCALE, HERO_IMAGE_SIZE, type JsonLd } from "../shared/seo.js";
 import type { PageMetadata, PostMeta, SiteConfig } from "./types.js";
 
 export type { JsonLd };
@@ -147,15 +147,16 @@ export function buildPostMetadata(
             authors: [author],
             // `alt` is the entry's own title - the SAME string the rendered hero <img alt>
             // already carries, so it is grounded in visible content rather than invented.
-            images: meta.image ? [{ url: meta.image, alt: meta.title }] : undefined,
+            images: meta.image ? [{ url: meta.image, alt: meta.title, ...HERO_IMAGE_SIZE }] : undefined,
             locale: ogLocaleFor(site.locales, meta.lang),
             alternateLocale: alternateLocale.length > 0 ? alternateLocale.map((lang) => ogLocaleFor(site.locales, lang)) : undefined,
         },
         twitter: {
             card: "summary_large_image",
+            site: site.twitterSite,
             title: meta.title,
             description: meta.description,
-            images: meta.image ? [{ url: meta.image, alt: meta.title }] : undefined,
+            images: meta.image ? [{ url: meta.image, alt: meta.title, ...HERO_IMAGE_SIZE }] : undefined,
         },
     };
 }
@@ -189,7 +190,7 @@ export function buildOverviewMetadata(site: SiteConfig, lang?: string, langs: st
             description,
             locale: ogLocaleFor(site.locales, resolvedLang),
         },
-        twitter: { card: "summary_large_image" },
+        twitter: { card: "summary_large_image", site: site.twitterSite },
     };
 }
 
@@ -237,6 +238,7 @@ export function postJsonLd(meta: PostMeta, site: SiteConfig, translations: strin
                 "@type": "BlogPosting",
                 "@id": url,
                 url,
+                mainEntityOfPage: { "@type": "WebPage", "@id": url },
                 headline: meta.title,
                 description: meta.description,
                 inLanguage: meta.lang,
@@ -249,6 +251,8 @@ export function postJsonLd(meta: PostMeta, site: SiteConfig, translations: strin
                     : { "@type": "Organization", name: site.brandName, url: origin },
                 ...(site.websiteId ? { isPartOf: { "@id": site.websiteId } } : {}),
                 ...(meta.image ? { image: absoluteUrl(site.siteUrl, meta.image) } : {}),
+                // schema.org `keywords` is Text; the comma-joined form is Google's own example.
+                ...(meta.keywords?.length ? { keywords: meta.keywords.join(", ") } : {}),
             },
             {
                 "@type": "BreadcrumbList",

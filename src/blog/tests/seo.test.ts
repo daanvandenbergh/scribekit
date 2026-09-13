@@ -46,9 +46,30 @@ describe("buildPostMetadata", () => {
         expect(meta.openGraph?.url).toBe("/blog/hello-world/");
         expect(meta.openGraph?.publishedTime).toBe("2026-06-28");
         expect(meta.openGraph?.modifiedTime).toBe("2026-07-07");
-        expect(meta.openGraph?.images).toEqual([{ url: "/assets/blog/hello-world.jpg", alt: "Hello World" }]);
+        expect(meta.openGraph?.images).toEqual([
+            { url: "/assets/blog/hello-world.jpg", alt: "Hello World", width: 1200, height: 630 },
+        ]);
         expect(meta.twitter?.card).toBe("summary_large_image");
-        expect(meta.twitter?.images).toEqual([{ url: "/assets/blog/hello-world.jpg", alt: "Hello World" }]);
+        expect(meta.twitter?.images).toEqual([
+            { url: "/assets/blog/hello-world.jpg", alt: "Hello World", width: 1200, height: 630 },
+        ]);
+    });
+
+    it("declares the hero's 1200x630 on BOTH share-card images", () => {
+        // og:image:width/height let Facebook's crawler render the image on the first share instead
+        // of after its own async fetch; the pair is the size the kit's own <img> renders the hero at.
+        const meta = buildPostMetadata(POST, SITE);
+        for (const image of [...(meta.openGraph?.images ?? []), ...(meta.twitter?.images ?? [])]) {
+            expect(image.width).toBe(1200);
+            expect(image.height).toBe(630);
+        }
+        expect(meta.openGraph?.images).toHaveLength(1);
+        expect(meta.twitter?.images).toHaveLength(1);
+    });
+
+    it("emits twitter:site from the site config and omits it when unset", () => {
+        expect(buildPostMetadata(POST, { ...SITE, twitterSite: "@example" }).twitter?.site).toBe("@example");
+        expect(buildPostMetadata(POST, SITE).twitter?.site).toBeUndefined();
     });
 
     it("gives every share-card image an `alt`, taken from the post's own title", () => {
@@ -96,6 +117,11 @@ describe("buildOverviewMetadata", () => {
         expect(meta.openGraph?.title).toBe("Example Blog");
         expect(meta.twitter?.card).toBe("summary_large_image");
     });
+
+    it("emits twitter:site from the site config and omits it when unset", () => {
+        expect(buildOverviewMetadata({ ...SITE, twitterSite: "@example" }).twitter?.site).toBe("@example");
+        expect(buildOverviewMetadata(SITE).twitter?.site).toBeUndefined();
+    });
 });
 
 describe("postJsonLd", () => {
@@ -125,6 +151,21 @@ describe("postJsonLd", () => {
     it("omits image when the post has none", () => {
         const graph = postJsonLd({ ...POST, image: undefined }, SITE)["@graph"] as Record<string, unknown>[];
         expect(graph[0]!).not.toHaveProperty("image");
+    });
+
+    it("names the page as mainEntityOfPage with the same @id as the posting", () => {
+        const posting = (postJsonLd(POST, SITE)["@graph"] as Record<string, unknown>[])[0]!;
+        expect(posting.mainEntityOfPage).toEqual({ "@type": "WebPage", "@id": posting["@id"] });
+        expect(posting["@id"]).toBe("https://example.com/blog/hello-world/");
+    });
+
+    it("joins front-matter keywords into schema.org Text, and omits the field when there are none", () => {
+        const graph = (meta: Partial<PostMeta>): Record<string, unknown> =>
+            (postJsonLd({ ...POST, ...meta }, SITE)["@graph"] as Record<string, unknown>[])[0]!;
+        expect(graph({}).keywords).toBe("hello, world");
+        // No empty string: an empty `keywords` is noise a validator flags, not a declaration.
+        expect(graph({ keywords: [] })).not.toHaveProperty("keywords");
+        expect(graph({ keywords: undefined })).not.toHaveProperty("keywords");
     });
 });
 

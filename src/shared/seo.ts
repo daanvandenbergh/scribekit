@@ -20,6 +20,13 @@ export type JsonLd = Record<string, unknown>;
 export const FALLBACK_LOCALE = "en";
 
 /**
+ * The dimensions every hero image is rendered at (`BlogPage`, `BlogOverviewGrid` and `DocsPage`
+ * all hard-code `width={1200} height={630}`), so the same pair is declared on the share card as
+ * `og:image:width`/`og:image:height`.
+ */
+export const HERO_IMAGE_SIZE = { width: 1200, height: 630 } as const;
+
+/**
  * Resolves a {@link LocalizedText} for one language: a plain string is the same copy everywhere, a
  * map is looked up by locale code (case-insensitively, so a lowercased URL segment finds a
  * `pt-BR` key) and falls back to the site's default locale.

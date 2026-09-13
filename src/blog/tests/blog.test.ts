@@ -242,6 +242,11 @@ describe("Blog.site", () => {
         expect(blog.site?.authorId).toBe("https://example.com/#person");
         expect(blog.site?.websiteId).toBe("https://example.com/#website");
     });
+
+    it("forwards twitterSite onto the site config", () => {
+        const blog = makeBlog({ siteUrl: SITE.siteUrl, brandName: SITE.brandName, twitterSite: "@example" });
+        expect(blog.site?.twitterSite).toBe("@example");
+    });
 });
 
 describe("Blog SEO methods", () => {

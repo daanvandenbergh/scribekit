@@ -64,6 +64,7 @@ new Docs(config: DocsConfig)
 | `organizationId` | `string` | `undefined`, which inlines a standalone `Organization` publisher | `@id` of an existing `Organization` |
 | `authorId` | `string` | `undefined`, which inlines a name-only author | `@id` of a `Person` or `Organization` author |
 | `websiteId` | `string` | `undefined`, which omits `isPartOf` | `@id` of the host `WebSite` entity |
+| `twitterSite` | `string` | `undefined`, which omits the tag | The site's X handle (`@example`), emitted as `twitter:site` on every page and index card |
 
 `this.site` is assembled only when **both** `siteUrl` and `brandName` are defined; otherwise it is `undefined` and every SEO method throws. `site.basePath` is always the resolved `basePath`.
 
@@ -104,7 +105,7 @@ Every `lang?` parameter defaults to `this.defaultLocale`.
 | `tableOfContents(doc)` | `TocEntry[]` from `##` and `###` headings | no |
 | `docMetadata(doc)` | `PageMetadata` | `Error` when `site` is unset |
 | `indexMetadata(lang?)` | `PageMetadata` | `Error` when `site` is unset |
-| `docJsonLd(doc)` | `JsonLd`: `TechArticle` + `BreadcrumbList` | `Error` when `site` is unset |
+| `docJsonLd(doc)` | `JsonLd`: `TechArticle` (with `mainEntityOfPage` and comma-joined `keywords`) + `BreadcrumbList` | `Error` when `site` is unset |
 | `indexJsonLd(lang?)` | `JsonLd`: `CollectionPage` + `BreadcrumbList` + `ItemList` | `Error` when `site` is unset |
 | `sitemapEntries()` | `SitemapEntry[]`, one per non-hidden `(slug, lang)`, with hreflang alternates | `Error` when `site` is unset |
 
@@ -221,6 +222,7 @@ new Blog(config: BlogConfig)
 | `organizationId` | `string` | `undefined` | `@id` reference for the publisher |
 | `authorId` | `string` | `undefined` | `@id` reference for the author |
 | `websiteId` | `string` | `undefined` | `@id` reference for `isPartOf` |
+| `twitterSite` | `string` | `undefined` | The site's X handle, emitted as `twitter:site` on every card |
 
 `site` is built only when `siteUrl !== undefined && brandName !== undefined`.
 
@@ -255,7 +257,7 @@ Nothing else is exposed; `contentDir` and `extension` are not fields at all, onl
 | `similarPosts(post, limit?)` | `PostMeta[]`, same-language neighbours. `limit` defaults to `3` | `DuplicatePostError` |
 | `postMetadata(post)` | `PageMetadata` | `Error` when `site` is unset |
 | `overviewMetadata(lang?)` | `PageMetadata` | `Error` when `site` is unset |
-| `postJsonLd(post)` | `JsonLd` | `Error` when `site` is unset |
+| `postJsonLd(post)` | `JsonLd`: `BlogPosting` (with `mainEntityOfPage` and comma-joined `keywords`) + `BreadcrumbList` | `Error` when `site` is unset |
 | `overviewJsonLd(posts, lang?)` | `JsonLd` | `Error` when `site` is unset |
 | `sitemapEntries()` | `SitemapEntry[]` | `DuplicatePostError`, `Error` when `site` is unset |
 | `rssFeed(lang?)` | `string`, one locale's complete RSS 2.0 document, newest post first | `DuplicatePostError`, `Error` when `site` is unset |
@@ -427,9 +429,9 @@ Pure and fs-free. Each takes a `SiteConfig` whose `siteUrl` and `brandName` are 
 
 | Signature | Emits |
 | --- | --- |
-| `buildDocMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `metadataBase`, `` title: `${meta.title} \| ${site.brandName}` ``, `description`, `keywords`, `authors`, `alternates.canonical` and `languages`, OpenGraph (`type: "article"`, `publishedTime`, `modifiedTime: meta.updated ?? meta.date`, `images`, `locale`, `alternateLocale`), Twitter (`card: "summary_large_image"`). Sets `robots: { index: false }` **iff `meta.hidden`**. hreflang is `undefined` when `translations.length <= 1` |
+| `buildDocMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `metadataBase`, `` title: `${meta.title} \| ${site.brandName}` ``, `description`, `keywords`, `authors`, `alternates.canonical` and `languages`, OpenGraph (`type: "article"`, `publishedTime`, `modifiedTime: meta.updated ?? meta.date`, `images` with `alt`, `width: 1200`, `height: 630`, `locale`, `alternateLocale`), Twitter (`card: "summary_large_image"`, `site: site.twitterSite`, the same `images`). Sets `robots: { index: false }` **iff `meta.hidden`**. hreflang is `undefined` when `translations.length <= 1` |
 | `buildIndexMetadata(site, lang?, langs = []): PageMetadata` | `` title: `Docs \| ${site.brandName}` ``, OG `type: "website"` with `` title: `${brandName} Docs` ``. No `robots` key; the index is never noindexed |
-| `docJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `TechArticle` and a `BreadcrumbList` (Home, Docs, the group name only, the page title). The `tab` never appears in JSON-LD breadcrumbs. When the page is translated, the `TechArticle` also carries `workTranslation` (an array, on the original-language version) or `translationOfWork` (on each translation) |
+| `docJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `TechArticle` (`mainEntityOfPage: { "@type": "WebPage", "@id": <page url> }`; `keywords` as the comma-joined front-matter list, omitted when empty) and a `BreadcrumbList` (Home, Docs, the group name only, the page title). The `tab` never appears in JSON-LD breadcrumbs. When the page is translated, the `TechArticle` also carries `workTranslation` (an array, on the original-language version) or `translationOfWork` (on each translation) |
 | `indexJsonLd(items, site, lang?): JsonLd` | `CollectionPage`, `BreadcrumbList`, and an `ItemList` **only when `items.length > 0`** |
 
 The docs section name in breadcrumbs is the literal `"Docs"`.
@@ -438,9 +440,9 @@ The docs section name in breadcrumbs is the literal `"Docs"`.
 
 | Signature | Emits |
 | --- | --- |
-| `buildPostMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `` title: `${meta.title} \| ${site.brandName}` ``, `alternates.canonical`, OG `type: "article"`, `publishedTime: meta.date \|\| undefined`, `modifiedTime: meta.updated ?? (meta.date \|\| undefined)`, `locale`, `twitter.card: "summary_large_image"`. **Never sets `robots`** |
+| `buildPostMetadata(meta, site, translations = [meta.lang]): PageMetadata` | `` title: `${meta.title} \| ${site.brandName}` ``, `alternates.canonical`, OG `type: "article"`, `publishedTime: meta.date \|\| undefined`, `modifiedTime: meta.updated ?? (meta.date \|\| undefined)`, `images` with `alt`, `width: 1200`, `height: 630`, `locale`, `twitter.card: "summary_large_image"`, `twitter.site: site.twitterSite`. **Never sets `robots`** |
 | `buildOverviewMetadata(site, lang?, langs = []): PageMetadata` | `` title: `Blog \| ${site.brandName}` ``, OG `type: "website"` with `` title: `${brandName} Blog` ``. hreflang only when `langs.length > 1` |
-| `postJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `BlogPosting` and a `BreadcrumbList` of 3 items (Home, Blog, the title). A translated post also carries `workTranslation` / `translationOfWork`, as the docs builder does |
+| `postJsonLd(meta, site, translations = [meta.lang]): JsonLd` | `@graph` of a `BlogPosting` (`mainEntityOfPage` and comma-joined `keywords`, as the docs builder does) and a `BreadcrumbList` of 3 items (Home, Blog, the title). A translated post also carries `workTranslation` / `translationOfWork`, as the docs builder does |
 | `overviewJsonLd(posts, site, lang?): JsonLd` | `CollectionPage`, a `BreadcrumbList` of 2 items, and an `ItemList` **only when `posts.length > 0`** |
 | `buildRssFeed(posts: PostMeta[], site: SiteConfig, lang?): string` | One locale's complete RSS 2.0 document, newest post first. This is what `Blog.rssFeed()` wraps |
 | `rssFeedPath(site: SiteConfig, lang: string): string` | The conventional mount path for that locale's feed: the locale's index path plus `/rss.xml`, so `/blog/rss.xml` by default, or `/en/rss.xml` under `prefixDefaultLocale`. **`site.trailingSlash` never applies** - the feed is a file, so its path stays bare |
@@ -510,9 +512,9 @@ The JSDoc on `blog.ts`, `blog/types.ts`, `docs/types.ts`, and `docs/docs.ts` cla
 | `LocaleConfig` | `{ code: string; label?: string; dateLocale?: string }` |
 | `TocEntry` | `{ depth: 2 \| 3; text: string; id: string }` |
 | `LocalizedText` | `string \| Record<string, string>` - site-level copy that is either the same in every locale (a string) or given per locale code. A missing key falls back to `defaultLocale`, then to the builder's generic text, never to another locale's copy |
-| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?: LocalizedText`, `indexName?: LocalizedText`, `defaultLocale?`, `locales?`, `prefixDefaultLocale?`, `trailingSlash?`, `organizationId?`, `authorId?`, `websiteId?`. `locales` is what lets the SEO builders read a locale's own `dateLocale` for `og:locale`; the backend classes set it from their own `locales` |
+| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?: LocalizedText`, `indexName?: LocalizedText`, `defaultLocale?`, `locales?`, `prefixDefaultLocale?`, `trailingSlash?`, `organizationId?`, `authorId?`, `websiteId?`, `twitterSite?`. `locales` is what lets the SEO builders read a locale's own `dateLocale` for `og:locale`; the backend classes set it from their own `locales` |
 | `SitemapEntry` | `{ url: string; alternates?: { languages?: Record<string, string> } }` |
-| `PageMetadata` | A structural subset of Next's `Metadata` with **no `next` type dependency**: `metadataBase?: URL`, `title?`, `description?`, `keywords?: string[]`, `robots?: { index?: boolean; follow?: boolean }`, `authors?: { name: string }[]`, `alternates?: { canonical?; languages? }`, `openGraph?`, `twitter?` |
+| `PageMetadata` | A structural subset of Next's `Metadata` with **no `next` type dependency**: `metadataBase?: URL`, `title?`, `description?`, `keywords?: string[]`, `robots?: { index?: boolean; follow?: boolean }`, `authors?: { name: string }[]`, `alternates?: { canonical?; languages? }`, `openGraph?` (its `images` entries take `url`, `alt?`, `width?`, `height?`), `twitter?` (same `images` shape, plus `site?`) |
 | `JsonLd` | `Record<string, unknown>` |
 
 Docs navigation types:

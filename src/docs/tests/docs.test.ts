@@ -324,6 +324,13 @@ describe("Docs - edge cases", () => {
         const docs = new Docs({ contentDir: path.join(HERE, "fixtures/docs"), siteUrl: "https://example.com", brandName: "Example" });
         expect(docs.docMetadata(docs.getDoc("quickstart")).alternates?.canonical).toBe("/docs/quickstart/");
     });
+
+    it("forwards twitterSite onto the site config and into every card", () => {
+        const docs = new Docs({ contentDir: path.join(HERE, "fixtures/docs"), siteUrl: "https://example.com", brandName: "Example", twitterSite: "@example" });
+        expect(docs.site?.twitterSite).toBe("@example");
+        expect(docs.docMetadata(docs.getDoc("quickstart")).twitter?.site).toBe("@example");
+        expect(docs.indexMetadata().twitter?.site).toBe("@example");
+    });
 });
 
 /**

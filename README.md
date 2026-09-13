@@ -665,6 +665,7 @@ The site attributes are passed directly (flattened) into the config:
 | `organizationId` | - | `@id` of an `Organization` in your site-wide JSON-LD. When set, `BlogPosting.publisher` and the overview `CollectionPage.publisher` reference it by `@id` instead of inlining a duplicate. |
 | `authorId` | - | `@id` of a `Person`/`Organization` your site defines as the blog author. When set, `BlogPosting.author` references it by `@id` instead of inlining a name-only `Organization`. |
 | `websiteId` | - | `@id` of a `WebSite` your site defines. When set, `BlogPosting` and the overview `CollectionPage` gain an `isPartOf` reference to it. |
+| `twitterSite` | - | Your site's X (Twitter) handle, `@` included (`@example`). Emitted as `twitter:site` on every post and index card; unset emits no attribution. |
 
 **Stitch into an existing site graph (better SEO).** If your app already emits site-wide schema.org JSON-LD with stable `@id`s, pass `organizationId` / `authorId` / `websiteId` so the blog references those entities by `@id` instead of inlining its own copies - search engines then merge the blog into your single knowledge-graph entity. Leave them unset to keep the self-contained default output.
 
@@ -686,7 +687,7 @@ Shared optional props: `basePath` (defaults to `blog.site.basePath`), `imgCompon
 
 ### `new Docs(config)`
 
-Same flattened site attributes as [`new Blog(config)`](#new-blogconfig) (`siteUrl` / `brandName` / `defaultAuthor` / `description` / `indexName` / `organizationId` / `authorId` / `websiteId` / `locale` / `locales` / `defaultLocale` / `prefixDefaultLocale` / `trailingSlash`), plus:
+Same flattened site attributes as [`new Blog(config)`](#new-blogconfig) (`siteUrl` / `brandName` / `defaultAuthor` / `description` / `indexName` / `organizationId` / `authorId` / `websiteId` / `twitterSite` / `locale` / `locales` / `defaultLocale` / `prefixDefaultLocale` / `trailingSlash`), plus:
 
 | Config | Default | Description |
 | --- | --- | --- |

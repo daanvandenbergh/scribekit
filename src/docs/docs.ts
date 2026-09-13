@@ -118,6 +118,7 @@ export class Docs {
                       organizationId: config.organizationId,
                       authorId: config.authorId,
                       websiteId: config.websiteId,
+                      twitterSite: config.twitterSite,
                   }
                 : undefined;
     }
