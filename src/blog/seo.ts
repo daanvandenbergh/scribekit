@@ -7,14 +7,25 @@
  *
  * The generic SEO primitives (`absoluteUrl`, `ogLocaleFor`, `hreflangMap`, the i18n `buildSitemap`)
  * live in `../shared/seo.js` and are shared with the docs module; URLs are built exclusively via
- * {@link localePath}, the same helper the React components use, so the canonical/hreflang
- * metadata can never drift from the rendered links. For a single-language blog the output is
+ * its `sitePath`/`pageUrl`/`metadataUrl` over `localePath`, the same helper the React components
+ * use, so the canonical/hreflang metadata can never drift from the rendered links. On a
+ * domain-per-locale site (`site.localeOrigins`) every URL sits on its own locale's origin. For a single-language blog the output is
  * unchanged: `defaultLocale` falls back to the post's own `lang`, so every URL is the unprefixed
  * `<basePath>/<slug>`.
  */
 
-import { localePath } from "../shared/locales.js";
-import { absoluteUrl, localizedText, ogLocaleFor, hreflangMap, FALLBACK_LOCALE, HERO_IMAGE_SIZE, type JsonLd } from "../shared/seo.js";
+import {
+    absoluteUrl,
+    localeOrigin,
+    localizedText,
+    metadataUrl,
+    ogLocaleFor,
+    hreflangMap,
+    pageUrl,
+    FALLBACK_LOCALE,
+    HERO_IMAGE_SIZE,
+    type JsonLd,
+} from "../shared/seo.js";
 import type { PageMetadata, PostMeta, SiteConfig } from "./types.js";
 
 export type { JsonLd };
@@ -68,7 +79,8 @@ export function overviewName(site: SiteConfig, lang?: string): string | undefine
  * @param site - the site configuration.
  * @param translations - the language codes the slug is available in.
  * @param defaultLocale - the locale served without a URL prefix.
- * @returns a `hreflang -> path` map, or `undefined` when there is only one translation.
+ * @returns a `hreflang -> path` map (absolute URLs on a domain-per-locale site), or `undefined`
+ *   when there is only one translation.
  */
 function postLanguages(
     meta: PostMeta,
@@ -76,8 +88,7 @@ function postLanguages(
     translations: string[],
     defaultLocale: string,
 ): Record<string, string> | undefined {
-    return hreflangMap(translations, defaultLocale, (lang) =>
-        localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang, slug: meta.slug }));
+    return hreflangMap(translations, defaultLocale, (lang) => metadataUrl(site, defaultLocale, lang, meta.slug));
 }
 
 /**
@@ -88,7 +99,8 @@ function postLanguages(
  * @param site - the site configuration.
  * @param langs - the configured locale codes.
  * @param defaultLocale - the locale served without a URL prefix.
- * @returns a `hreflang -> path` map, or `undefined` when fewer than two locales exist.
+ * @returns a `hreflang -> path` map (absolute URLs on a domain-per-locale site), or `undefined`
+ *   when fewer than two locales exist.
  */
 function overviewLanguages(
     site: SiteConfig,
@@ -100,17 +112,18 @@ function overviewLanguages(
     }
     const languages: Record<string, string> = {};
     for (const lang of langs) {
-        languages[lang] = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang });
+        languages[lang] = metadataUrl(site, defaultLocale, lang);
     }
-    languages["x-default"] = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: defaultLocale });
+    languages["x-default"] = metadataUrl(site, defaultLocale, defaultLocale);
     return languages;
 }
 
 /**
  * Builds Next.js page metadata for a single post from its front-matter.
  *
- * Sets `metadataBase` from `site.siteUrl` (so relative canonical/OG image paths resolve), a
- * root-relative canonical, hreflang `alternates.languages` for the post's translations, and
+ * Sets `metadataBase` from the post locale's origin (`site.siteUrl`, or its `localeOrigins` entry)
+ * so relative canonical/OG image paths resolve, a root-relative canonical (absolute on a
+ * domain-per-locale site), hreflang `alternates.languages` for the post's translations, and
  * OpenGraph `article` (with `og:locale`) + Twitter `summary_large_image` tags.
  *
  * @param meta - the post's normalised front-matter.
@@ -126,11 +139,11 @@ export function buildPostMetadata(
 ): PageMetadata {
     const defaultLocale = site.defaultLocale ?? meta.lang;
     const author = authorOf(meta, site);
-    const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: meta.lang, slug: meta.slug });
+    const url = metadataUrl(site, defaultLocale, meta.lang, meta.slug);
     const languages = postLanguages(meta, site, translations, defaultLocale);
     const alternateLocale = translations.filter((lang) => lang !== meta.lang);
     return {
-        metadataBase: new URL(site.siteUrl),
+        metadataBase: new URL(localeOrigin(site, meta.lang)),
         title: `${meta.title} | ${site.brandName}`,
         description: meta.description,
         keywords: meta.keywords,
@@ -175,10 +188,10 @@ export function buildOverviewMetadata(site: SiteConfig, lang?: string, langs: st
     const defaultLocale = site.defaultLocale ?? resolvedLang;
     const description = overviewDescription(site, resolvedLang);
     const name = overviewName(site, resolvedLang) ?? `${site.brandName} Blog`;
-    const url = localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang });
+    const url = metadataUrl(site, defaultLocale, resolvedLang);
     const languages = overviewLanguages(site, langs, defaultLocale);
     return {
-        metadataBase: new URL(site.siteUrl),
+        metadataBase: new URL(localeOrigin(site, resolvedLang)),
         title: `Blog | ${site.brandName}`,
         description,
         alternates: { canonical: url, languages },
@@ -196,8 +209,8 @@ export function buildOverviewMetadata(site: SiteConfig, lang?: string, langs: st
 
 /**
  * Builds schema.org JSON-LD for a single post: a `BlogPosting` (with `inLanguage`) plus a
- * `BreadcrumbList`. All URLs are fully absolute (built from `site.siteUrl`), because
- * `metadataBase` does not apply to JSON-LD.
+ * `BreadcrumbList`. All URLs are fully absolute (built from `site.siteUrl`, or each locale's
+ * `localeOrigins` entry), because `metadataBase` does not apply to JSON-LD.
  *
  * When the slug is translated, the `BlogPosting` also links its siblings: the original-language
  * version (the default locale, or the first translation when the default is absent) carries a
@@ -213,13 +226,14 @@ export function buildOverviewMetadata(site: SiteConfig, lang?: string, langs: st
  */
 export function postJsonLd(meta: PostMeta, site: SiteConfig, translations: string[] = [meta.lang]): JsonLd {
     const defaultLocale = site.defaultLocale ?? meta.lang;
-    const origin = new URL(site.siteUrl).origin;
+    const siteUrl = localeOrigin(site, meta.lang);
+    const origin = new URL(siteUrl).origin;
     const author = authorOf(meta, site);
-    const url = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: meta.lang, slug: meta.slug }));
-    const blogUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: meta.lang }));
+    const url = pageUrl(site, defaultLocale, meta.lang, meta.slug);
+    const blogUrl = pageUrl(site, defaultLocale, meta.lang);
     // A self-describing reference to one language's version of this slug.
     const refFor = (lang: string): JsonLd => {
-        const u = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang, slug: meta.slug }));
+        const u = pageUrl(site, defaultLocale, lang, meta.slug);
         return { "@type": "BlogPosting", "@id": u, url: u, inLanguage: lang };
     };
     // Original = default locale when translated, else the first translation (mirrors x-default).
@@ -250,7 +264,7 @@ export function postJsonLd(meta: PostMeta, site: SiteConfig, translations: strin
                     ? { "@id": site.organizationId }
                     : { "@type": "Organization", name: site.brandName, url: origin },
                 ...(site.websiteId ? { isPartOf: { "@id": site.websiteId } } : {}),
-                ...(meta.image ? { image: absoluteUrl(site.siteUrl, meta.image) } : {}),
+                ...(meta.image ? { image: absoluteUrl(siteUrl, meta.image) } : {}),
                 // schema.org `keywords` is Text; the comma-joined form is Google's own example.
                 ...(meta.keywords?.length ? { keywords: meta.keywords.join(", ") } : {}),
             },
@@ -279,8 +293,8 @@ export function postJsonLd(meta: PostMeta, site: SiteConfig, translations: strin
 export function overviewJsonLd(posts: PostMeta[], site: SiteConfig, lang?: string): JsonLd {
     const resolvedLang = lang ?? site.defaultLocale ?? FALLBACK_LOCALE;
     const defaultLocale = site.defaultLocale ?? resolvedLang;
-    const origin = new URL(site.siteUrl).origin;
-    const blogUrl = absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolvedLang }));
+    const origin = new URL(localeOrigin(site, resolvedLang)).origin;
+    const blogUrl = pageUrl(site, defaultLocale, resolvedLang);
     const description = overviewDescription(site, resolvedLang);
     const graph: JsonLd[] = [
         {
@@ -306,7 +320,7 @@ export function overviewJsonLd(posts: PostMeta[], site: SiteConfig, lang?: strin
             itemListElement: posts.map((p, i) => ({
                 "@type": "ListItem",
                 position: i + 1,
-                url: absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: p.lang, slug: p.slug })),
+                url: pageUrl(site, defaultLocale, p.lang, p.slug),
                 name: p.title,
             })),
         });

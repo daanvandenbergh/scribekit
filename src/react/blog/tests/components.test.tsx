@@ -610,3 +610,31 @@ describe("BlogPage multi-language", () => {
         expect(html).not.toContain("min read");
     });
 });
+
+describe("domain-per-locale links (blog.localeOrigins)", () => {
+    /** A fake French blog on its own domain: links must carry no /fr prefix. */
+    const domainBlog = (): Blog =>
+        i18nFakeBlog({
+            localeOrigins: { en: "https://example.com", fr: "https://example.fr" },
+            getPost: () => ({ ...POST, meta: { ...POST.meta, lang: "fr" } }),
+            similarPosts: () => [{ ...SECOND, lang: "fr" }],
+        });
+
+    it("links overview cards without a locale prefix", () => {
+        const html = renderToStaticMarkup(<BlogOverview blog={domainBlog()} lang="fr" posts={[{ ...POST.meta, lang: "fr" }]} />);
+        expect(html).toContain('href="/blog/hello-world/"');
+        expect(html).not.toContain('href="/fr/');
+    });
+
+    it("links the back-link and similar posts without a locale prefix", () => {
+        const html = renderToStaticMarkup(<BlogPage blog={domainBlog()} slug="hello-world" lang="fr" />);
+        expect(html).toContain('href="/blog/"');
+        expect(html).toContain('href="/blog/second/"');
+        expect(html).not.toContain('href="/fr/');
+    });
+
+    it("keeps the /fr prefix on a single-origin blog (control)", () => {
+        const html = renderToStaticMarkup(<BlogOverview blog={i18nFakeBlog()} lang="fr" posts={[{ ...POST.meta, lang: "fr" }]} />);
+        expect(html).toContain('href="/fr/blog/hello-world/"');
+    });
+});

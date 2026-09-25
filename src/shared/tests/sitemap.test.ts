@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { absoluteUrl, buildSitemap, hreflangMap, ogLocale, ogLocaleFor } from "../seo.js";
+import { absoluteUrl, buildSitemap, hreflangMap, localeOrigin, metadataUrl, ogLocale, ogLocaleFor, pageUrl, sitePath } from "../seo.js";
 import type { SiteConfig } from "../types.js";
 
 /** Site config with a default locale, exercising the i18n sitemap paths. */
@@ -145,5 +145,60 @@ describe("buildSitemap", () => {
 
     it("returns an empty array for no refs", () => {
         expect(buildSitemap([], SITE_I18N, translationsOf)).toEqual([]);
+    });
+});
+
+describe("domain-per-locale URL primitives", () => {
+    /** A three-domain site: nl default, no trailing slash. */
+    const DOMAINS: SiteConfig = {
+        siteUrl: "https://example.nl",
+        brandName: "Example",
+        defaultLocale: "nl",
+        trailingSlash: false,
+        localeOrigins: { nl: "https://example.nl", de: "https://example.de", fr: "https://example.fr" },
+    };
+
+    it("localeOrigin picks the locale's own origin, falling back to siteUrl", () => {
+        expect(localeOrigin(DOMAINS, "de")).toBe("https://example.de");
+        expect(localeOrigin(DOMAINS, "xx")).toBe("https://example.nl");
+        expect(localeOrigin(SITE_I18N, "fr")).toBe("https://example.com");
+    });
+
+    it("sitePath drops the locale prefix only on a domain-per-locale site", () => {
+        expect(sitePath(DOMAINS, "nl", "de", "post")).toBe("/blog/post");
+        expect(sitePath(DOMAINS, "nl", "fr")).toBe("/blog");
+        expect(sitePath(SITE_I18N, "en", "fr", "post")).toBe("/fr/blog/post/");
+    });
+
+    it("pageUrl puts the path on the locale's origin", () => {
+        expect(pageUrl(DOMAINS, "nl", "de", "post")).toBe("https://example.de/blog/post");
+        expect(pageUrl(SITE_I18N, "en", "fr", "post")).toBe("https://example.com/fr/blog/post/");
+    });
+
+    it("metadataUrl is root-relative on one origin and absolute across domains", () => {
+        expect(metadataUrl(SITE_I18N, "en", "fr", "post")).toBe("/fr/blog/post/");
+        expect(metadataUrl(DOMAINS, "nl", "fr", "post")).toBe("https://example.fr/blog/post");
+    });
+
+    it("buildSitemap puts each entry and every alternate on its locale's domain", () => {
+        const entries = buildSitemap(
+            [
+                { slug: "post", lang: "nl" },
+                { slug: "post", lang: "de" },
+                { slug: "solo", lang: "fr" },
+            ],
+            DOMAINS,
+            (slug) => (slug === "post" ? ["nl", "de"] : ["fr"]),
+        );
+        const alternates = {
+            nl: "https://example.nl/blog/post",
+            de: "https://example.de/blog/post",
+            "x-default": "https://example.nl/blog/post",
+        };
+        expect(entries).toEqual([
+            { url: "https://example.nl/blog/post", alternates: { languages: alternates } },
+            { url: "https://example.de/blog/post", alternates: { languages: alternates } },
+            { url: "https://example.fr/blog/solo" },
+        ]);
     });
 });

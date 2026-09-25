@@ -100,6 +100,17 @@ export interface SiteConfig {
      */
     prefixDefaultLocale?: boolean | undefined;
     /**
+     * One origin per locale, for a site that serves each language on its own domain
+     * (`{ nl: "https://example.nl", de: "https://example.de" }` - e.g. an i18nkit
+     * `strategy: "domain"` instance's `i18n.domains`). When set, no locale is URL-prefixed (every
+     * locale's pages live at `<basePath>/<slug>` on its own origin) and every absolute URL built for
+     * a page - canonical, hreflang alternates, `og:url`, `metadataBase`, JSON-LD, sitemap, RSS - uses
+     * the origin of that page's locale, so hreflang links cross domains. A locale missing from the
+     * map falls back to {@link siteUrl}. Leave unset for a single-origin site (the default).
+     * Blog only: a `Docs` instance rejects it.
+     */
+    localeOrigins?: Readonly<Record<string, string>> | undefined;
+    /**
      * Whether every built URL ends in a slash (`/docs/getting-started/`). **Defaults to `true`**,
      * matching Next's `trailingSlash: true`.
      *

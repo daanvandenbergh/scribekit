@@ -572,3 +572,67 @@ describe("Blog multi-language", () => {
         });
     });
 });
+
+describe("Blog domain-per-locale (localeOrigins)", () => {
+    /** en on example.com, fr on example.fr - the i18n fixture's two locales. */
+    const ORIGINS = { en: "https://example.com", fr: "https://example.fr/" };
+
+    it("normalizes and exposes the origins, and defaults siteUrl to the default locale's", () => {
+        const blog = makeI18nBlog({ localeOrigins: ORIGINS, brandName: "Example" });
+        expect(blog.localeOrigins).toEqual({ en: "https://example.com", fr: "https://example.fr" });
+        expect(Object.isFrozen(blog.localeOrigins)).toBe(true);
+        expect(blog.site?.siteUrl).toBe("https://example.com");
+        expect(blog.site?.localeOrigins).toBe(blog.localeOrigins);
+    });
+
+    it("keeps an explicit siteUrl", () => {
+        const blog = makeI18nBlog({ localeOrigins: ORIGINS, siteUrl: "https://www.example.com", brandName: "Example" });
+        expect(blog.site?.siteUrl).toBe("https://www.example.com");
+    });
+
+    it("leaves localeOrigins undefined on a single-origin blog", () => {
+        expect(makeI18nBlog().localeOrigins).toBeUndefined();
+        expect(makeI18nBlog({ siteUrl: "https://example.com", brandName: "Example" }).site?.localeOrigins).toBeUndefined();
+    });
+
+    it("covers the default locale alone on a blog without configured locales", () => {
+        const blog = new Blog({ contentDir: CONTENT_DIR, localeOrigins: { en: "https://example.com" }, brandName: "Example" });
+        expect(blog.site?.siteUrl).toBe("https://example.com");
+        expect(() => new Blog({ contentDir: CONTENT_DIR, localeOrigins: { fr: "https://example.fr" } })).toThrow(
+            /names "fr", which is not a configured locale \(en\)/,
+        );
+    });
+
+    it("builds every SEO surface on the page locale's own origin, with no locale prefix", () => {
+        const blog = makeI18nBlog({ localeOrigins: ORIGINS, brandName: "Example" });
+        const fr = blog.getPost("getting-started", "fr");
+        expect(blog.postMetadata(fr).alternates).toEqual({
+            canonical: "https://example.fr/blog/getting-started/",
+            languages: {
+                en: "https://example.com/blog/getting-started/",
+                fr: "https://example.fr/blog/getting-started/",
+                "x-default": "https://example.com/blog/getting-started/",
+            },
+        });
+        expect(blog.overviewMetadata("fr").alternates?.canonical).toBe("https://example.fr/blog/");
+        expect(blog.rssFeed("fr")).toContain("<link>https://example.fr/blog/getting-started/</link>");
+        expect(blog.sitemapEntries().map((e) => e.url).sort()).toEqual([
+            "https://example.com/blog/getting-started/",
+            "https://example.com/blog/ops/",
+            "https://example.fr/blog/getting-started/",
+            "https://example.fr/blog/only-fr/",
+        ]);
+    });
+
+    it("rejects a missing, unknown or non-http(s) origin, and prefixDefaultLocale", () => {
+        expect(() => makeI18nBlog({ localeOrigins: { en: "https://example.com" } })).toThrow(
+            /needs an absolute http\(s\) origin for locale "fr"; got undefined/,
+        );
+        expect(() => makeI18nBlog({ localeOrigins: { ...ORIGINS, de: "https://example.de" } })).toThrow(/names "de"/);
+        expect(() => makeI18nBlog({ localeOrigins: { ...ORIGINS, fr: "example.fr" } })).toThrow(/got "example.fr"/);
+        expect(() => makeI18nBlog({ localeOrigins: { ...ORIGINS, fr: "ftp://example.fr" } })).toThrow(/got "ftp:\/\/example.fr"/);
+        expect(() => makeI18nBlog({ localeOrigins: ORIGINS, prefixDefaultLocale: true })).toThrow(
+            /cannot be combined with `prefixDefaultLocale`/,
+        );
+    });
+});

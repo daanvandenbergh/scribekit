@@ -531,6 +531,22 @@ Because the default is reached via a rewrite (rendered on demand), guard the pos
 
 > **Prefer no proxy?** Set `prefixDefaultLocale: true`. Every locale is then prefixed, including the default (`/en/blog/...`), so the same `[lang]/blog` tree serves everything with no rewrite - at the cost of `/en/` in the default language's URLs. Add a `next.config.mjs` redirect from bare `/blog` to `/en/blog` if you like.
 
+#### One domain per locale
+
+A site that serves each language on its own domain (`https://example.nl/blog/x`, `https://example.de/blog/x`) passes `localeOrigins` - one origin per configured locale. Then no locale is URL-prefixed (every post lives at `<basePath>/<slug>` on its locale's own domain), and every absolute URL is built on the page locale's origin: `metadataBase`, the canonical, `og:url`, the hreflang alternates (absolute, so they can cross domains), the JSON-LD `url`/`@id`s and breadcrumbs, `sitemapEntries()` and `rssFeed()`. `siteUrl` defaults to the default locale's origin. With an [i18nkit](https://www.npmjs.com/package/@daanvandenbergh/i18nkit) `strategy: "domain"` instance, pass its `domains`:
+
+```ts
+export const blog = new Blog({
+    contentDir: "./blog",
+    brandName: "Example",
+    locales: i18n.list.map((l) => ({ code: l.code, label: l.label, dateLocale: l.locale })),
+    defaultLocale: i18n.default,
+    localeOrigins: i18n.domains, // { nl: "https://example.nl", de: "https://example.de", ... }
+});
+```
+
+The app keeps one internal `app/[lang]/blog` tree and its middleware rewrites each domain's bare `/blog/...` into it (i18nkit's docs show that middleware). Every locale needs an origin; the constructor throws on a missing or unknown locale, a non-`http(s)` value, or `localeOrigins` combined with `prefixDefaultLocale`. On localhost, where the other domains are unreachable, bare links would all land on the default locale - to browse every language in dev, leave `localeOrigins` unset there (e.g. `localeOrigins: process.env.NODE_ENV === "development" ? undefined : i18n.domains`, with `siteUrl` set) so the blog falls back to `/<code>/blog/...` prefixes. A language switcher on a domain-per-locale site links to absolute URLs (i18nkit's `i18n.localeUrl(path, code)`). `localeOrigins` is blog-only: `new Docs` rejects it.
+
 `BlogOverview`, `BlogPage`, and the docs components take a `lang` prop, build links via the shared `localePath` (so they can't drift from the canonical/hreflang metadata), and format dates in each language's `dateLocale`.
 
 **Built-in UI copy** (search placeholder, "load more", "min read", "on this page", …) auto-translates to the `lang`, covering the EU's 24 official languages and falling back to English - so a `/fr/blog` page reads in French with no extra wiring. Every label prop still overrides its translation. The copy is powered by [`@daanvandenbergh/i18nkit`](https://www.npmjs.com/package/@daanvandenbergh/i18nkit), whose type-safe catalog guarantees every string is translated at compile time. The resolvers and catalog are exported from `/react` (`blogLabels`, `docsLabels`, `CATALOG`, and the `ui` i18nkit instance) if you want to read a label or add a language.
@@ -662,6 +678,7 @@ The site attributes are passed directly (flattened) into the config:
 | `locales` | - | Languages this blog is published in; see [Multiple locales](#multiple-locales). Leave unset for a single-language blog. |
 | `defaultLocale` | first `locales` code, else base subtag of `locale` | The default language (the `x-default` hreflang target), served unprefixed unless `prefixDefaultLocale`. |
 | `prefixDefaultLocale` | `false` | When `true`, the default locale is URL-prefixed too (`/en/blog/<slug>`), so every locale routes through one `[lang]` segment. |
+| `localeOrigins` | - | One origin per locale for a [domain-per-locale](#one-domain-per-locale) site (`{ nl: "https://example.nl", de: "https://example.de" }`): no locale is prefixed and every absolute URL uses the page locale's origin. `siteUrl` then defaults to the default locale's origin. |
 | `trailingSlash` | `true` | Whether every built URL ends in a slash (`/blog/<slug>/`, `/blog/`). **Must match your `next.config` `trailingSlash`** - a mismatch is silent and site-wide, pointing every canonical, hreflang, sitemap entry and link at the form your host doesn't serve. Next's own default is `false`, so either set `trailingSlash: true` in `next.config` (what the [GitHub Pages setup](#deploy-to-github-pages) does) or `trailingSlash: false` here. The site root stays `/` either way. |
 | `organizationId` | - | `@id` of an `Organization` in your site-wide JSON-LD. When set, `BlogPosting.publisher` and the overview `CollectionPage.publisher` reference it by `@id` instead of inlining a duplicate. |
 | `authorId` | - | `@id` of a `Person`/`Organization` your site defines as the blog author. When set, `BlogPosting.author` references it by `@id` instead of inlining a name-only `Organization`. |
@@ -670,7 +687,7 @@ The site attributes are passed directly (flattened) into the config:
 
 **Stitch into an existing site graph (better SEO).** If your app already emits site-wide schema.org JSON-LD with stable `@id`s, pass `organizationId` / `authorId` / `websiteId` so the blog references those entities by `@id` instead of inlining its own copies - search engines then merge the blog into your single knowledge-graph entity. Leave them unset to keep the self-contained default output.
 
-Methods: `getPostSlugs()`, `getPost(slug, lang?)` (throws `PostNotFoundError`), `getAllPosts(lang?)` (newest first), `getAllCategories(lang?)`, `formatDate(iso, lang?)`, `readingMinutes(post)`, `tableOfContents(post)`, `similarPosts(post, limit?)`, and - when `siteUrl`/`brandName` are set - `overviewMetadata(lang?)`, `postMetadata(post)`, `overviewJsonLd(posts, lang?)`, `postJsonLd(post)`, `sitemapEntries()`. Multi-language: `getPostRefs()` (every `(slug, lang)` pair, for `generateStaticParams`), `getTranslations(slug)`, `dateLocale(lang?)`, `ogLocale(lang?)` (that language's `og:locale` tag - the same value the metadata builders emit, for a host app that hand-builds an OpenGraph block). The assembled config is exposed as `blog.site` / `blog.locale` / `blog.locales` / `blog.defaultLocale` / `blog.prefixDefaultLocale` / `blog.trailingSlash`. The pure helpers behind the components (`readingMinutes`, `tableOfContents`, `similarPosts`, `slugify`, `collectCategories`, `localePath`) are also exported from the package root.
+Methods: `getPostSlugs()`, `getPost(slug, lang?)` (throws `PostNotFoundError`), `getAllPosts(lang?)` (newest first), `getAllCategories(lang?)`, `formatDate(iso, lang?)`, `readingMinutes(post)`, `tableOfContents(post)`, `similarPosts(post, limit?)`, and - when `siteUrl`/`brandName` are set - `overviewMetadata(lang?)`, `postMetadata(post)`, `overviewJsonLd(posts, lang?)`, `postJsonLd(post)`, `sitemapEntries()`. Multi-language: `getPostRefs()` (every `(slug, lang)` pair, for `generateStaticParams`), `getTranslations(slug)`, `dateLocale(lang?)`, `ogLocale(lang?)` (that language's `og:locale` tag - the same value the metadata builders emit, for a host app that hand-builds an OpenGraph block). The assembled config is exposed as `blog.site` / `blog.locale` / `blog.locales` / `blog.defaultLocale` / `blog.prefixDefaultLocale` / `blog.localeOrigins` / `blog.trailingSlash`. The pure helpers behind the components (`readingMinutes`, `tableOfContents`, `similarPosts`, `slugify`, `collectCategories`, `localePath`) are also exported from the package root.
 
 ### `<BlogOverview>` / `<BlogPage>`
 
@@ -688,7 +705,7 @@ Shared optional props: `basePath` (defaults to `blog.site.basePath`), `imgCompon
 
 ### `new Docs(config)`
 
-Same flattened site attributes as [`new Blog(config)`](#new-blogconfig) (`siteUrl` / `brandName` / `defaultAuthor` / `description` / `indexName` / `organizationId` / `authorId` / `websiteId` / `twitterSite` / `locale` / `locales` / `defaultLocale` / `prefixDefaultLocale` / `trailingSlash`), plus:
+Same flattened site attributes as [`new Blog(config)`](#new-blogconfig) (`siteUrl` / `brandName` / `defaultAuthor` / `description` / `indexName` / `organizationId` / `authorId` / `websiteId` / `twitterSite` / `locale` / `locales` / `defaultLocale` / `prefixDefaultLocale` / `trailingSlash`; `localeOrigins` is blog-only and makes `new Docs` throw), plus:
 
 | Config | Default | Description |
 | --- | --- | --- |

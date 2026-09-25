@@ -252,7 +252,7 @@ export interface DocsConfig extends Partial<SiteConfig> {
     /**
      * Languages this documentation is published in. Leave unset for a single-language docs site.
      * When set, a page in a non-default language lives in the page's own folder as
-     * `<slug>/<code><extension>` (e.g. `fr.mdx`) and is served under `<basePath>/<code>/`, with
+     * `<slug>/<code><extension>` (e.g. `fr.mdx`) and is served under `/<code><basePath>/`, with
      * hreflang/`og:locale` linking it to its siblings.
      */
     locales?: LocaleConfig[] | undefined;

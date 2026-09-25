@@ -20,7 +20,7 @@ import type { Adjacent, Breadcrumb, Doc, DocMeta, DocsConfig, LocaleConfig, NavC
  * a structured corpus whose order and grouping come from each page's `tab`/`group`/`order`
  * front-matter. Multi-language behaves exactly like the blog: leave `locales` unset for a
  * single-language docs site; when set, a page's non-default language lives beside its default
- * (`<slug>/fr.mdx` next to `<slug>/en.mdx`) and is served under `<basePath>/<code>/<slug>`.
+ * (`<slug>/fr.mdx` next to `<slug>/en.mdx`) and is served under `/<code><basePath>/<slug>`.
  *
  * The class is Node-only (it reads the filesystem) and is marked `server-only`; keep it in
  * server components / route files and pass the resulting data to the React components as props.
@@ -79,8 +79,12 @@ export class Docs {
 
     /**
      * @param config - directory paths and options; see {@link DocsConfig}.
+     * @throws Error when `localeOrigins` is set - domain-per-locale URLs are supported by `Blog` only.
      */
     constructor(config: DocsConfig) {
+        if (config.localeOrigins !== undefined) {
+            throw new Error("Docs: `localeOrigins` (one domain per locale) is supported by Blog only.");
+        }
         this.basePath = config.basePath ?? "/docs";
         this.locale = config.locale ?? "en-GB";
         this.locales = (config.locales ?? []).map((l) => ({

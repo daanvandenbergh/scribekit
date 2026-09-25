@@ -85,6 +85,69 @@ export function absoluteUrl(siteUrl: string, pathOrUrl: string): string {
 }
 
 /**
+ * The origin a locale's pages are served from: its {@link SiteConfig.localeOrigins} entry on a
+ * domain-per-locale site, else the single `siteUrl`.
+ *
+ * @param site - the site configuration.
+ * @param lang - the locale code.
+ * @returns the absolute origin (possibly with a sub-path, see {@link absoluteUrl}).
+ */
+export function localeOrigin(site: SiteConfig, lang: string): string {
+    return site.localeOrigins?.[lang] ?? site.siteUrl;
+}
+
+/**
+ * The root-relative path of a page (or, without `slug`, of a locale's index) under the site's URL
+ * options - {@link localePath} fed from one {@link SiteConfig}, so every builder threads the same
+ * `basePath` / `prefixDefaultLocale` / `localeOrigins` / `trailingSlash`.
+ *
+ * @param site - the site configuration.
+ * @param defaultLocale - the locale served unprefixed (the caller's resolved default).
+ * @param lang - the target locale code.
+ * @param slug - the page slug; omit for the locale's index.
+ * @returns the root-relative path.
+ */
+export function sitePath(site: SiteConfig, defaultLocale: string, lang: string, slug?: string): string {
+    return localePath({
+        basePath: site.basePath,
+        defaultLocale,
+        prefixDefaultLocale: site.prefixDefaultLocale,
+        domainPerLocale: site.localeOrigins !== undefined,
+        trailingSlash: site.trailingSlash,
+        lang,
+        slug,
+    });
+}
+
+/**
+ * The absolute URL of a page (or a locale's index) on its locale's origin.
+ *
+ * @param site - the site configuration.
+ * @param defaultLocale - the locale served unprefixed.
+ * @param lang - the target locale code.
+ * @param slug - the page slug; omit for the locale's index.
+ * @returns the absolute URL.
+ */
+export function pageUrl(site: SiteConfig, defaultLocale: string, lang: string, slug?: string): string {
+    return absoluteUrl(localeOrigin(site, lang), sitePath(site, defaultLocale, lang, slug));
+}
+
+/**
+ * The URL a page's metadata (canonical, hreflang, `og:url`) names: root-relative on a single-origin
+ * site (resolved by Next against `metadataBase`, exactly as before), absolute on a domain-per-locale
+ * site - an hreflang alternate on another domain cannot be root-relative.
+ *
+ * @param site - the site configuration.
+ * @param defaultLocale - the locale served unprefixed.
+ * @param lang - the target locale code.
+ * @param slug - the page slug; omit for the locale's index.
+ * @returns the root-relative path or absolute URL.
+ */
+export function metadataUrl(site: SiteConfig, defaultLocale: string, lang: string, slug?: string): string {
+    return site.localeOrigins ? pageUrl(site, defaultLocale, lang, slug) : sitePath(site, defaultLocale, lang, slug);
+}
+
+/**
  * Maps a language subtag to the territory-qualified locale Open Graph expects (`fr` -> `fr_FR`,
  * `en` -> `en_US`), deriving the territory from the platform's CLDR likely-subtags data via
  * `Intl.Locale`. A tag that already carries a region is preserved (`pt-BR` -> `pt_BR`); a tag
@@ -157,7 +220,8 @@ export function hreflangMap(
  * i18n-correct sitemap. Untranslated pages get a bare `{ url }` with no `alternates`.
  *
  * @param refs - every `(slug, lang)` pair to emit (typically `Blog.getPostRefs()` / `Docs.getDocRefs()`).
- * @param site - the site configuration; `siteUrl` makes the URLs absolute.
+ * @param site - the site configuration; `siteUrl` (or each locale's `localeOrigins` entry) makes the
+ *   URLs absolute.
  * @param translationsOf - maps a slug to the language codes it exists in, default-locale first
  *   (typically `Blog.getTranslations` / `Docs.getTranslations`).
  * @returns one {@link SitemapEntry} per ref, in the order given.
@@ -168,8 +232,7 @@ export function buildSitemap(
     translationsOf: (slug: string) => string[],
 ): SitemapEntry[] {
     const defaultLocale = site.defaultLocale ?? FALLBACK_LOCALE;
-    const urlFor = (lang: string, slug: string): string =>
-        absoluteUrl(site.siteUrl, localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang, slug }));
+    const urlFor = (lang: string, slug: string): string => pageUrl(site, defaultLocale, lang, slug);
     return refs.map((ref) => {
         const languages = hreflangMap(translationsOf(ref.slug), defaultLocale, (lang) => urlFor(lang, ref.slug));
         const entry: SitemapEntry = { url: urlFor(ref.lang, ref.slug) };

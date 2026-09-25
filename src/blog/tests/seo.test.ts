@@ -423,3 +423,75 @@ describe("per-locale index copy", () => {
         expect(page?.description).toBe("The Example blog.");
     });
 });
+
+describe("domain-per-locale site (localeOrigins)", () => {
+    /** nl default on example.nl, de on example.de, fr on example.fr; the host app has no trailing slash. */
+    const DOMAINS: SiteConfig = {
+        siteUrl: "https://example.nl",
+        brandName: "Example",
+        defaultLocale: "nl",
+        trailingSlash: false,
+        localeOrigins: { nl: "https://example.nl", de: "https://example.de", fr: "https://example.fr" },
+    };
+    /** The same post in the default locale and in German. */
+    const POST_NL: PostMeta = { ...POST, lang: "nl" };
+    const DE_POST: PostMeta = { ...POST, lang: "de" };
+    const hreflang = {
+        nl: "https://example.nl/blog/hello-world",
+        de: "https://example.de/blog/hello-world",
+        "x-default": "https://example.nl/blog/hello-world",
+    };
+
+    it("builds post metadata on the post locale's origin with cross-domain hreflang", () => {
+        const meta = buildPostMetadata(DE_POST, DOMAINS, ["nl", "de"]);
+        expect(meta.metadataBase?.toString()).toBe("https://example.de/");
+        expect(meta.alternates?.canonical).toBe("https://example.de/blog/hello-world");
+        expect(meta.alternates?.languages).toEqual(hreflang);
+        expect(meta.openGraph?.url).toBe("https://example.de/blog/hello-world");
+    });
+
+    it("builds the index metadata per locale domain, every alternate absolute", () => {
+        const meta = buildOverviewMetadata(DOMAINS, "fr", ["nl", "de", "fr"]);
+        expect(meta.metadataBase?.toString()).toBe("https://example.fr/");
+        expect(meta.alternates?.canonical).toBe("https://example.fr/blog");
+        expect(meta.openGraph?.url).toBe("https://example.fr/blog");
+        expect(meta.alternates?.languages).toEqual({
+            nl: "https://example.nl/blog",
+            de: "https://example.de/blog",
+            fr: "https://example.fr/blog",
+            "x-default": "https://example.nl/blog",
+        });
+    });
+
+    it("puts every post JSON-LD url, @id, breadcrumb, publisher and image on the locale's origin", () => {
+        const url = "https://example.de/blog/hello-world";
+        const [posting, crumbs] = postJsonLd(DE_POST, DOMAINS, ["nl", "de"])["@graph"] as Record<string, unknown>[];
+        expect(posting).toMatchObject({
+            "@id": url,
+            url,
+            mainEntityOfPage: { "@id": url },
+            image: "https://example.de/assets/blog/hello-world.jpg",
+            publisher: { url: "https://example.de" },
+            // The German version points back at the Dutch original on its own domain.
+            translationOfWork: {
+                "@type": "BlogPosting",
+                "@id": "https://example.nl/blog/hello-world",
+                url: "https://example.nl/blog/hello-world",
+                inLanguage: "nl",
+            },
+        });
+        expect(crumbs).toMatchObject({
+            itemListElement: [{ item: "https://example.de" }, { item: "https://example.de/blog" }, { item: url }],
+        });
+        // ...and the original lists the translation on the German domain.
+        const [original] = postJsonLd(POST_NL, DOMAINS, ["nl", "de"])["@graph"] as Record<string, unknown>[];
+        expect(original).toMatchObject({ "@id": "https://example.nl/blog/hello-world", workTranslation: [{ url }] });
+    });
+
+    it("puts the index JSON-LD and its ItemList on the locale's origin", () => {
+        const [page, crumbs, list] = overviewJsonLd([DE_POST], DOMAINS, "de")["@graph"] as Record<string, unknown>[];
+        expect(page).toMatchObject({ "@id": "https://example.de/blog", url: "https://example.de/blog" });
+        expect(crumbs).toMatchObject({ itemListElement: [{ item: "https://example.de" }, { item: "https://example.de/blog" }] });
+        expect(list).toMatchObject({ itemListElement: [{ url: "https://example.de/blog/hello-world" }] });
+    });
+});

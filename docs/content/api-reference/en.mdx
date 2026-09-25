@@ -5,7 +5,7 @@ tab: "Documentation"
 group: "Reference"
 order: 1
 icon: "code"
-updated: "2026-08-11"
+updated: "2026-09-25"
 image: "/assets/docs/api-reference/hero.en.jpg"
 ---
 
@@ -39,7 +39,7 @@ Real dependencies, installed for you: `@daanvandenbergh/i18nkit`, `fuse.js`, `gr
 new Docs(config: DocsConfig)
 ```
 
-`DocsConfig` extends `Partial<SiteConfig>`, so the site attributes are flat on the config object. The constructor does not throw.
+`DocsConfig` extends `Partial<SiteConfig>`, so the site attributes are flat on the config object. The constructor throws only when `localeOrigins` is set - domain-per-locale URLs are supported by `Blog` only.
 
 ### DocsConfig options
 
@@ -212,9 +212,10 @@ new Blog(config: BlogConfig)
 | `locales` | `LocaleConfig[]` | `[]` | Languages published. Unset means single-language |
 | `defaultLocale` | `string` | `config.defaultLocale`, else `locales[0].code`, else `locale.split("-")[0]`, else `"en"` | Unprefixed locale and `x-default` target |
 | `prefixDefaultLocale` | `boolean` | `false` | Prefix the default locale too |
+| `localeOrigins` | `Record<string, string>` | `undefined` | One origin per locale (a domain-per-locale site). No locale is prefixed; every absolute URL uses the page locale's origin |
 | `trailingSlash` | `boolean` | `true` | End every built URL in a slash (`/blog/post/`). Must match the host app's `next.config` `trailingSlash` |
 | `basePath` | `string` | `"/blog"` | Mount route, run through `normalizeBasePath` |
-| `siteUrl` | `string` | `undefined` | Origin for `metadataBase` and absolute JSON-LD. Gates `site` |
+| `siteUrl` | `string` | `localeOrigins[defaultLocale]`, else `undefined` | Origin for `metadataBase` and absolute JSON-LD. Gates `site` |
 | `brandName` | `string` | `undefined` | Title suffix, `og:siteName`, publisher. Gates `site` |
 | `defaultAuthor` | `string` | `undefined` | Author fallback |
 | `description` | `string \| Record<string, string>` | falls back to `` `The ${brandName} blog.` `` | Index description, also the RSS channel description. A map is resolved per locale, falling back to `defaultLocale` |
@@ -224,7 +225,9 @@ new Blog(config: BlogConfig)
 | `websiteId` | `string` | `undefined` | `@id` reference for `isPartOf` |
 | `twitterSite` | `string` | `undefined` | The site's X handle, emitted as `twitter:site` on every card |
 
-`site` is built only when `siteUrl !== undefined && brandName !== undefined`.
+`site` is built only when `brandName` and a `siteUrl` (given, or defaulted from `localeOrigins`) are both defined.
+
+`localeOrigins` must name exactly the configured locale codes (the default locale alone when `locales` is unset), each an absolute `http(s)` URL; trailing slashes are stripped. The constructor throws `` Blog: `localeOrigins` needs an absolute http(s) origin for locale "fr"; got undefined. `` for a missing or malformed value, `` Blog: `localeOrigins` names "de", which is not a configured locale (en, fr). `` for an extra key, and a plain `Error` when combined with `prefixDefaultLocale: true`.
 
 ### Public fields
 
@@ -234,6 +237,7 @@ new Blog(config: BlogConfig)
 | `readonly locales` | `LocaleConfig[]` |
 | `readonly defaultLocale` | `string` |
 | `readonly prefixDefaultLocale` | `boolean` |
+| `readonly localeOrigins` | `Readonly<Record<string, string>> \| undefined` |
 | `readonly trailingSlash` | `boolean` |
 | `readonly site` | `SiteConfig \| undefined` |
 
@@ -448,6 +452,8 @@ The docs section name in breadcrumbs is the literal `"Docs"`.
 | `buildRssFeed(posts: PostMeta[], site: SiteConfig, lang?): string` | One locale's complete RSS 2.0 document, newest post first. This is what `Blog.rssFeed()` wraps |
 | `rssFeedPath(site: SiteConfig, lang: string): string` | The conventional mount path for that locale's feed: the locale's index path plus `/rss.xml`, so `/blog/rss.xml` by default, or `/en/rss.xml` under `prefixDefaultLocale`. **`site.trailingSlash` never applies** - the feed is a file, so its path stays bare |
 
+With `site.localeOrigins` set (a domain-per-locale site), every blog builder, `buildRssFeed` and `buildSitemap` build each URL on its page locale's origin with no locale prefix: `metadataBase` is that origin, and the canonical, `og:url` and hreflang `languages` become absolute URLs (root-relative ones cannot cross domains). Without it, the output is unchanged: root-relative metadata against `siteUrl`.
+
 ## Shared helpers
 
 | Signature | Behaviour |
@@ -469,6 +475,7 @@ localePath(opts: {
     lang: string;
     slug?: string | undefined;
     prefixDefaultLocale?: boolean | undefined;
+    domainPerLocale?: boolean | undefined;
     trailingSlash?: boolean | undefined;
 }): string
 ```
@@ -482,6 +489,7 @@ Builds the root-relative URL path for a page, or for a locale's index page when 
 | `lang` | `string` | **yes** | The target locale code |
 | `slug` | `string?` | no | Omit for the locale's index URL |
 | `prefixDefaultLocale` | `boolean?` | no | When `true`, the default locale is prefixed too |
+| `domainPerLocale` | `boolean?` | no | When `true`, no locale is prefixed - one domain per locale. Wins over `prefixDefaultLocale` |
 | `trailingSlash` | `boolean?` | no | Defaults to **`true`**. When `false`, the path is emitted bare |
 
 **The locale prefix comes first, then the base path.** The URL shape is `/<lang><basePath>/<slug>/`.
@@ -494,6 +502,7 @@ Builds the root-relative URL path for a page, or for a locale's index page when 
 | Non-default locale, no slug | `/fr/blog/` |
 | `prefixDefaultLocale: true`, default locale | `/en/blog/post/` and `/en/blog/` |
 | `prefixDefaultLocale: true`, non-default locale | `/fr/blog/post/`, prefixed either way |
+| `domainPerLocale: true`, any locale | `/blog/post/` - the origin carries the locale |
 | `basePath: "/docs"` | `/docs/quickstart/` and `/fr/docs/quickstart/` |
 | `basePath: ""` (or `"/"`) | `/quickstart/`, `/fr/quickstart/`, and `/` for the index |
 | `trailingSlash: false` | The same paths without the final slash: `/blog/post`, `/fr/blog`, `/quickstart`. The site root stays `/` |
@@ -504,8 +513,6 @@ Builds the root-relative URL path for a page, or for a locale's index page when 
 
 `trailingSlash` defaults to `true` here and must match the host app's `next.config` `trailingSlash`, whose own default is `false` - so an app that never set it needs either `trailingSlash: true` in `next.config` or `trailingSlash: false` on the instance. Every canonical, hreflang, sitemap entry, and nav link comes from this one function, so a mismatch is not one broken link: it points the whole surface at the URL form the host does not serve, and nothing throws.
 
-The JSDoc on `blog.ts`, `blog/types.ts`, `docs/types.ts`, and `docs/docs.ts` claims a translation is served under `<basePath>/<code>/`, that is `/blog/fr/post`. **That comment is wrong.** The code and its tests produce `/fr/blog/post`.
-
 ## Types
 
 | Type | Shape |
@@ -513,7 +520,7 @@ The JSDoc on `blog.ts`, `blog/types.ts`, `docs/types.ts`, and `docs/docs.ts` cla
 | `LocaleConfig` | `{ code: string; label?: string; dateLocale?: string }` |
 | `TocEntry` | `{ depth: 2 \| 3; text: string; id: string }` |
 | `LocalizedText` | `string \| Record<string, string>` - site-level copy that is either the same in every locale (a string) or given per locale code. A missing key falls back to `defaultLocale`, then to the builder's generic text, never to another locale's copy |
-| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?: LocalizedText`, `indexName?: LocalizedText`, `defaultLocale?`, `locales?`, `prefixDefaultLocale?`, `trailingSlash?`, `organizationId?`, `authorId?`, `websiteId?`, `twitterSite?`. `locales` is what lets the SEO builders read a locale's own `dateLocale` for `og:locale`; the backend classes set it from their own `locales` |
+| `SiteConfig` | `siteUrl` and `brandName` are the **only two required** fields; plus `defaultAuthor?`, `basePath?`, `description?: LocalizedText`, `indexName?: LocalizedText`, `defaultLocale?`, `locales?`, `prefixDefaultLocale?`, `localeOrigins?: Record<string, string>`, `trailingSlash?`, `organizationId?`, `authorId?`, `websiteId?`, `twitterSite?`. `locales` is what lets the SEO builders read a locale's own `dateLocale` for `og:locale`; the backend classes set it from their own `locales` |
 | `SitemapEntry` | `{ url: string; alternates?: { languages?: Record<string, string> } }` |
 | `PageMetadata` | A structural subset of Next's `Metadata` with **no `next` type dependency**: `metadataBase?: URL`, `title?`, `description?`, `keywords?: string[]`, `robots?: { index?: boolean; follow?: boolean }`, `authors?: { name: string }[]`, `alternates?: { canonical?; languages? }`, `openGraph?` (its `images` entries take `url`, `alt?`, `width?`, `height?`), `twitter?` (same `images` shape, plus `site?`) |
 | `JsonLd` | `Record<string, unknown>` |
@@ -589,7 +596,7 @@ The interactive body rendered by `BlogOverview`: fuzzy search, category filters,
 | `readingLabel` | `(minutes: number) => string` | translated |
 | `updatedLabel` | `(date: string) => string` | translated |
 
-`BlogPage` shows an "Updated <date>" item beside the publish date whenever the post's `updated` front-matter is later than its `date`.
+`BlogPage` shows an `Updated <date>` item beside the publish date whenever the post's `updated` front-matter is later than its `date`.
 
 #### BlogSidebar
 

@@ -150,3 +150,27 @@ describe("per-locale channel header", () => {
         expect(buildRssFeed([POST], SITE, "en")).toContain("<description>The Example blog.</description>");
     });
 });
+
+describe("domain-per-locale feed (localeOrigins)", () => {
+    const DOMAINS: SiteConfig = {
+        siteUrl: "https://example.nl",
+        brandName: "Example",
+        defaultLocale: "nl",
+        trailingSlash: false,
+        localeOrigins: { nl: "https://example.nl", de: "https://example.de" },
+    };
+
+    it("mounts every locale's feed unprefixed", () => {
+        expect(rssFeedPath(DOMAINS, "de")).toBe("/blog/rss.xml");
+        expect(rssFeedPath(DOMAINS, "nl")).toBe("/blog/rss.xml");
+    });
+
+    it("puts the channel, self link and every item on the feed locale's origin", () => {
+        const xml = buildRssFeed([{ ...POST, lang: "de" }], DOMAINS, "de");
+        expect(xml).toContain("<link>https://example.de/blog</link>");
+        expect(xml).toContain('<atom:link href="https://example.de/blog/rss.xml"');
+        expect(xml).toContain("<link>https://example.de/blog/hello-world</link>");
+        expect(xml).toContain('<guid isPermaLink="true">https://example.de/blog/hello-world</guid>');
+        expect(xml).not.toContain("example.nl");
+    });
+});

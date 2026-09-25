@@ -21,8 +21,9 @@ import type { BlogConfig, LocaleConfig, PageMetadata, Post, PostMeta, SiteConfig
  * When `locales` is set, a post in a non-default language lives in the post's own `<slug>/`
  * folder as `<code><extension>` (e.g. `fr.mdx`), beside the default-language
  * `<defaultLocale><extension>` (e.g. `en.mdx`; the language-neutral `post<extension>` also
- * works); it is served under `<basePath>/<code>/<slug>` with hreflang/`og:locale` linking the
- * translations.
+ * works); it is served under `/<code><basePath>/<slug>` with hreflang/`og:locale` linking the
+ * translations - or, on a domain-per-locale site (`localeOrigins`), under `<basePath>/<slug>` on
+ * that locale's own origin.
  *
  * The class is Node-only (it reads the filesystem) and is marked `server-only`; keep it in
  * server components / route files, and pass the resulting `Post`/`PostMeta` data to the
@@ -65,14 +66,24 @@ export class Blog {
      */
     readonly trailingSlash: boolean;
     /**
+     * Each locale's origin on a domain-per-locale site (trailing slashes stripped), or `undefined`
+     * for a single-origin site. When set, no locale is URL-prefixed. Public so the components build
+     * links that match the SEO metadata. See {@link SiteConfig.localeOrigins}.
+     */
+    readonly localeOrigins: Readonly<Record<string, string>> | undefined;
+    /**
      * Site config assembled from the flat site attributes passed to the constructor, or
-     * `undefined` when `siteUrl`/`brandName` were not provided. Exposed as a public read-only
+     * `undefined` when `brandName` or a `siteUrl` (which defaults to the default locale's
+     * `localeOrigins` entry) was not provided. Exposed as a public read-only
      * property; the components read it to build their SEO JSON-LD.
      */
     readonly site: SiteConfig | undefined;
 
     /**
      * @param config - directory paths and options; see {@link BlogConfig}.
+     * @throws Error when `localeOrigins` is set together with `prefixDefaultLocale`, lacks an
+     *   origin for a configured locale, names an unconfigured locale, or holds a value that is not
+     *   an absolute `http(s)` URL.
      */
     constructor(config: BlogConfig) {
         this.locale = config.locale ?? "en-GB";
@@ -84,6 +95,15 @@ export class Blog {
         this.defaultLocale = config.defaultLocale ?? config.locales?.[0]?.code ?? this.locale.split("-")[0] ?? "en";
         this.prefixDefaultLocale = config.prefixDefaultLocale ?? false;
         this.trailingSlash = config.trailingSlash ?? true;
+        this.localeOrigins =
+            config.localeOrigins === undefined
+                ? undefined
+                : validateLocaleOrigins(
+                      config.localeOrigins,
+                      this.locales.length > 0 ? this.locales.map((l) => l.code) : [this.defaultLocale],
+                      this.prefixDefaultLocale,
+                  );
+        const siteUrl = config.siteUrl ?? this.localeOrigins?.[this.defaultLocale];
         this.store = new ContentStore({
             contentDir: path.resolve(config.contentDir),
             extension: config.extension ?? ".mdx",
@@ -93,9 +113,9 @@ export class Blog {
             onDuplicate: (slug, lang, a, b) => new DuplicatePostError(slug, lang, a, b),
         });
         this.site =
-            config.siteUrl !== undefined && config.brandName !== undefined
+            siteUrl !== undefined && config.brandName !== undefined
                 ? {
-                      siteUrl: config.siteUrl,
+                      siteUrl,
                       brandName: config.brandName,
                       defaultAuthor: config.defaultAuthor,
                       basePath: config.basePath,
@@ -104,6 +124,7 @@ export class Blog {
                       defaultLocale: this.defaultLocale,
                       locales: this.locales,
                       prefixDefaultLocale: this.prefixDefaultLocale,
+                      localeOrigins: this.localeOrigins,
                       trailingSlash: this.trailingSlash,
                       organizationId: config.organizationId,
                       authorId: config.authorId,
@@ -437,3 +458,44 @@ export class Blog {
         return this.site;
     }
 }
+
+/**
+ * Validate and normalize a domain-per-locale `localeOrigins` map: exactly one absolute `http(s)`
+ * origin per configured locale, trailing slashes stripped (so URLs never double a slash).
+ *
+ * @param origins - the configured map (untrusted: JS callers skip the types).
+ * @param codes - every configured locale code.
+ * @param prefixDefaultLocale - the configured flag; contradicts a domain per locale.
+ * @returns the normalized map, frozen.
+ * @throws Error on a contradiction, a missing/unknown locale, or a non-`http(s)` value.
+ */
+function validateLocaleOrigins(
+    origins: Readonly<Record<string, string>>,
+    codes: string[],
+    prefixDefaultLocale: boolean,
+): Readonly<Record<string, string>> {
+    if (prefixDefaultLocale) {
+        throw new Error("Blog: `localeOrigins` (one domain per locale, no URL prefix) cannot be combined with `prefixDefaultLocale`.");
+    }
+    for (const key of Object.keys(origins)) {
+        if (!codes.includes(key)) {
+            throw new Error(`Blog: \`localeOrigins\` names "${key}", which is not a configured locale (${codes.join(", ")}).`);
+        }
+    }
+    const normalized: Record<string, string> = {};
+    for (const code of codes) {
+        const value: unknown = origins[code];
+        let protocol: string | undefined;
+        try {
+            protocol = typeof value === "string" ? new URL(value).protocol : undefined;
+        } catch {
+            protocol = undefined;
+        }
+        if (protocol !== "https:" && protocol !== "http:") {
+            throw new Error(`Blog: \`localeOrigins\` needs an absolute http(s) origin for locale "${code}"; got ${JSON.stringify(value)}.`);
+        }
+        normalized[code] = (value as string).replace(/\/+$/, "");
+    }
+    return Object.freeze(normalized);
+}
+

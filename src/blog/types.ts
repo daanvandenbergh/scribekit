@@ -86,7 +86,7 @@ export interface BlogConfig extends Partial<SiteConfig> {
     /**
      * Languages this blog is published in. Leave unset for a single-language blog (behaviour is
      * unchanged). When set, a post in a non-default language lives in the post's own folder as
-     * `<slug>/<code><extension>` (e.g. `fr.mdx`) and is served under `<basePath>/<code>/`, with
+     * `<slug>/<code><extension>` (e.g. `fr.mdx`) and is served under `/<code><basePath>/`, with
      * hreflang/`og:locale` linking it to its siblings. The `defaultLocale` (from {@link SiteConfig})
      * is the post's `<slug>/<defaultLocale><extension>` (e.g. `en.mdx`; or `post<extension>`) and is
      * served unprefixed; it defaults to the first entry's `code`.

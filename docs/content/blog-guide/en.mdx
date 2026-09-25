@@ -5,7 +5,7 @@ tab: "Documentation"
 group: "Guides"
 order: 1
 icon: "document"
-updated: "2026-08-11"
+updated: "2026-09-25"
 image: "/assets/docs/blog-guide/hero.en.jpg"
 ---
 
@@ -164,6 +164,20 @@ Where the tree lives depends on one config flag, and getting it wrong 404s the d
 | `prefixDefaultLocale: true` | `/en/blog/<slug>` - move everything under `app/[lang]/blog/[slug]` | `/fr/blog/<slug>` |
 
 Every rendered link - card links, the back link, similar posts - and every canonical, hreflang, and sitemap URL goes through the same `localePath` helper, so the routes have to match what it produces.
+
+**One domain per locale.** If each language has its own domain (`https://example.nl/blog/x`, `https://example.de/blog/x`), pass `localeOrigins` instead of choosing a prefix: one origin per locale, e.g. an i18nkit `strategy: "domain"` instance's `i18n.domains`. No locale is then prefixed - every post lives at `/blog/<slug>` on its locale's domain - and every canonical, `og:url`, hreflang alternate, JSON-LD URL, sitemap entry and RSS link is built on the page locale's origin, with the hreflang alternates absolute so they cross domains. `siteUrl` defaults to the default locale's origin.
+
+```ts
+export const blog = new Blog({
+    contentDir: "./blog",
+    brandName: "Example",
+    locales: [{ code: "nl" }, { code: "de" }, { code: "fr" }],
+    defaultLocale: "nl",
+    localeOrigins: { nl: "https://example.nl", de: "https://example.de", fr: "https://example.fr" },
+});
+```
+
+Keep one `app/[lang]/blog/[slug]` tree and let your middleware rewrite each domain's bare `/blog/...` into it. The constructor throws on a missing or unknown locale, a non-`http(s)` origin, or `localeOrigins` together with `prefixDefaultLocale`. On localhost the other domains are unreachable, so leave `localeOrigins` unset in development (set `siteUrl` instead) to browse every language under `/<code>/blog/...`.
 
 That helper also ends every path in a slash (`/blog/<slug>/`), because **`trailingSlash` defaults to `true`** on the instance - and it has to agree with your `next.config` `trailingSlash`, whose own default is `false`. So either turn it on in `next.config`, or set `trailingSlash: false` on the `Blog`. Nothing throws on a mismatch; the whole surface simply points at the URL form your host does not serve. The RSS feed path is the one exception, and it is handled for you: `/blog/rss.xml` is a file, so it never takes a slash either way.
 

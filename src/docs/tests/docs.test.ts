@@ -481,3 +481,11 @@ describe("Docs.getRedirectRefs", () => {
         expect(docs.getRedirectRefs()).toEqual([{ slug: "old", lang: "en" }]);
     });
 });
+
+describe("Docs localeOrigins", () => {
+    it("rejects a domain-per-locale config - it is supported by Blog only", () => {
+        expect(() => new Docs({ contentDir: path.join(HERE, "fixtures/docs"), localeOrigins: { en: "https://example.com" } })).toThrow(
+            /supported by Blog only/,
+        );
+    });
+});

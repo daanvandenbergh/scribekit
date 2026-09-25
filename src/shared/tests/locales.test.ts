@@ -117,3 +117,27 @@ describe("localePath", () => {
         });
     });
 });
+
+describe("localePath with domainPerLocale", () => {
+    it("prefixes no locale - the origin carries it", () => {
+        expect(localePath({ basePath: "/blog", defaultLocale: "nl", lang: "de", slug: "post", domainPerLocale: true })).toBe(
+            "/blog/post/",
+        );
+        expect(localePath({ basePath: "/blog", defaultLocale: "nl", lang: "nl", domainPerLocale: true, trailingSlash: false })).toBe(
+            "/blog",
+        );
+        expect(localePath({ basePath: "", defaultLocale: "nl", lang: "fr", domainPerLocale: true })).toBe("/");
+    });
+
+    it("wins over prefixDefaultLocale", () => {
+        expect(
+            localePath({ basePath: "/blog", defaultLocale: "nl", lang: "nl", slug: "x", prefixDefaultLocale: true, domainPerLocale: true }),
+        ).toBe("/blog/x/");
+    });
+
+    it("keeps the prefix scheme when false", () => {
+        expect(localePath({ basePath: "/blog", defaultLocale: "nl", lang: "de", slug: "x", domainPerLocale: false })).toBe(
+            "/de/blog/x/",
+        );
+    });
+});

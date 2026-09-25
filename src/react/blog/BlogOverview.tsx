@@ -79,6 +79,7 @@ export function BlogOverview({
                 basePath={resolvedBasePath}
                 defaultLocale={blog.defaultLocale}
                 prefixDefaultLocale={blog.prefixDefaultLocale}
+                domainPerLocale={blog.localeOrigins !== undefined}
                 trailingSlash={blog.trailingSlash}
                 locale={blog.dateLocale(resolvedLang)}
                 lang={resolvedLang}

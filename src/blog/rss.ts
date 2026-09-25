@@ -7,11 +7,12 @@
  *
  * One feed per locale, mounted by convention at `<locale index path>/rss.xml` (e.g.
  * `/blog/rss.xml`, or `/en/rss.xml` under `prefixDefaultLocale`) - the same `localePath` the
- * links, canonicals and sitemap use, so the feed's URLs can never drift from the rendered site.
+ * links, canonicals and sitemap use, so the feed's URLs can never drift from the rendered site. On
+ * a domain-per-locale site (`site.localeOrigins`) each feed and its URLs sit on its locale's origin.
  */
 
 import { localePath } from "../shared/locales.js";
-import { absoluteUrl, FALLBACK_LOCALE } from "../shared/seo.js";
+import { absoluteUrl, localeOrigin, pageUrl, FALLBACK_LOCALE } from "../shared/seo.js";
 import { overviewDescription, overviewName } from "./seo.js";
 import type { PostMeta, SiteConfig } from "./types.js";
 
@@ -58,6 +59,7 @@ export function rssFeedPath(site: SiteConfig, lang: string): string {
         basePath: site.basePath,
         defaultLocale,
         prefixDefaultLocale: site.prefixDefaultLocale,
+        domainPerLocale: site.localeOrigins !== undefined,
         trailingSlash: false,
         lang,
     });
@@ -77,23 +79,17 @@ export function rssFeedPath(site: SiteConfig, lang: string): string {
  * build only when a post actually changed.
  *
  * @param posts - the locale's posts' metadata (typically `Blog.getAllPosts(lang)`), newest first.
- * @param site - the site configuration; `siteUrl` makes every URL absolute.
+ * @param site - the site configuration; `siteUrl` (or the locale's `localeOrigins` entry) makes
+ *   every URL absolute.
  * @param lang - the locale code the feed is for. Defaults to the site's default locale.
  * @returns the XML document, ready to serve as `application/rss+xml`.
  */
 export function buildRssFeed(posts: PostMeta[], site: SiteConfig, lang?: string): string {
     const defaultLocale = site.defaultLocale ?? FALLBACK_LOCALE;
     const resolved = lang ?? defaultLocale;
-    const indexUrl = absoluteUrl(
-        site.siteUrl,
-        localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolved }),
-    );
-    const selfUrl = absoluteUrl(site.siteUrl, rssFeedPath(site, resolved));
-    const urlFor = (slug: string): string =>
-        absoluteUrl(
-            site.siteUrl,
-            localePath({ basePath: site.basePath, defaultLocale, prefixDefaultLocale: site.prefixDefaultLocale, trailingSlash: site.trailingSlash, lang: resolved, slug }),
-        );
+    const indexUrl = pageUrl(site, defaultLocale, resolved);
+    const selfUrl = absoluteUrl(localeOrigin(site, resolved), rssFeedPath(site, resolved));
+    const urlFor = (slug: string): string => pageUrl(site, defaultLocale, resolved, slug);
 
     const dated = posts.filter((post) => post.date !== "").map((post) => post.date);
     const newest = dated.length > 0 ? dated.reduce((a, b) => (a > b ? a : b)) : undefined;

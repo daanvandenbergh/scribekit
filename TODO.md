@@ -120,17 +120,6 @@
   reason. Do not "fix" this by making the errors fs-heavy - the rule is still right, the justification is
   fiction. Verify with `npm run typecheck && npm test` (comment-only change).
 
-- [ ] Fix the wrong multilingual URL shape stated in the source JSDoc. `src/docs/types.ts:214` and
-  `src/docs/docs.ts:37` both say a translation "is served under `<basePath>/<code>/`" (i.e. `/docs/fr/x`),
-  and `src/blog/types.ts:82` + `src/blog/blog.ts:36` carry the same wrong wording. The **actual** behaviour
-  puts the locale first: `localePath` (`src/shared/locales.ts:87-92`) produces `/fr/docs/x`, and the tests
-  confirm it (`src/docs/tests/docs.test.ts:140`, `src/shared/tests/locales.test.ts:66`), as does
-  `demo/docs/README.md:12`. The code is right and the comments are wrong, so **fix the four comments** to
-  describe `/<lang><basePath>/<slug>`. This matters beyond tidiness: the `/scribekit-docs` skill instructs
-  agents to trace every documented fact to a `file:line` in source, so a stale JSDoc actively teaches a
-  docs-writing agent the wrong URL scheme. Behaviour is unchanged (comment-only), so verify with
-  `npm run typecheck && npm test` and by grepping that no `<basePath>/<code>/` wording remains.
-
 - [ ] Resolve the contradiction between `skills/scribekit-docs/docs-style.md` and
   `skills/scribekit-docs/write.md` about closing sections. `docs-style.md:62-65` bans a `## Next steps`
   list outright ("the renderer already emits prev/next ... so do **not** append a `## Next steps` list that

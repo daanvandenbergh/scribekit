@@ -82,7 +82,12 @@ export function normalizeBasePath(basePath: string | undefined): string {
  * @param opts.defaultLocale - the locale code served without a prefix (unless prefixed below).
  * @param opts.lang - the target locale code.
  * @param opts.slug - the page slug; omit for the locale's index URL.
+ * On a domain-per-locale site (`domainPerLocale: true`) the origin carries the locale, so no locale
+ * is prefixed: every locale's page is `<base>/<slug>` on its own domain.
+ *
  * @param opts.prefixDefaultLocale - when `true`, the default locale is prefixed too.
+ * @param opts.domainPerLocale - when `true`, no locale is prefixed (one domain per locale; see
+ *   `SiteConfig.localeOrigins`). Defaults to `false`.
  * @param opts.trailingSlash - when `false`, omit the trailing slash on a page URL. Defaults to `true`.
  * @returns the root-relative URL path (resolves against `metadataBase`, like the canonical).
  */
@@ -92,10 +97,13 @@ export function localePath(opts: {
     lang: string;
     slug?: string | undefined;
     prefixDefaultLocale?: boolean | undefined;
+    domainPerLocale?: boolean | undefined;
     trailingSlash?: boolean | undefined;
 }): string {
     const base = normalizeBasePath(opts.basePath);
-    const prefix = localePrefix(opts.lang, opts.defaultLocale, opts.prefixDefaultLocale ?? false);
+    const prefix = opts.domainPerLocale
+        ? ""
+        : localePrefix(opts.lang, opts.defaultLocale, opts.prefixDefaultLocale ?? false);
     const path = `${prefix}${base}`;
     const full = opts.slug ? `${path}/${opts.slug}` : path;
     // A root-mounted section (basePath `""`) in its unprefixed default locale leaves `full` empty;
