@@ -32,7 +32,7 @@ const SITE_LINKED: SiteConfig = {
 describe("buildPostMetadata", () => {
     it("builds title, description, keywords, canonical and metadataBase", () => {
         const meta = buildPostMetadata(POST, SITE);
-        expect(meta.title).toBe("Hello World | Example");
+        expect(meta.title).toEqual({ absolute: "Hello World | Example" });
         expect(meta.description).toBe("A first post.");
         expect(meta.keywords).toEqual(["hello", "world"]);
         expect(meta.metadataBase?.toString()).toBe("https://example.com/");
@@ -110,7 +110,7 @@ describe("buildPostMetadata", () => {
 describe("buildOverviewMetadata", () => {
     it("builds the index title, canonical, and website OpenGraph", () => {
         const meta = buildOverviewMetadata({ ...SITE, description: "Our blog." });
-        expect(meta.title).toBe("Blog | Example");
+        expect(meta.title).toEqual({ absolute: "Blog | Example" });
         expect(meta.description).toBe("Our blog.");
         expect(meta.alternates?.canonical).toBe("/blog/");
         expect(meta.openGraph?.type).toBe("website");

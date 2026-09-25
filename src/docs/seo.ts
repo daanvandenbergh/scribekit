@@ -135,7 +135,7 @@ export function buildDocMetadata(
     const alternateLocale = translations.filter((lang) => lang !== meta.lang);
     return {
         metadataBase: new URL(site.siteUrl),
-        title: `${meta.title} | ${site.brandName}`,
+        title: { absolute: `${meta.title} | ${site.brandName}` },
         description: meta.description,
         keywords: meta.keywords,
         ...(meta.hidden ? { robots: { index: false } } : {}),
@@ -183,7 +183,7 @@ export function buildIndexMetadata(site: SiteConfig, lang?: string, langs: strin
     const languages = indexLanguages(site, langs, defaultLocale);
     return {
         metadataBase: new URL(site.siteUrl),
-        title: `${SECTION_NAME} | ${site.brandName}`,
+        title: { absolute: `${SECTION_NAME} | ${site.brandName}` },
         description,
         alternates: { canonical: url, languages },
         openGraph: {

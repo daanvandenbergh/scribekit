@@ -144,7 +144,7 @@ export function buildPostMetadata(
     const alternateLocale = translations.filter((lang) => lang !== meta.lang);
     return {
         metadataBase: new URL(localeOrigin(site, meta.lang)),
-        title: `${meta.title} | ${site.brandName}`,
+        title: { absolute: `${meta.title} | ${site.brandName}` },
         description: meta.description,
         keywords: meta.keywords,
         authors: [{ name: author }],
@@ -192,7 +192,7 @@ export function buildOverviewMetadata(site: SiteConfig, lang?: string, langs: st
     const languages = overviewLanguages(site, langs, defaultLocale);
     return {
         metadataBase: new URL(localeOrigin(site, resolvedLang)),
-        title: `Blog | ${site.brandName}`,
+        title: { absolute: `Blog | ${site.brandName}` },
         description,
         alternates: { canonical: url, languages },
         openGraph: {

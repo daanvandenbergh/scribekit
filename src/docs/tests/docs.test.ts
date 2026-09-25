@@ -206,7 +206,7 @@ describe("Docs SEO methods", () => {
 
     it("builds page metadata with hreflang for a translated page", () => {
         const meta = docs.docMetadata(docs.getDoc("greeting-and-voice"));
-        expect(meta.title).toBe("Greeting & voice | Example");
+        expect(meta.title).toEqual({ absolute: "Greeting & voice | Example" });
         expect(meta.alternates?.canonical).toBe("/docs/greeting-and-voice/");
         expect(meta.alternates?.languages).toEqual({
             en: "/docs/greeting-and-voice/",
@@ -217,7 +217,7 @@ describe("Docs SEO methods", () => {
 
     it("builds the docs index metadata", () => {
         const meta = docs.indexMetadata();
-        expect(meta.title).toBe("Docs | Example");
+        expect(meta.title).toEqual({ absolute: "Docs | Example" });
         expect(meta.alternates?.canonical).toBe("/docs/");
     });
 

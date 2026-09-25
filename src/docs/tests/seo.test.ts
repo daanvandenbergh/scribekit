@@ -31,7 +31,7 @@ const SITE_LINKED: SiteConfig = {
 describe("buildDocMetadata", () => {
     it("builds title, description, keywords, canonical and metadataBase", () => {
         const meta = buildDocMetadata(DOC, SITE);
-        expect(meta.title).toBe("Greeting & voice | Example");
+        expect(meta.title).toEqual({ absolute: "Greeting & voice | Example" });
         expect(meta.description).toBe("Configure how your assistant greets callers.");
         expect(meta.keywords).toEqual(["greeting", "voice"]);
         expect(meta.metadataBase?.toString()).toBe("https://example.com/");
@@ -137,7 +137,7 @@ describe("buildDocMetadata", () => {
 describe("buildIndexMetadata", () => {
     it("builds the docs index title, canonical, and website OpenGraph", () => {
         const meta = buildIndexMetadata({ ...SITE, description: "Everything you need." });
-        expect(meta.title).toBe("Docs | Example");
+        expect(meta.title).toEqual({ absolute: "Docs | Example" });
         expect(meta.description).toBe("Everything you need.");
         expect(meta.alternates?.canonical).toBe("/docs/");
         expect(meta.openGraph?.type).toBe("website");

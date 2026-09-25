@@ -269,8 +269,8 @@ describe("Blog SEO methods", () => {
     it("delegate to the pure builders when site config is present", () => {
         const blog = makeBlog({ siteUrl: SITE.siteUrl, brandName: SITE.brandName });
         const post = blog.getPost("how-many-calls");
-        expect(blog.postMetadata(post).title).toBe("How many calls do plumbers miss | Example");
-        expect(blog.overviewMetadata().title).toBe("Blog | Example");
+        expect(blog.postMetadata(post).title).toEqual({ absolute: "How many calls do plumbers miss | Example" });
+        expect(blog.overviewMetadata().title).toEqual({ absolute: "Blog | Example" });
         expect(blog.postJsonLd(post)["@context"]).toBe("https://schema.org");
         expect(blog.overviewJsonLd(blog.getAllPosts())["@context"]).toBe("https://schema.org");
     });

@@ -166,8 +166,11 @@ export interface SiteConfig {
 export interface PageMetadata {
     /** Base URL that relative `canonical`/OG image paths resolve against. */
     metadataBase?: URL | undefined;
-    /** SEO/browser title. */
-    title?: string | undefined;
+    /**
+     * SEO/browser title. The builders return `{ absolute }` (already brand-suffixed), so a
+     * consumer's root `title.template` never appends the brand a second time.
+     */
+    title?: string | { absolute: string } | undefined;
     /** Meta description. */
     description?: string | undefined;
     /** SEO keywords. */
