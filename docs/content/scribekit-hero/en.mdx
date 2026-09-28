@@ -132,9 +132,11 @@ Changing `format` on a surface that already has heroes means re-running `regener
 
 | Surface | Rendered image |
 | --- | --- |
-| Blog | `<assets>/blog/<slug>/hero.<code>.<ext>` |
-| Docs | `<assets>/docs/<slug>/hero.<code>.<ext>` |
+| Blog | `<public-dir>/<asset-path>/blog/<slug>/hero.<code>.<ext>` |
+| Docs | `<public-dir>/<asset-path>/docs/<slug>/hero.<code>.<ext>` |
 | README | `.agentstore/scribekit-hero/readme/hero.<ext>` |
+
+`<public-dir>` is the directory the site serves at its root (`public/`, `static/`) and `<asset-path>` the path inside it (e.g. `assets`). The public dir is never part of the URL: `public/assets/blog/<slug>/hero.en.jpg` is wired as `image: "/assets/blog/<slug>/hero.en.jpg"`.
 
 `<ext>` is the surface's `format` (see above): `jpg` unless it says otherwise, `png` for the README.
 

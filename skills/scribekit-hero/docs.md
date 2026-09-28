@@ -42,16 +42,19 @@ since there is one params file). Deterministic, no random pick.
    (SKILL.md), passing `?lang=<code>`.
 6. **Optimise + save**: downsample each render to 1200x630 and encode it per SKILL.md's
    **[Encode](./SKILL.md#encode)** (JPEG ~80 KB unless the settings export a `format` - `webp`/`avif`
-   are the smaller alternatives), one per locale, to `<assets>/docs/<slug>/hero.<code>.<ext>` - every
+   are the smaller alternatives), one per locale, to `<public-dir>/<asset-path>/docs/<slug>/hero.<code>.<ext>` - every
    language named by its code, default included (e.g. `hero.en.jpg`, `hero.fr.jpg`), matching the page
    files (`en.mdx`, `fr.mdx`).
    A docs hero is an **opaque rectangle** (the site rounds/borders it in CSS) - **never** a rounded
    transparent image like the README hero.
-7. **Wire** `image: "/<assets>/docs/<slug>/hero.<code>.<ext>"` into each language's page front-matter -
+7. **Wire** `image: "/<asset-path>/docs/<slug>/hero.<code>.<ext>"` into each language's page front-matter -
    **always a site-root path with a leading slash**, never a bare filename and never a full URL (OG
    emits `DocMeta.image` as-is under `metadataBase`, JSON-LD absolutizes it; only a leading-slash root
    path is correct on both). **Updating an existing hero**: also bump `updated:` (`date +%F`, quoted).
 8. **Verify** at full size **and** ~320px card scale: title legible, on-brand, matches sibling heroes.
+   Then confirm every wired `image:` resolves: `<public-dir>` + the `image:` value must be a file on
+   disk (e.g. `public` + `/assets/blog/<slug>/hero.en.jpg`). A miss means the file and the URL disagree -
+   fix the path, never ship a broken hero.
 
 ### Localised heroes (multi-language docs)
 
@@ -71,7 +74,7 @@ export default (locale = "en") => ({ gradient: "aurora-glow", ...text[locale] })
 - **Same gradient across languages** - it is the one `gradient` value in the shared file, so no
   re-rotation is possible or needed.
 - **Render loops the configured locales** (from Step 0), one image each, into the page's folder as
-  `<assets>/docs/<slug>/hero.<code>.<ext>` - every language named by its code (e.g. `hero.en.jpg`).
+  `<public-dir>/<asset-path>/docs/<slug>/hero.<code>.<ext>` - every language named by its code (e.g. `hero.en.jpg`).
 - **Completeness**: if a configured locale returns no text (`params(locale)` empty), stop and fix the
   params file - that language would render a blank title.
 
@@ -82,6 +85,6 @@ Re-render **every** docs hero from its saved params - run this after changing th
 with zero per-page edits.
 1. Glob `<docs-content-dir>/*/hero.js` (each page folder has exactly one).
 2. For each, render **all configured locales** via the pipeline (SKILL.md) and overwrite
-   `<assets>/docs/<slug>/hero.<code>.<ext>`.
+   `<public-dir>/<asset-path>/docs/<slug>/hero.<code>.<ext>`.
 3. **Report** the count rendered (pages x locales). Do not touch the pages' frontmatter (the `image:`
    paths are unchanged).

@@ -241,7 +241,7 @@ option** from `hero.settings.js` and is **on-brand** (matches the other posts' h
 baked-in brand identity, and gradient family); correct
 dimensions/ratio (~1200x630, ~1.91:1); **white title legible** at full size and when scaled to a card
 thumbnail; the `<img alt>`/title is descriptive. **Translations**: the hero is language-specific per
-the localised-heroes rule (own `<assets>/blog/<slug>/hero.<lang>.jpg`, hero text in the post's language,
+the localised-heroes rule (own `<public-dir>/<asset-path>/blog/<slug>/hero.<lang>.jpg`, hero text in the post's language,
 same gradient as the default-language hero) - flag a translation whose `image:` points at another
 language's hero. Missing or off-brand -> recommend **/scribekit-hero** `blog-hero` (create/update); if the
 gradients themselves look off (banding, off-brand hues) -> **/scribekit-hero** `tune-gradients`.

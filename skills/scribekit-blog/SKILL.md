@@ -32,8 +32,11 @@ generic. Gather and keep as working notes for the run:
   pick here, fixed before anything is counted (see house-style.md - never the pivot-heaviest sibling).
 - **Where posts live** - find the blog content dir and its reader (a `lib`/`content` module that
   parses MDX frontmatter; common dirs: `blog/`, `content/blog/`, `src/content/`, `posts/`). Note
-  the file extension and the **public assets dir** heroes are served from (e.g. `public/`,
-  `static/`).
+  the file extension, the **public dir** the site serves at its root (`<public-dir>`, e.g. `public/`,
+  `static/`) and the **asset path** heroes live under inside it (`<asset-path>`, e.g. `assets`). A hero
+  file at `<public-dir>/<asset-path>/blog/<slug>/hero.<lang>.jpg` is wired as
+  `image: "/<asset-path>/blog/<slug>/hero.<lang>.jpg"` - the public dir is never part of the URL
+  (see /scribekit-hero SKILL.md Step 0).
 - **Frontmatter contract** - from the reader (or existing posts), learn the exact fields the
   project parses and any quirks. Common shape: `title`, `date`, `description`, `keywords`,
   `categories`, `author`, `author-image`, `image`, `updated`. Match it exactly - a field the reader ignores is

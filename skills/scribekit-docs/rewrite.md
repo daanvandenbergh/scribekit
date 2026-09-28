@@ -79,7 +79,7 @@ check it per **[/scribekit-hero](../scribekit-hero/docs.md)**: the `<slug>/hero.
 gradient** from the docs `hero.settings.js` and is **on-brand** (matches sibling docs heroes); correct
 ratio (~1200x630, an **opaque JPEG** - not a rounded PNG); **title legible** at full size and card
 scale. **Translations**: language-specific hero (own
-`<assets>/docs/<slug>/hero.<lang>.jpg`, same gradient) - flag one pointing at another language's file.
+`<public-dir>/<asset-path>/docs/<slug>/hero.<lang>.jpg`, same gradient) - flag one pointing at another language's file.
 Missing or off-brand -> recommend **/scribekit-hero** `docs-hero`; gradients themselves off ->
 **/scribekit-hero** `tune-gradients docs`.
 

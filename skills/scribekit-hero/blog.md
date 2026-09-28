@@ -42,12 +42,15 @@ language (one params file), so translations always match.
    (SKILL.md), passing `?lang=<code>`.
 6. **Optimise + save**: downsample each render to 1200×630 and encode it per SKILL.md's
    **[Encode](./SKILL.md#encode)** (JPEG ~80 KB unless the settings export a `format` - `webp`/`avif`
-   are the smaller alternatives), one per locale, to `<assets>/blog/<slug>/hero.<code>.<ext>` - every
+   are the smaller alternatives), one per locale, to `<public-dir>/<asset-path>/blog/<slug>/hero.<code>.<ext>` - every
    language named by its code, default included (e.g. `hero.en.jpg`, `hero.fr.jpg`), matching the post
    files (`en.mdx`, `fr.mdx`).
-7. **Wire** `image: "/<assets>/blog/<slug>/hero.<code>.<ext>"` into each language's post. **Updating an
+7. **Wire** `image: "/<asset-path>/blog/<slug>/hero.<code>.<ext>"` into each language's post. **Updating an
    existing hero**: also bump `updated:` (`date +%F`, quoted) on the posts.
 8. **Verify** at full size **and** ~320px card scale: title legible, on-brand, matches sibling heroes.
+   Then confirm every wired `image:` resolves: `<public-dir>` + the `image:` value must be a file on
+   disk (e.g. `public` + `/assets/blog/<slug>/hero.en.jpg`). A miss means the file and the URL disagree -
+   fix the path, never ship a broken hero.
 
 ### Localised heroes (multi-language blogs)
 
@@ -70,7 +73,7 @@ export default (locale = "en") => ({ gradient: "aurora-glow", ...text[locale] })
 - **Same gradient across languages** - it is the one `gradient` value in the shared file, so no
   re-rotation is possible or needed.
 - **Render loops the configured locales** (from Step 0), one image each, into the post's folder as
-  `<assets>/blog/<slug>/hero.<code>.<ext>` - every language named by its code (e.g. `hero.en.jpg`, `hero.fr.jpg`).
+  `<public-dir>/<asset-path>/blog/<slug>/hero.<code>.<ext>` - every language named by its code (e.g. `hero.en.jpg`, `hero.fr.jpg`).
 - **Completeness**: if a configured locale returns no text (`params(locale)` empty), stop and fix the
   params file - that language would render a blank title.
 
@@ -81,6 +84,6 @@ Re-render **every** blog hero from its saved params - run this after changing th
 heroes with zero per-post edits.
 1. Glob `<content-dir>/*/hero.js` (each post folder has exactly one).
 2. For each, render **all configured locales** via the pipeline (SKILL.md) and overwrite
-   `<assets>/blog/<slug>/hero.<code>.<ext>`.
+   `<public-dir>/<asset-path>/blog/<slug>/hero.<code>.<ext>`.
 3. **Report** the count rendered (posts × locales). Do not touch the posts' frontmatter (the `image:`
    paths are unchanged).

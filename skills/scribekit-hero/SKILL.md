@@ -30,10 +30,16 @@ Discover the project so the hero is *this project's*, not generic. Gather as wor
   projects ban em-dashes), British vs US spelling, etc. - they show up in hero title/subtitle text.
 - **For the blog and docs modes also learn** (skip for `readme-hero`): where posts/pages live (the
   blog content dir and its reader, or the docs `contentDir` from the project's `new Docs({...})` /
-  `_docs.ts`), the **public assets dir** heroes are served from (e.g. `public/`, `static/`), and
-  whether the surface is **multi-language** (look for `locales`/`defaultLocale` in the `Blog`/`Docs`
+  `_docs.ts`), the **public dir** and the **asset path** heroes live under, and whether the surface is **multi-language** (look for `locales`/`defaultLocale` in the `Blog`/`Docs`
   config, or `<lang>.<ext>` files inside the folders) - note the configured codes and the default
   locale.
+  - `<public-dir>` - the directory the site serves at its root (e.g. `public/`, `static/`).
+  - `<asset-path>` - the path inside it that holds the heroes, as it appears in the URL (e.g. `assets`,
+    or empty when heroes sit directly in `<public-dir>`).
+  - A file at `<public-dir>/<p>` is served at `/<p>`: **write** heroes to
+    `<public-dir>/<asset-path>/...` and **wire** `image:` as `/<asset-path>/...` - the public dir is
+    never part of the URL. Example: `public/assets/blog/<slug>/hero.en.jpg` is wired as
+    `image: "/assets/blog/<slug>/hero.en.jpg"`.
 
 If the project genuinely has none of this (a near-empty repo), **ask the user** for the essentials
 rather than guessing.
