@@ -10,10 +10,24 @@ do that now.
 ## Procedure
 
 ### 1. Resolve the topic
-- **Topic given** -> use it. Sharpen a broad topic into a specific, search-intent-shaped angle.
-- **No topic** -> auto-select: ground the niche from Step 0 (CLAUDE.md/README + landing page), list
-  existing posts in the content dir so you don't overlap, and propose the single highest-value gap
-  topic with real informational search intent. **State the chosen topic + a one-line rationale**
+First list every existing post: slug + `title` from each locale's frontmatter in the content dir.
+**One search intent, one post.** A new post that answers the same query as an existing one splits
+its ranking between the two (keyword cannibalisation) - a different title is not a different topic.
+
+- **Topic given** -> use it. Sharpen a broad topic into a specific, search-intent-shaped angle. If
+  an existing post already answers that intent, stop and ask whether to `rewrite <slug>` instead.
+- **No topic** -> auto-select: ground the niche from Step 0 (CLAUDE.md/README + landing page) and
+  propose the single highest-value gap topic with real informational search intent. Two hard
+  rules, checked before any research:
+  - **No overlap.** Reject any candidate whose intent an existing post already answers.
+  - **No YMYL topics.** Never auto-select health, medical, safety, legal or financial topics
+    ("your money or your life"): a wrong sentence there can hurt a reader, and search engines hold
+    them to the strictest quality bar. Stay in the product's own territory - for a shop selling
+    baby keepsakes: gifts, names, traditions, keepsakes; never sleep, feeding, development or
+    parental-leave rules. A safe topic that needs a YMYL section to be complete is rejected too -
+    pick another.
+
+  **State the chosen topic + a one-line rationale** (naming the closest existing post, if any)
   before continuing.
 
 ### 2. Research (mandatory)
@@ -399,7 +413,7 @@ fact-bearing sentence beside its original - translation is a rewrite, and rewrit
 qualifiers die ("supply-and-fit" halving into "materials-dominant" shipped exactly this way). **Render a language-specific hero** per the localised-heroes rule in
 **[/scribekit-hero](../scribekit-hero/blog.md)**: add the translation's title/subtitle to the post's single
 `<slug>/hero.js` (a `(locale) => params` map, reusing the same gradient), and render its JPEG to
-`<assets>/blog/<slug>/hero.<lang>.jpg` - never point a translation's `image:` at the default-language
+`<public-dir>/<asset-path>/blog/<slug>/hero.<lang>.jpg` - never point a translation's `image:` at the default-language
 hero, since the hero bakes in title/subtitle text. Keep internal links pointing to same-language
 routes.
 

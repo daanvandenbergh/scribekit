@@ -31,6 +31,10 @@ anything is written.
 | `write` | Writes the post **and its hero by default**. On a multi-language blog, also writes a translation for **every** configured locale. | A new post, the argument is a topic or idea, or the verb is create / write / draft. |
 | `rewrite` | Audits an existing post **and applies the fixes**, up to a substantial rewrite. | rewrite / overhaul / redo / review / audit / fact-check / critique / improve / score, or the argument resolves to an existing post file or slug. |
 
+A `write` with no topic auto-selects one, never one an existing post already answers (one search
+intent, one post) and never a health, medical, safety, legal or financial (YMYL) topic. A given
+topic an existing post already covers stops with the offer to `rewrite` that post instead.
+
 **Never run two modes in one invocation.** If a bare slug matches a post but the verb suggests a
 fresh take, the skill asks one clarifying question first. A `rewrite` with no target lists the posts
 in the content directory and asks which.
@@ -64,7 +68,7 @@ in the content directory and asks which.
 | `<contentDir>/README.md` | Seeded once from `assets/content-dir-README.md`, verbatim. Never overwritten if it already exists. |
 | `<contentDir>/hero.settings.js` | Seeded once by `/scribekit-hero` on the first hero for the blog surface, from the project brand. Never re-seeded. |
 | `<contentDir>/<slug>/hero.js` | Hero parameters, written by `/scribekit-hero`. **One file per post, covering every language** - a `(locale) => params` map when the blog is multi-language. |
-| `<assets>/blog/<slug>/hero.<code>.<ext>` | The rendered hero, wired into the post's `image:` frontmatter. One per locale, because the hero bakes the title text into the image - a translation never points `image:` at the default-language hero. |
+| `<public-dir>/<asset-path>/blog/<slug>/hero.<code>.<ext>` | The rendered hero, wired into the post's `image:` frontmatter. One per locale, because the hero bakes the title text into the image - a translation never points `image:` at the default-language hero. |
 
 The language is the file's name, never a frontmatter field. `<slug>/post.<ext>` still resolves as a
 language-neutral fallback, but the locale-named form is preferred.
